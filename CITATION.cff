@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "calphad-kinetics"
+version: 0.1.0.dev0
+license: MIT
+type: software
+authors:
+  - family-names: Bustamante
+    given-names: Michael E.
+    orcid: "https://orcid.org/0009-0009-9001-8151"
+    affiliation: "Odinzen LLC, Houston, TX, United States"
