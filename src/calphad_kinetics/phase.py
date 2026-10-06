@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
@@ -19,6 +20,30 @@ Frame = Literal["number", "volume"]
 COMPOSITION_FLOOR = 1e-12
 
 
+@dataclass(frozen=True)
+class ShortCircuit:
+    """Fast diffusion paths (grain boundaries or dislocations) averaged into the lattice.
+
+    Hart, Acta Metall. 5 (1957) 597, eq. (5): an atom that spends a fraction f of
+    its time in the paths sees D_eff = f D_path + (1 - f) D_lattice. With D* = RT M
+    (Andersson and Agren, J. Appl. Phys. 72 (1992) 1350, eq. (61)) the same average
+    applies to each element's mobility, and so to every diffusion matrix built from
+    it. Hart's condition is that a diffusion distance spans many paths; a coarse
+    microstructure with isolated boundaries is outside it.
+
+    ``fraction`` is Hart's f, the fraction of atoms in the paths. ``mobility_db``
+    holds MQ/MF parameters for diffusion along the paths, entered under the same
+    phase name and constitution as the lattice parameters.
+    """
+
+    fraction: float
+    mobility_db: Database
+
+    def __post_init__(self):
+        if not 0.0 <= self.fraction <= 1.0:
+            raise ValueError(f"short-circuit fraction must lie in [0, 1], got {self.fraction}")
+
+
 class SolutionPhase:
     """Thermodynamics and mobilities of one substitutional solution phase.
 
@@ -33,10 +58,20 @@ class SolutionPhase:
         elements: list[str] | tuple[str, ...],
         dependent: str | None = None,
         mobility_db: Database | None = None,
+        short_circuit: ShortCircuit | None = None,
     ):
         self.lattice = SubstitutionalLattice.from_database(db, phase_name, elements, dependent)
         self.gibbs = GibbsEnergy(db, self.lattice)
         self.mobility_model = MobilityModel(mobility_db or db, self.lattice)
+        self.short_circuit = short_circuit
+        self._path_model = MobilityModel(short_circuit.mobility_db, self.lattice) if short_circuit else None
+
+    def _mobility(self, x: np.ndarray, T, magnetic_factor) -> np.ndarray:
+        m = self.mobility_model.mobility(x, T, magnetic_factor)
+        if self._path_model is None:
+            return m
+        f = self.short_circuit.fraction
+        return (1.0 - f) * m + f * self._path_model.mobility(x, T, magnetic_factor)
 
     @property
     def elements(self) -> tuple[str, ...]:
@@ -67,12 +102,13 @@ class SolutionPhase:
         return thermodynamic_factor(x, self.dmu_dx(x, T), T)
 
     def mobility(self, x, T, magnetic_factor=1.0) -> np.ndarray:
-        return self.mobility_model.mobility(self._x(x), T, magnetic_factor)
+        """Atomic mobilities in m^2 mol / (J s), including any short-circuit paths."""
+        return self._mobility(self._x(x), T, magnetic_factor)
 
     def intrinsic_matrix(self, x, T, magnetic_factor=1.0) -> np.ndarray:
         """Lattice-frame diffusivities D^I_kj in m^2/s, shape (..., n, n-1)."""
         x = self._x(x)
-        return intrinsic_matrix(x, self.mobility_model.mobility(x, T, magnetic_factor), self.dmu_dx(x, T))
+        return intrinsic_matrix(x, self._mobility(x, T, magnetic_factor), self.dmu_dx(x, T))
 
     def lattice_velocity(self, x, dx_dz, T, magnetic_factor=1.0) -> np.ndarray:
         """Kirkendall (marker) velocity relative to the number-fixed frame, m/s.
@@ -96,7 +132,7 @@ class SolutionPhase:
         """
         x = self._x(x)
         dmu = self.dmu_dx(x, T)
-        mob = self.mobility_model.mobility(x, T, magnetic_factor)
+        mob = self._mobility(x, T, magnetic_factor)
         if frame == "number":
             return number_fixed_matrix(x, mob, dmu)
         if frame == "volume":
