@@ -22,6 +22,7 @@ import scipy.sparse.linalg as spla
 from .errors import ConvergenceError
 
 Diffusivity = Callable[[np.ndarray], np.ndarray] | np.ndarray
+LatticeVelocity = Callable[[np.ndarray, np.ndarray], np.ndarray]
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,7 @@ class DiffusionResult:
     z_faces: np.ndarray
     x: np.ndarray
     picard_iterations: list[int] = field(default_factory=list)
+    markers: np.ndarray | None = None  # marker positions [t_index, marker] when tracked
 
     @property
     def z(self) -> np.ndarray:
@@ -138,6 +140,8 @@ def solve_planar(
     save_times=None,
     picard_tol: float = 1e-10,
     max_picard: int = 50,
+    markers=None,
+    lattice_velocity: LatticeVelocity | None = None,
 ) -> DiffusionResult:
     """Integrate planar interdiffusion from ``x0`` to ``t_end``.
 
@@ -151,6 +155,10 @@ def solve_planar(
     dt : maximum time step (s); steps are shortened to land on ``save_times``.
     picard_tol : convergence threshold on the max change in mole fraction
         between Picard iterates.
+    markers : initial positions (m) of inert Kirkendall markers to follow.
+    lattice_velocity : callable (x, dx_dz) -> v giving the lattice velocity at the
+        interior faces, such as ``lambda x, g: phase.lattice_velocity(x, g, T)``.
+        Required with ``markers``.
 
     Returns profiles at t=0 and at every save time (always including ``t_end``).
     """
@@ -211,14 +219,63 @@ def solve_planar(
             f"at t={t_new:g} s (last change {change:.3g}); reduce dt"
         )
 
+    tracker = None
+    if markers is not None:
+        if lattice_velocity is None:
+            raise ValueError("tracking markers needs lattice_velocity")
+        tracker = _MarkerTracker(np.atleast_1d(np.asarray(markers, dtype=float)), z_faces, lattice_velocity)
+
     times, saved, iters = [0.0], [x.copy()], []
+    marker_track = [tracker.z.copy()] if tracker else None
     t = 0.0
     for target, steps in _output_schedule(t_end, dt, save_times):
         step = (target - t) / steps
         for i in range(steps):
-            x, k = advance(x, step, t + (i + 1) * step)
+            t_new = t + (i + 1) * step
+            x, k = advance(x, step, t_new)
             iters.append(k)
+            if tracker:
+                tracker.advance(x, t_new - step, t_new)
         t = target
         times.append(t)
         saved.append(x.copy())
-    return DiffusionResult(np.array(times), z_faces, np.array(saved), iters)
+        if tracker:
+            marker_track.append(tracker.z.copy())
+    return DiffusionResult(np.array(times), z_faces, np.array(saved), iters,
+                           np.array(marker_track) if tracker else None)
+
+
+class _MarkerTracker:
+    """Moves inert markers with the lattice, dz/dt = v(z, t).
+
+    Integrated in tau = sqrt(t) as dz/dtau = 2 tau v by the trapezoid rule. In a
+    diffusion couple v falls as 1/sqrt(t) and markers move parabolically (van Loo,
+    Prog. Solid State Chem. 20 (1990) 47, eq. (5)), so 2 tau v is constant and the
+    rule is exact there; integrating in t instead would carry an O(sqrt(dt/t))
+    error from the singular start. The first interval uses its end value alone for
+    the same reason.
+    """
+
+    def __init__(self, z0: np.ndarray, z_faces: np.ndarray, velocity: LatticeVelocity):
+        self.z = z0.copy()
+        self.velocity = velocity
+        self.face_z = z_faces[1:-1]
+        centers = 0.5 * (z_faces[1:] + z_faces[:-1])
+        self.h = np.diff(centers)
+        self.g_old = None
+
+    def _g(self, x: np.ndarray, z: np.ndarray, t: float) -> np.ndarray:
+        faces = 0.5 * (x[1:] + x[:-1])
+        grad = np.diff(x, axis=0) / self.h[:, None]
+        v = self.velocity(faces, grad)
+        return 2.0 * np.sqrt(t) * np.interp(z, self.face_z, v)
+
+    def advance(self, x: np.ndarray, t_old: float, t_new: float) -> None:
+        dtau = np.sqrt(t_new) - np.sqrt(t_old)
+        g_new = self._g(x, self.z, t_new)
+        g_old = g_new if self.g_old is None else self.g_old
+        z_pred = self.z + dtau * 0.5 * (g_old + g_new)
+        g_new = self._g(x, z_pred, t_new)  # one corrector pass at the predicted position
+        g_old = g_new if self.g_old is None else self.g_old
+        self.z = self.z + dtau * 0.5 * (g_old + g_new)
+        self.g_old = self._g(x, self.z, t_new)

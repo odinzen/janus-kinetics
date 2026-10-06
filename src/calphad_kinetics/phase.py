@@ -8,7 +8,7 @@ import numpy as np
 from pycalphad import Database
 
 from ._lattice import SubstitutionalLattice
-from .diffusivity import number_fixed_matrix, volume_fixed_matrix
+from .diffusivity import intrinsic_matrix, lattice_velocity, number_fixed_matrix, volume_fixed_matrix
 from .mobility import MobilityModel
 from .thermo import GibbsEnergy, check_stability, dmu_dx, reduced_hessian, thermodynamic_factor
 
@@ -68,6 +68,18 @@ class SolutionPhase:
 
     def mobility(self, x, T, magnetic_factor=1.0) -> np.ndarray:
         return self.mobility_model.mobility(self._x(x), T, magnetic_factor)
+
+    def intrinsic_matrix(self, x, T, magnetic_factor=1.0) -> np.ndarray:
+        """Lattice-frame diffusivities D^I_kj in m^2/s, shape (..., n, n-1)."""
+        x = self._x(x)
+        return intrinsic_matrix(x, self.mobility_model.mobility(x, T, magnetic_factor), self.dmu_dx(x, T))
+
+    def lattice_velocity(self, x, dx_dz, T, magnetic_factor=1.0) -> np.ndarray:
+        """Kirkendall (marker) velocity relative to the number-fixed frame, m/s.
+
+        ``dx_dz`` are the independent mole-fraction gradients (1/m), shape (..., n-1).
+        """
+        return lattice_velocity(self.intrinsic_matrix(x, T, magnetic_factor), np.asarray(dx_dz, dtype=float))
 
     def interdiffusion_matrix(
         self,
