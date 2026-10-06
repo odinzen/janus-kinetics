@@ -31,10 +31,12 @@ class MobilityModel:
     """Andersson-Agren atomic mobilities M_B(x, T) for one substitutional phase.
 
     Phi_B = sum_i x_i Phi_B^i + sum_{i<j} x_i x_j sum_r Phi_B^{ij,r} (x_i - x_j)^r
-    + ternary terms, with M_B = exp(Phi_B / RT) / RT. Equations from Andersson and
-    Agren, J. Appl. Phys. 72 (1992) 1350; the ternary term with
-    v_ijk^s = x_s + (1 - x_i - x_j - x_k)/3 and the split Phi_B = RT Theta_B - Q_B
-    follow eqs. (3)-(6) of Jonsson, ISIJ Int. 35 (1995) 1415.
+    + ternary terms, the expansion of eq. (67) in Andersson and Agren, J. Appl.
+    Phys. 72 (1992) 1350. The ternary term with v_ijk^s = x_s + (1 - x_i - x_j - x_k)/3,
+    the split Phi_B = RT Theta_B - Q_B and M_B = exp(Phi_B / RT) / RT are eqs.
+    (3)-(6) of Jonsson, ISIJ Int. 35 (1995) 1415. Andersson and Agren's eq. (66)
+    writes the mobility without the 1/RT; the MQ/MF database convention follows
+    Jonsson.
 
     Every diffusing element must have an end-member parameter (MQ or MF) in every
     pure element of the system, otherwise Phi_B would silently fall to zero near

@@ -33,6 +33,14 @@ def test_ideal_binary_is_darken(ideal_db):
     np.testing.assert_allclose(d, (1 - xa) * dstar[:, 0] + xa * dstar[:, 1], rtol=1e-11)
 
 
+def test_dilute_limit_is_tracer_diffusivity(ideal_db):
+    """As x_A -> 0 the Darken form gives D~ = D*_A in pure B, finite despite RT/x_A in G''."""
+    phase = SolutionPhase(ideal_db, "SOL", ["A", "B"])
+    d = phase.interdiffusion_matrix(np.array([[0.0], [1e-9]]), T)[:, 0, 0]
+    dstar_pure_b = phase.mobility_model.tracer_diffusivity(np.array([0.0, 1.0]), T)[0]
+    np.testing.assert_allclose(d, dstar_pure_b, rtol=1e-8)
+
+
 def test_volume_frame_with_equal_volumes_is_number_frame(regular_db):
     phase = SolutionPhase(regular_db, "SOL", ["A", "B", "C"])
     dn = phase.interdiffusion_matrix(X, T)

@@ -28,7 +28,7 @@ Implemented and tested:
   inside a miscibility gap or two-phase field and needs a multiphase model, which
   this version does not have.
 
-Validation (`pytest`, 36 tests pass, 3 skipped):
+Validation (`pytest`, 38 tests pass, 3 skipped):
 
 - error-function solutions for a binary step couple, a fixed-surface
   semi-infinite medium, a graded grid, a diagonal ternary, and a coupled
@@ -45,9 +45,9 @@ Validation (`pytest`, 36 tests pass, 3 skipped):
 
 Not yet in this version:
 
-- the ferromagnetic mobility factor of Jonsson (1994). `mobility()` accepts a
-  `magnetic_factor` multiplier, but its formula is not implemented until the
-  source is checked;
+- the ferromagnetic mobility factor of Jonsson (Z. Metallkd. 83, 1992, 349).
+  `mobility()` accepts a `magnetic_factor` multiplier, but its formula is not
+  implemented until the original paper is checked;
 - benchmarks against measured interdiffusion matrices (Cu-Ni-Zn) and against
   Jonsson's chemical diffusivities, which need data not yet in hand;
 - phases with interstitial elements or vacancies on the substitutional sublattice;

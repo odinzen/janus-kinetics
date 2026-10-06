@@ -118,6 +118,21 @@ def test_spinodal_raises_named_error(gap_db):
     phase.dmu_dx(np.array([[0.05]]), T)
 
 
+def test_stability_threshold_is_exactly_the_spinodal(gap_db):
+    """Regular binary spinodal at x(1-x) = RT / (2 L0); probe 1e-3 either side of it.
+
+    Just inside, G'' is only a few hundred J/mol below zero, so any slack in the
+    zero threshold lets a spinodal composition through.
+    """
+    phase = SolutionPhase(gap_db, "SOL", ["A", "B"])
+    xs = 0.5 * (1 - np.sqrt(1 - 2 * R * T / 30000.0))
+    inside, outside = np.array([[xs + 1e-3]]), np.array([[xs - 1e-3]])
+    assert -1e3 < phase.reduced_hessian(inside, T).min() < 0
+    with pytest.raises(UnstableCompositionError):
+        phase.dmu_dx(inside, T)
+    phase.dmu_dx(outside, T)
+
+
 def test_reduced_hessian_helpers_shape():
     h = np.arange(16.0).reshape(4, 4)
     h = h + h.T
