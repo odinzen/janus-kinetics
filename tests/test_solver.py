@@ -44,7 +44,7 @@ def couple_error(n_cells, n_steps):
 
 def test_binary_constant_d_matches_erf():
     err = couple_error(400, 400)
-    assert err < 2e-3, err
+    assert err < 5e-4, err
 
 
 def test_binary_error_falls_with_refinement():
@@ -61,7 +61,7 @@ def test_fixed_surface_composition_matches_erf():
     x0 = np.full((400, 1), xi)
     res = solve_planar(faces, x0, D, T_END, T_END / 400, left=Boundary.fixed([xs]))
     exact = xs + (xi - xs) * erf(z / (2 * np.sqrt(D * T_END)))
-    assert np.max(np.abs(res.x[-1, :, 0] - exact)) < 2e-3
+    assert np.max(np.abs(res.x[-1, :, 0] - exact)) < 5e-4
 
 
 def test_diagonal_ternary_matches_independent_erfs():
@@ -71,7 +71,7 @@ def test_diagonal_ternary_matches_independent_erfs():
     res = solve_planar(faces, x0, d, T_END, T_END / 400)
     for k in range(2):
         exact = erf_couple(z, T_END, d[k, k], left[k], right[k])
-        assert np.max(np.abs(res.x[-1, :, k] - exact)) < 2e-3
+        assert np.max(np.abs(res.x[-1, :, k] - exact)) < 5e-4
 
 
 def test_coupled_constant_ternary_matches_eigen_solution():
@@ -86,7 +86,7 @@ def test_coupled_constant_ternary_matches_eigen_solution():
     ul, ur = np.linalg.solve(vec, left), np.linalg.solve(vec, right)
     u = np.column_stack([erf_couple(z, T_END, lam[k], ul[k], ur[k]) for k in range(2)])
     exact = u @ vec.T
-    assert np.max(np.abs(res.x[-1] - exact)) < 1.5e-3
+    assert np.max(np.abs(res.x[-1] - exact)) < 5e-4
     # the uphill feature that makes this case a real coupling test
     assert np.ptp(exact[:, 1]) > abs(left[1] - right[1])
 
@@ -150,7 +150,7 @@ def test_nonlinear_profile_obeys_boltzmann_scaling():
     late = res.x[2, :, 0]
     late_at_scaled = np.interp(2 * z, z, late)  # x(2z, 4t) should equal x(z, t)
     inner = np.abs(z) < half / 2
-    assert np.max(np.abs(late_at_scaled[inner] - early[inner])) < 5e-3
+    assert np.max(np.abs(late_at_scaled[inner] - early[inner])) < 1.5e-3
     # and the profile is genuinely asymmetric, so D(x) mattered
     exact_const = erf_couple(z, 1e5, 1e-15 * np.exp(2.0), 0.9, 0.1)
     assert np.max(np.abs(early - exact_const)) > 0.02
@@ -168,3 +168,13 @@ def test_picard_failure_is_reported():
     faces, z, x0 = step_couple(50, np.array([0.9]), np.array([0.1]))
     with pytest.raises(ConvergenceError):
         solve_planar(faces, x0, dfun, 1e5, 1e5, max_picard=2)
+
+
+def test_graded_grid_matches_erf():
+    """Cells refined toward the fixed surface; the face-flux form must stay accurate."""
+    xs, xi = 0.9, 0.3
+    faces = HALF * np.linspace(0.0, 1.0, 301) ** 1.5
+    z = 0.5 * (faces[1:] + faces[:-1])
+    res = solve_planar(faces, np.full((300, 1), xi), D, T_END, T_END / 400, left=Boundary.fixed([xs]))
+    exact = xs + (xi - xs) * erf(z / (2 * np.sqrt(D * T_END)))
+    assert np.max(np.abs(res.x[-1, :, 0] - exact)) < 5e-4
