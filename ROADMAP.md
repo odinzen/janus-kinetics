@@ -21,6 +21,11 @@ passes. Every reference is checked against Crossref by tools/check_references.py
   for constant partial molar volumes (planar solver, in concentrations). Partial
   volumes that vary with composition, and the other solvers, still use one V_m.
 - Adaptive time stepping.
+- Oxides: cation tracer and chemical diffusion done (OxideCationDiffusion,
+  Hallstrom et al. 2011). Open: their Figs. 4 and 7-8, which need Sundman's (1991)
+  and Kjellqvist et al.'s (2008) descriptions; oxygen diffusion and scale growth
+  (Hallstrom et al., Solid State Ionics 240 (2013) 41); the general sublattice
+  formalism of Agren (1982).
 - Ordered B2 phases: done for mobilities and diffusivities at a point (B2Phase,
   Helander and Agren 1999). Open: the Al-rich vacancy range (0.3 decades off their
   Fig. 2 with Ansara's own B2 model as well as Dupin's reformulation, so the cause

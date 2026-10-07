@@ -53,6 +53,10 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
 - **Ordered B2 phases** (NiAl, FeAl): the ordering contribution to the activation
   energy from the equilibrium site fractions (Helander and Agren 1999), with tracer
   and chemical diffusivities that reproduce their Al-Ni figures on the Ni-rich side.
+- **Cation diffusion in non-stoichiometric oxides** (magnetite, hematite): tracer
+  and chemical diffusivities of the metal as functions of temperature and oxygen
+  pressure, from vacancy jumps on the sublattices of a Calphad oxide description
+  (Hallstrom, Hoglund and Agren 2011).
 - **Homogenization model** for diffusion through multiphase mixtures (Larsson and
   Hoglund 2009), with local equilibrium tabulated up front for binaries and
   ternaries or computed on demand for any number of elements (their section 2.5).
@@ -81,7 +85,7 @@ pip install -e . --no-deps
 pytest
 ```
 
-The test suite (278 tests, plus 3 skipped for data that is not available) takes
+The test suite (284 tests, plus 5 skipped for data that is not available) takes
 about five minutes. On Windows run inside the activated environment, since
 numpy's MKL libraries are only found on the activated path.
 

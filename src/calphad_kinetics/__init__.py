@@ -23,6 +23,7 @@ from .datasets import campbell2002_fcc_ni, helander1999_bcc_alni, jonsson1995_bc
 from .errors import ConvergenceError, MissingParameterError, UnstableCompositionError, UnsupportedPhaseError
 from .mobility import MobilityModel
 from .ordered import B2Phase, ordering_energy
+from .oxides import JumpPath, OxideCationDiffusion
 from .moving_boundary import (
     FixedInterface,
     Layer,
@@ -61,6 +62,7 @@ __all__ = [
     "FixedInterface",
     "GibbsEnergy",
     "InterstitialPhase",
+    "JumpPath",
     "Kinetics",
     "Layer",
     "LineCompound",
@@ -70,6 +72,7 @@ __all__ = [
     "MobilityModel",
     "MovingBoundaryResult",
     "OnDemandEquilibriumTable",
+    "OxideCationDiffusion",
     "ParabolicGrowth",
     "PhaseDissolvedError",
     "PrecipitationResult",

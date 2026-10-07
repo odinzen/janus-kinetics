@@ -404,6 +404,28 @@ Eq. 12: dQ^ord (J/mol) of ``element`` for site fractions y_a, y_b over ``constit
 ``terms`` maps (k, i, j) to dQ^order_kij, with i and j in either order. The two
 sublattices must have equal site numbers, as in B2, so x_i = (y_i^a + y_i^b) / 2.
 
+## `calphad_kinetics.oxides`
+
+### `class JumpPath(sublattice: 'int', mobility: 'Callable[[float], float]') -> None`
+
+Jumps of the metal into vacancies of sublattice ``sublattice`` (index in the phase), with
+mobility ``mobility(T)`` in m^2 mol / (J s).
+
+
+### `class OxideCationDiffusion(db: 'Database', phase: 'str', paths: 'Sequence[JumpPath]', metal: 'str' = 'FE', anion: 'str' = 'O')`
+
+Metal diffusion in an oxide phase by vacancy jumps on the given sublattices.
+
+``metal`` and ``anion`` are element names (e.g. "FE" and "O"); every constituent
+of the metal (its ions) counts as the metal on a sublattice. The oxygen
+potential is given as a partial pressure of O2 relative to the database's gas
+standard state (1 bar for the usual R*T*LN(1E-05*P) term), using its GAS phase.
+
+- `chemical_diffusivity(self, T: 'float', p_o2: 'float', step: 'float' = 0.02) -> 'float'`: D_M = (D*_M / RT) n_M dmu_M/dn_M (eq. 9) in m^2/s, the derivative taken along the
+- `oxygen_potential(self, T: 'float', p_o2: 'float') -> 'float'`: mu_O (J/mol) of O2 gas at T and partial pressure p_o2, from the database's GAS phase.
+- `state(self, T: 'float', p_o2: 'float') -> 'dict'`: Site fractions keyed (sublattice, species), metal per anion site n_M, chemical potentials and mole fractions.
+- `tracer_diffusivity(self, T: 'float', p_o2: 'float') -> 'float'`: D*_M in m^2/s, eq. (7) (eq. (13) for a single path).
+
 ## `calphad_kinetics.particle_reaction`
 
 ### `def conversion(t, growth_constant: 'float | Callable[[float], float]', radius: 'float', z: 'float', geometry: 'Geometry', temperature: 'Temperature | None' = None) -> 'np.ndarray'`

@@ -221,6 +221,28 @@ Ansara (1997) (Al,Ni)(Ni,Va) model they used and with Dupin's (2001)
 reformulation of it; their treatment of vacancies in the mobility is not spelled
 out, and the module warns there.
 
+## Cation diffusion in non-stoichiometric oxides
+
+A metal ion moves by jumping into a vacant site of a sublattice it shares with
+vacancies, so its flux follows the defect structure that the oxygen potential
+sets (Hallstrom, Hoglund and Agren 2011, eqs. 3 and 13). For jump paths s with
+a_s sites per a_O anion sites,
+
+    J_M = -sum_s (a_s / a_O) y_Va^s y_M^s M_s (1 / V_m) dmu_M/dz
+    D*_M = RT sum_s (a_s / a_O) y_Va^s y_M^s M_s / n_M                (eq. 7)
+    D_M = (D*_M / RT) n_M dmu_M/dn_M                                 (eq. 9)
+
+with n_M the metal per anion site. Magnetite has two paths, the normal
+octahedral sites (vacancies at high p_O2) and the extra octahedral sites
+(interstitial Fe at low p_O2), which gives the minimum of D* against p_O2;
+hematite has one. Site fractions and potentials come from pycalphad at the
+oxygen potential of O2 at the given partial pressure, and the derivative of eq. 9
+is taken along that potential, which converges far better than differences in
+composition over magnetite's narrow range. The shipped mobilities are those of
+the paper (eqs. 10-11 and 14); they belong with the thermodynamic descriptions
+they were fitted to, Sundman (1991) for magnetite and Kjellqvist et al. (2008)
+for hematite, and comparisons with the paper's figures wait for those.
+
 ## Homogenization
 
 Each cell is in local equilibrium at its overall composition, so it has one set

@@ -29,6 +29,8 @@ First version.
 - Homogenization with local equilibrium computed on demand (Larsson and Hoglund
   2009, section 2.5), so multiphase diffusion runs with four or more elements,
   and their optional ideal flux term against oscillations (section 2.4, eq. 13).
+- Cation diffusion in non-stoichiometric oxides (Hallstrom, Hoglund and Agren
+  2011), with their magnetite and hematite mobilities.
 - Ordered B2 phases (Helander and Agren 1999) with the Al-Ni parameters, checked
   against their Figs. 2 and 7.
 - Mobility and thermodynamic databases may declare vacancy-only sublattices
