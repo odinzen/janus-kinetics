@@ -96,6 +96,10 @@ class SolutionPhase:
         check_stability(x, g2, self.elements)
         return dmu_dx(x, g2)
 
+    def chemical_potentials(self, x, T) -> np.ndarray:
+        """Chemical potentials of every element in J/mol, shape (..., n)."""
+        return self.gibbs.chemical_potentials(self._x(x), T)
+
     def thermodynamic_factor(self, x, T) -> np.ndarray:
         """Dimensionless (x_i/RT) dmu_i/dx_j, shape (..., n, n-1)."""
         x = self._x(x)

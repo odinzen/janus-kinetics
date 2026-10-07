@@ -31,9 +31,11 @@ class GibbsEnergy:
             raise ValueError(f"unresolved symbols in GM of {lattice.phase_name}: {leftover}")
         xs = list(lattice.x_symbols)
         n = len(xs)
-        hess = [gm.diff(xs[i]).diff(xs[j]) for i in range(n) for j in range(i, n)]
+        grad = [gm.diff(x) for x in xs]
+        hess = [grad[i].diff(xs[j]) for i in range(n) for j in range(i, n)]
         args = xs + [v.T]
         self._gm = se.Lambdify(args, [gm], cse=True)
+        self._grad = se.Lambdify(args, grad, cse=True)
         self._hess = se.Lambdify(args, hess, cse=True)
         self._upper = np.triu_indices(n)
 
@@ -45,6 +47,18 @@ class GibbsEnergy:
     def gm(self, x: np.ndarray, T) -> np.ndarray:
         """Molar Gibbs energy at full mole fractions ``x`` (..., n)."""
         return self._gm(self._args(x, T))[..., 0]
+
+    def chemical_potentials(self, x: np.ndarray, T) -> np.ndarray:
+        """mu_i = G + dG/dx_i - sum_k x_k dG/dx_k in J/mol, shape (..., n).
+
+        The partial derivatives are of G extended off the simplex as pycalphad writes
+        it; the combination is independent of that extension because sum_k x_k = 1.
+        """
+        x = np.asarray(x, dtype=float)
+        args = self._args(x, T)
+        g = self._gm(args)[..., :1]
+        grad = self._grad(args)
+        return g + grad - (x * grad).sum(axis=-1, keepdims=True)
 
     def hessian(self, x: np.ndarray, T) -> np.ndarray:
         """Unconstrained second derivatives d2GM/dx_i dx_j, shape (..., n, n).
