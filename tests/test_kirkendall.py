@@ -133,3 +133,13 @@ def test_van_loo_eq11_recovers_both_intrinsic_diffusivities(couple):
 def test_tracking_requires_a_velocity():
     with pytest.raises(ValueError, match="lattice_velocity"):
         solve_planar(uniform_faces(1.0, 4), np.zeros((4, 1)), 1.0, 1.0, 0.5, markers=[0.5])
+
+
+def test_eq_12_reduces_to_eq_11_at_constant_molar_volume(couple):
+    from calphad_kinetics.couple_analysis import intrinsic_from_profile
+
+    res, z, t_end = couple
+    zk = res.markers[-1, 0]
+    xa = res.x[-1, :, 0]
+    for profile in (xa, 1 - xa):
+        assert intrinsic_from_profile(z, profile, t_end, zk) == pytest.approx(van_loo_eq11(z, profile, zk, t_end), rel=1e-9)

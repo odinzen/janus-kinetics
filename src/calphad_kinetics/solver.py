@@ -279,8 +279,9 @@ def solve_planar(
         evaluated at the end of each step, which runs a non-isothermal anneal;
         ``phase.interdiffusion_function(schedule)`` builds one.
     dt : maximum time step (s); steps are shortened to land on ``save_times``.
-    picard_tol : convergence threshold on the max change in mole fraction
-        between Picard iterates.
+    picard_tol : convergence threshold on the max change in the variables between
+        Picard iterates, relative to their largest initial magnitude when that
+        exceeds 1 (concentrations in mol/m^3, say); absolute for mole fractions.
     markers : initial positions (m) of inert Kirkendall markers to follow.
     lattice_velocity : callable (x, dx_dz) or (x, dx_dz, t) -> v giving the lattice
         velocity at the interior faces, such as ``lambda x, g: phase.lattice_velocity(x, g, T)``.
@@ -298,6 +299,7 @@ def solve_planar(
         raise ValueError("x0 needs one row per cell")
     dfun, constant = _as_callable(diffusivity)
     asm = _Assembler(z_faces, m)
+    scale = max(1.0, float(np.max(np.abs(x))))
 
     for b in (left, right):
         if b.kind == "fixed" and not callable(b.composition) and b.composition.size != m:
@@ -354,7 +356,7 @@ def solve_planar(
             a, rhs_bc = step_matrix(xk.reshape(n_cells, m), step, t_new)
             delta = a.solve(rhs + rhs_bc.ravel() - a @ xk)
             xk = xk + delta
-            change = np.max(np.abs(delta)) if k > 1 else np.inf
+            change = np.max(np.abs(delta)) / scale if k > 1 else np.inf
             if change < picard_tol:
                 return xk.reshape(n_cells, m), k
         raise ConvergenceError(

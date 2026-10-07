@@ -14,9 +14,11 @@ passes. Every reference is checked against Crossref by tools/check_references.py
   (2002) Table 7 tabulates measured fcc Ni-Al-Cr matrices at 1100 C, and their
   mobilities ship with the package; an open fcc Ni-Al-Cr thermodynamic
   description (Dupin, Ansara and Sundman, Calphad 25 (2001) 279) is still needed.
-- Interstitial solutes (C, N) on a vacancy sublattice, with u-fractions in place
-  of mole fractions.
-- Volume-fixed frame in the solver, with a composition-dependent molar volume.
+- Interstitial solutes (C, N, O) on a vacancy sublattice, with u-fractions in place
+  of mole fractions: done (InterstitialPhase, Andersson and Agren eqs. 62-65).
+- Volume-fixed frame in the solver, with a composition-dependent molar volume: done
+  for constant partial molar volumes (planar solver, in concentrations). Partial
+  volumes that vary with composition, and the other solvers, still use one V_m.
 - Adaptive time stepping.
 
 ## Phase 2. Moving boundaries and microstructure-scale transport (done)

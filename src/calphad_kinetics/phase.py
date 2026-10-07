@@ -11,7 +11,14 @@ from pycalphad import Database
 from tinydb import where
 
 from ._lattice import SubstitutionalLattice
-from .diffusivity import intrinsic_matrix, lattice_velocity, number_fixed_matrix, volume_fixed_matrix
+from .diffusivity import (
+    intrinsic_matrix,
+    lattice_velocity,
+    number_fixed_matrix,
+    to_mole_fractions,
+    volume_fixed_lattice_velocity,
+    volume_fixed_matrix,
+)
 from .mobility import MobilityModel
 from .schedule import Temperature, temperature_at
 from .thermo import GibbsEnergy, check_stability, dmu_dx, reduced_hessian, thermodynamic_factor
@@ -136,12 +143,19 @@ class SolutionPhase:
         x = self._x(x)
         return intrinsic_matrix(x, self._mobility(x, T, magnetic_factor), self._dmu(x, T))
 
-    def lattice_velocity(self, x, dx_dz, T, magnetic_factor=1.0) -> np.ndarray:
-        """Kirkendall (marker) velocity relative to the number-fixed frame, m/s.
+    def lattice_velocity(self, x, gradient, T, magnetic_factor=1.0, partial_volumes=None) -> np.ndarray:
+        """Kirkendall (marker) velocity, m/s.
 
-        ``dx_dz`` are the independent mole-fraction gradients (1/m), shape (..., n-1).
+        Relative to the number-fixed frame, with ``gradient`` the independent
+        mole-fraction gradients (1/m); with ``partial_volumes`` relative to the
+        volume-fixed frame, with ``gradient`` the independent concentration
+        gradients (mol/m^4). Shape (..., n-1) either way.
         """
-        return lattice_velocity(self.intrinsic_matrix(x, T, magnetic_factor), np.asarray(dx_dz, dtype=float))
+        if partial_volumes is None:
+            return lattice_velocity(self.intrinsic_matrix(x, T, magnetic_factor), np.asarray(gradient, dtype=float))
+        x = self._x(x)
+        return volume_fixed_lattice_velocity(x, self._mobility(x, T, magnetic_factor), self._dmu(x, T),
+                                             partial_volumes, gradient)
 
     def interdiffusion_matrix(
         self,
@@ -169,9 +183,29 @@ class SolutionPhase:
         raise ValueError(f"unknown frame {frame!r}")
 
     def interdiffusion_function(self, temperature: Temperature, frame: Frame = "number", partial_volumes=None):
-        """D~ as a function of (x, t) for the solvers, at a constant T or along a schedule."""
+        """D~ as a function of the solver variables and t, at a constant T or along a schedule.
+
+        In the number-fixed frame the variables are the independent mole fractions.
+        In the volume-fixed frame (``partial_volumes`` given) they are the
+        independent concentrations c (mol/m^3), so ``solve_planar`` conserves moles
+        while the molar volume varies with composition; convert with
+        :func:`calphad_kinetics.diffusivity.to_concentrations` and ``to_mole_fractions``.
+        """
+        if frame == "volume":
+            if partial_volumes is None:
+                raise ValueError("the volume-fixed frame needs partial_volumes")
+            vol = np.asarray(partial_volumes, dtype=float)
+            return lambda c, t: self.interdiffusion_matrix(to_mole_fractions(c, vol), temperature_at(temperature, t),
+                                                           "volume", vol)
         return lambda x, t: self.interdiffusion_matrix(x, temperature_at(temperature, t), frame, partial_volumes)
 
-    def lattice_velocity_function(self, temperature: Temperature):
-        """Marker velocity as a function of (x, dx_dz, t), for ``solve_planar(..., lattice_velocity=...)``."""
-        return lambda x, g, t: self.lattice_velocity(x, g, temperature_at(temperature, t))
+    def lattice_velocity_function(self, temperature: Temperature, partial_volumes=None):
+        """Marker velocity as a function of (variables, gradients, t), for ``solve_planar(..., lattice_velocity=...)``.
+
+        The variables are mole fractions, or concentrations when ``partial_volumes`` is given.
+        """
+        if partial_volumes is None:
+            return lambda x, g, t: self.lattice_velocity(x, g, temperature_at(temperature, t))
+        vol = np.asarray(partial_volumes, dtype=float)
+        return lambda c, g, t: self.lattice_velocity(to_mole_fractions(c, vol), g, temperature_at(temperature, t),
+                                                     partial_volumes=vol)

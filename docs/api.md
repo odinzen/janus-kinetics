@@ -8,6 +8,27 @@ Generated from the docstrings by `tools/gen_api.py`; do not edit by hand.
 
 Constant, value `8.3145`.
 
+## `calphad_kinetics.couple_analysis`
+
+### `def interdiffusion_from_profile(z, x, t: 'float', molar_volume=None) -> 'np.ndarray'`
+
+D~ (m^2/s) at every point of the profile ``x`` (mole fraction of one element), eq. 3.
+
+    D~(Y*) = V_m/(2t) (dz/dY)* [ (1 - Y*) int_{-inf}^{z*} Y/V_m dz + Y* int_{z*}^{+inf} (1 - Y)/V_m dz ]
+
+with Y = (N - N^-)/(N^+ - N^-). ``molar_volume`` (m^3/mol) is a constant, or
+an array along z; it cancels when constant (eq. 2). Values where the profile
+is flat (the undisturbed ends) are meaningless, so read D~ inside the zone.
+
+### `def intrinsic_from_profile(z, x, t: 'float', z_marker: 'float', molar_volume=None) -> 'float'`
+
+Intrinsic diffusivity D_i (m^2/s) of the element whose mole fraction is ``x``, at the Kirkendall plane, eq. 12.
+
+    D_i(z_K) = 1/(2t) (dz/dC_i)_K [ N_i^+ int_{-inf}^{z_K} Y/V_m dz - N_i^- int_{z_K}^{+inf} (1 - Y)/V_m dz ]
+
+with C_i = N_i / V_m. Call it with N_A and with 1 - N_A for the two elements of
+a binary. ``z_marker`` is the measured marker position in the same frame as z.
+
 ## `calphad_kinetics.datasets`
 
 ### `def campbell2002_fcc_ni() -> 'Database'`
@@ -63,6 +84,24 @@ D_kj = sum_i (delta_ik - x_k) x_i M_i dmu_i/dx_j, the vacancy-mechanism result
 of Andersson and Agren, J. Appl. Phys. 72 (1992) 1350, eqs. (59)-(60), quoted
 as eq. (2) of Jonsson, ISIJ Int. 35 (1995) 1415. Fluxes follow J_k = -sum_j D_kj dc_j/dz
 with c_j = x_j / V_m and a constant molar volume.
+
+### `def to_concentrations(x: 'np.ndarray', partial_volumes: 'np.ndarray') -> 'np.ndarray'`
+
+Independent concentrations c_k = x_k / V_m (mol/m^3) from all n mole fractions, V_m = sum_i x_i V_i.
+
+### `def to_mole_fractions(c: 'np.ndarray', partial_volumes: 'np.ndarray') -> 'np.ndarray'`
+
+All n mole fractions from the independent concentrations, closing sum_i V_i c_i = 1.
+
+### `def volume_fixed_lattice_velocity(x: 'np.ndarray', mobility: 'np.ndarray', dmu: 'np.ndarray', partial_volumes: 'np.ndarray', dc_dz: 'np.ndarray') -> 'np.ndarray'`
+
+Lattice (marker) velocity relative to the volume-fixed frame, m/s.
+
+With sum_k V_k J_k = 0 in that frame and J_k = J'_k + c_k v (van Loo, Prog.
+Solid State Chem. 20 (1990) 47, eqs. 4 and 6), v = -sum_k V_k J'_k, where the
+lattice flux is J'_k = -c_k M_k dmu_k/dz. In a binary this is van Loo's eq. 9,
+v = V_A (D_A - D_B) dc_A/dz. ``dc_dz`` holds the independent concentration
+gradients (mol/m^4), shape (..., n-1).
 
 ### `def volume_fixed_matrix(x: 'np.ndarray', mobility: 'np.ndarray', dmu: 'np.ndarray', partial_volumes: 'np.ndarray') -> 'np.ndarray'`
 
@@ -356,11 +395,11 @@ n mole fractions, in the order of :attr:`elements` (dependent element last).
 
 - `chemical_potentials(self, x, T) -> 'np.ndarray'`: Chemical potentials of every element in J/mol, shape (..., n).
 - `dmu_dx(self, x, T) -> 'np.ndarray'`: dmu_i/dx_j (dependent eliminated), J/mol, shape (..., n, n-1).
-- `interdiffusion_function(self, temperature: 'Temperature', frame: 'Frame' = 'number', partial_volumes=None)`: D~ as a function of (x, t) for the solvers, at a constant T or along a schedule.
+- `interdiffusion_function(self, temperature: 'Temperature', frame: 'Frame' = 'number', partial_volumes=None)`: D~ as a function of the solver variables and t, at a constant T or along a schedule.
 - `interdiffusion_matrix(self, x, T, frame: 'Frame' = 'number', partial_volumes: 'np.ndarray | None' = None, magnetic_factor=1.0) -> 'np.ndarray'`: Reduced interdiffusion matrix D~ in m^2/s, shape (..., n-1, n-1).
 - `intrinsic_matrix(self, x, T, magnetic_factor=1.0) -> 'np.ndarray'`: Lattice-frame diffusivities D^I_kj in m^2/s, shape (..., n, n-1).
-- `lattice_velocity(self, x, dx_dz, T, magnetic_factor=1.0) -> 'np.ndarray'`: Kirkendall (marker) velocity relative to the number-fixed frame, m/s.
-- `lattice_velocity_function(self, temperature: 'Temperature')`: Marker velocity as a function of (x, dx_dz, t), for ``solve_planar(..., lattice_velocity=...)``.
+- `lattice_velocity(self, x, gradient, T, magnetic_factor=1.0, partial_volumes=None) -> 'np.ndarray'`: Kirkendall (marker) velocity, m/s.
+- `lattice_velocity_function(self, temperature: 'Temperature', partial_volumes=None)`: Marker velocity as a function of (variables, gradients, t), for ``solve_planar(..., lattice_velocity=...)``.
 - `mobility(self, x, T, magnetic_factor=1.0) -> 'np.ndarray'`: Atomic mobilities in m^2 mol / (J s), including any short-circuit paths.
 - `reduced_hessian(self, x, T) -> 'np.ndarray'`: d2G/dx_k dx_j with the dependent element eliminated, J/mol, shape (..., n-1, n-1).
 - `thermodynamic_factor(self, x, T) -> 'np.ndarray'`: Dimensionless (x_i/RT) dmu_i/dx_j, shape (..., n, n-1).
@@ -560,8 +599,9 @@ diffusivity : constant (n-1, n-1) matrix in m^2/s, or a callable mapping
     evaluated at the end of each step, which runs a non-isothermal anneal;
     ``phase.interdiffusion_function(schedule)`` builds one.
 dt : maximum time step (s); steps are shortened to land on ``save_times``.
-picard_tol : convergence threshold on the max change in mole fraction
-    between Picard iterates.
+picard_tol : convergence threshold on the max change in the variables between
+    Picard iterates, relative to their largest initial magnitude when that
+    exceeds 1 (concentrations in mol/m^3, say); absolute for mole fractions.
 markers : initial positions (m) of inert Kirkendall markers to follow.
 lattice_velocity : callable (x, dx_dz) or (x, dx_dz, t) -> v giving the lattice
     velocity at the interior faces, such as ``lambda x, g: phase.lattice_velocity(x, g, T)``.

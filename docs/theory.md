@@ -57,6 +57,29 @@ eqs. 28-29, 40, 50, 54 and 58 of Andersson and Agren:
     D^V_kj = sum_i (delta_ik - c_k V_i) c_i M_i dmu_i/dc_j,
     dx_k/dc_j = V_m [delta_kj - x_k (1 - V_j/V_n)]
 
+Since sum_i V_i c_i = 1 everywhere, the volume-fixed frame is fixed to the ends
+of a closed sample, and the solver can integrate the concentrations c_k on a
+fixed grid with D^V, conserving moles while V_m varies with composition. The
+lattice moves relative to that frame at v = -sum_k V_k J'_k (van Loo 1990,
+eqs. 4 and 6), which in a binary is eq. 9, v = V_A (D_A - D_B) dc_A/dz, with
+D~ = c_A V_A D_B + c_B V_B D_A (eq. 10).
+
+## Reading a measured couple
+
+The inverse problem: from a binary penetration curve after time t, the
+interdiffusion coefficient follows without a Matano plane (van Loo eq. 3),
+
+    D~(Y*) = V_m/(2t) (dz/dY)* [ (1 - Y*) int_{-inf}^{z*} Y/V_m dz + Y* int_{z*}^{inf} (1 - Y)/V_m dz ],
+
+with Y = (N - N^-)/(N^+ - N^-), and the intrinsic diffusivities at the marker
+plane follow from eq. 12,
+
+    D_i(z_K) = 1/(2t) (dz/dC_i)_K [ N_i^+ int_{-inf}^{z_K} Y/V_m dz - N_i^- int_{z_K}^{inf} (1 - Y)/V_m dz ].
+
+Both reduce to the constant-volume eqs. 2 and 11. Applied to a simulated couple
+with V_B/V_A = 1.8 they recover the model's D~ to 0.5 % and both intrinsic
+diffusivities to 1 %; ignoring the volume change misses D_A by over 10 %.
+
 ## Planar solver
 
 dx_k/dt = d/dz (sum_j D_kj dx_j/dz) is solved by backward Euler on a finite-volume

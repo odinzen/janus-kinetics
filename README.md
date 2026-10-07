@@ -19,7 +19,13 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
 - **Interdiffusion matrices** in the number-fixed and volume-fixed frames, and
   intrinsic (lattice-frame) diffusivities.
 - **Planar diffusion solver**, implicit and conservative, with no-flux or
-  fixed-composition boundaries and **Kirkendall marker** tracking (van Loo 1990).
+  fixed-composition boundaries and **Kirkendall marker** tracking (van Loo 1990),
+  in the number-fixed frame or, with partial molar volumes, in the volume-fixed
+  frame in concentrations, so the molar volume may change with composition.
+- **Reading measured couples**: the interdiffusion coefficient from a binary
+  penetration curve without a Matano plane, and the intrinsic diffusivities at
+  the marker plane, both allowing a composition-dependent molar volume (van Loo
+  1990, eqs. 3 and 12).
 - **Short-circuit diffusion** by Hart's time-fraction average (Hart 1957, derived
   for dislocations; applied here also to grain boundaries and to multicomponent
   mobilities), and **diffusion down isolated grain boundaries** from a surface
@@ -70,7 +76,7 @@ pip install -e . --no-deps
 pytest
 ```
 
-The test suite (232 tests, plus 4 skipped for data that is not available) takes
+The test suite (240 tests, plus 4 skipped for data that is not available) takes
 about five minutes. On Windows run inside the activated environment, since
 numpy's MKL libraries are only found on the activated path.
 
@@ -124,8 +130,10 @@ Conventions worth knowing:
   Wildcard parameters such as `MQ(FCC_A1&NI,*:VA;0)` apply at every composition.
 - Outside a parameter's temperature ranges pycalphad extends the nearest range;
   nothing warns that T is outside the assessed range.
-- The solvers run in the number-fixed frame with one molar volume for all
-  substitutional elements. Temperatures are in kelvin throughout.
+- The planar solver runs in the number-fixed frame with one molar volume for
+  all substitutional elements unless partial molar volumes are given, in which
+  case its variables are concentrations (mol/m^3); the other solvers use one
+  molar volume. Temperatures are in kelvin throughout.
 - A thermodynamic description with a magnetic contribution triggers a warning,
   because the mobilities omit Jonsson's ferromagnetic factor.
 

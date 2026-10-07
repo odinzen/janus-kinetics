@@ -15,6 +15,9 @@ First version.
 - Non-isothermal anneals along piecewise-linear temperature schedules.
 - Stoichiometric reaction layers in binary couples (Wagner's integrated
   diffusivity, van Loo 1990), checked against van Loo's Ni-Sn and Fe-O analyses.
+- Volume-fixed planar diffusion in concentrations with constant but unequal
+  partial molar volumes, with marker tracking, and analysis of measured binary
+  couples for D~ and the intrinsic diffusivities (van Loo 1990, eqs. 3, 9, 10, 12).
 - Conversion of plates, cylinders and spheres through a reaction layer (van Loo
   1990, eqs. 25-27), including anneal schedules and the inverse for k_p.
 - Homogenization model for multiphase diffusion (binaries and ternaries).
