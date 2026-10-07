@@ -11,10 +11,10 @@ kinetic factors Gamma^phi_k = M^phi_k u^phi_k (their eqs. (2)-(5)):
 The second form is the number-fixed (volume-fixed at equal partial volumes)
 frame of their eq. (3). Gamma* is one of the Wiener or Hashin-Shtrikman bounds,
 eqs. (6)-(11). Local equilibrium comes from :func:`pycalphad.equilibrium` on a
-grid of compositions computed once and interpolated linearly. Larsson and
-Hoglund (section 2.5) fill such a grid on demand instead, because a complete
-table becomes impractical for four or more elements; for the binaries and
-ternaries handled here the complete table is affordable. Their small ideal flux
+grid of compositions, either computed once and interpolated linearly
+(:class:`LocalEquilibriumTable`, binaries and ternaries) or filled on demand as
+in their section 2.5 (:class:`OnDemandEquilibriumTable`, any number of
+elements, since a complete table becomes impractical beyond three). Their small ideal flux
 term against oscillations in multiphase regions (section 2.4, eq. 13) is not
 included.
 
@@ -64,6 +64,15 @@ def average_kinetic_factor(gamma: np.ndarray, fraction: np.ndarray, how: Averagi
     return ref + a / (1.0 - a / (3.0 * ref))
 
 
+def _local_values(phases, T, averaging, phase_names, phase_row, fraction_row, x_rows, mu) -> np.ndarray:
+    """[mu (n), ln Gamma* (n), phase fractions (P)] at one composition from its equilibrium."""
+    present = [(str(ph), f, xp) for ph, f, xp in zip(phase_row, fraction_row, x_rows) if ph and f > 0]
+    gam = np.array([phases[ph].mobility(xp, T) * xp for ph, _, xp in present])
+    frac = np.array([f for _, f, _ in present])
+    fractions = [sum(f for ph, f, _ in present if ph == name) for name in phase_names]
+    return np.concatenate([mu, np.log(average_kinetic_factor(gam, frac / frac.sum(), averaging)), fractions])
+
+
 class LocalEquilibriumTable:
     """Chemical potentials and Gamma* at local equilibrium, tabulated over composition.
 
@@ -90,7 +99,8 @@ class LocalEquilibriumTable:
         self.n = len(self.elements)
         self.m = self.n - 1
         if self.m > 2:
-            raise ValueError("the tabulated local equilibrium is limited to binaries and ternaries")
+            raise ValueError("the tabulated local equilibrium is limited to binaries and ternaries; "
+                             "use OnDemandEquilibriumTable for more elements")
         if spacing is None:
             # the ternary grid grows as 1/spacing^2 and pycalphad cost with it
             spacing = 0.0025 if self.m == 1 else 0.02
@@ -108,20 +118,15 @@ class LocalEquilibriumTable:
         xph = eq.X.squeeze(["N", "P", "T"]).transpose(*dims, "vertex", "component").values[..., comp]
         mu = eq.MU.squeeze(["N", "P", "T"]).transpose(*dims, "component").values[..., comp]
 
-        points, mus, log_gammas, fractions = [], [], [], []
+        points, rows = [], []
         for idx in np.ndindex(mu.shape[:-1]):
             x_ind = np.array([axis[i] for i in idx])
             if x_ind.sum() >= 1.0 - 0.5 * spacing or not np.all(np.isfinite(mu[idx])):
                 continue
-            present = [(str(ph), f, xp) for ph, f, xp in zip(phase[idx], np_[idx], xph[idx]) if ph and f > 0]
-            gam = np.array([phases[ph].mobility(xp, T) * xp for ph, _, xp in present])
-            frac = np.array([f for _, f, _ in present])
             points.append(x_ind)
-            mus.append(mu[idx])
-            log_gammas.append(np.log(average_kinetic_factor(gam, frac / frac.sum(), averaging)))
-            fractions.append([sum(f for ph, f, _ in present if ph == name) for name in self.phase_names])
+            rows.append(_local_values(phases, T, averaging, self.phase_names, phase[idx], np_[idx], xph[idx], mu[idx]))
         self.points = np.array(points)
-        values = np.hstack([np.array(mus), np.array(log_gammas), np.array(fractions)])
+        values = np.array(rows)
         if self.m == 1:
             order = np.argsort(self.points[:, 0])
             xp, vals = self.points[order, 0], values[order]
@@ -175,6 +180,149 @@ class LocalEquilibriumTable:
 
     def admissible(self, x: np.ndarray) -> bool:
         return bool(np.all(x >= self.lower) and np.all(x <= self.upper) and np.all(x.sum(axis=-1) <= self.max_sum))
+
+
+class OnDemandEquilibriumTable:
+    """Local equilibrium computed only where a simulation goes, for any number of elements.
+
+    Larsson and Hoglund (2009, section 2.5): composition space is divided into a
+    grid of step ``spacing``, equilibrium is calculated at a grid node only when a
+    composition near it is first requested, and node results are stored under the
+    node's integer index (their hash table) for reuse. Between nodes, values are
+    interpolated linearly on the Kuhn simplex of the surrounding grid cell, so the
+    potentials are continuous and :meth:`dmu_dx` is the exact slope of that
+    simplex; in a binary and on grid lines this equals the full table of
+    :class:`LocalEquilibriumTable`. Only one temperature is held, as in the paper,
+    where stored data are dropped when T changes. ``calculations`` counts the
+    equilibria made. Nodes need every mole fraction, the dependent one included,
+    to be at least one step from zero.
+    """
+
+    def __init__(
+        self,
+        db: Database,
+        phases: dict[str, SolutionPhase],
+        T: float,
+        averaging: Averaging = "hashin_shtrikman_lower",
+        spacing: float = 0.01,
+        pressure: float = 101325.0,
+    ):
+        orders = {p.elements for p in phases.values()}
+        if len(orders) != 1:
+            raise ValueError(f"phases list different elements or orders: {orders}")
+        if not 0 < spacing < 0.5:
+            raise ValueError("spacing is a mole-fraction step in (0, 0.5)")
+        self.elements = orders.pop()
+        self.n = len(self.elements)
+        self.m = self.n - 1
+        self.db, self.phases, self.T = db, phases, float(T)
+        self.spacing, self.averaging, self.pressure = spacing, averaging, pressure
+        self.phase_names = sorted(phases)
+        self._nodes: dict[tuple[int, ...], np.ndarray] = {}
+        self._last = None
+        self.calculations = 0
+        self._top = int(np.floor(1.0 / spacing + 1e-9)) - 1  # largest index sum keeping the dependent >= one step
+
+    def _valid(self, idx) -> bool:
+        return min(idx) >= 1 and sum(idx) <= self._top
+
+    def _node(self, idx: tuple[int, ...]) -> np.ndarray:
+        stored = self._nodes.get(idx)
+        if stored is not None:
+            return stored
+        if not self._valid(idx):
+            raise ValueError(f"grid node {np.array(idx) * self.spacing} is outside the composition range; "
+                             "use a smaller spacing to reach compositions this close to a pure element")
+        x_node = np.array(idx) * self.spacing
+        conds = {v.T: self.T, v.P: self.pressure, v.N: 1}
+        conds.update({v.X(el): float(xi) for el, xi in zip(self.elements[: self.m], x_node)})
+        eq = equilibrium(self.db, list(self.elements) + ["VA"], self.phase_names, conds)
+        self.calculations += 1
+        comp = [list(eq.component.values).index(el) for el in self.elements]
+        squeeze = [d for d in eq.MU.dims if d not in ("component",)]
+        mu = eq.MU.squeeze(squeeze).values[comp]
+        if not np.all(np.isfinite(mu)):
+            raise ValueError(f"equilibrium failed at grid node {x_node}")
+        phase = eq.Phase.values.reshape(-1)
+        fraction = eq.NP.values.reshape(-1)
+        x_rows = eq.X.values.reshape(-1, len(eq.component))[:, comp]
+        values = _local_values(self.phases, self.T, self.averaging, self.phase_names, phase, fraction, x_rows, mu)
+        self._nodes[idx] = values
+        return values
+
+    def _simplices(self, x):
+        """Kuhn-simplex vertices (M, m+1, m), barycentric weights (M, m+1) and the order in
+        which coordinates step up (M, m) for each composition."""
+        x = np.atleast_2d(np.asarray(x, dtype=float))
+        u = x / self.spacing
+        base = np.floor(u + 1e-12).astype(int)
+        r = np.clip(u - base, 0.0, 1.0)
+        order = np.argsort(-r, axis=1, kind="stable")
+        rs = np.take_along_axis(r, order, axis=1)
+        steps = np.zeros((len(x), self.m + 1, self.m), dtype=int)
+        rows = np.arange(len(x))
+        for k in range(self.m):
+            steps[:, k + 1] = steps[:, k]
+            steps[rows, k + 1, order[:, k]] += 1
+        vertices = base[:, None, :] + steps
+        weights = np.concatenate([1.0 - rs[:, :1], rs[:, :-1] - rs[:, 1:], rs[:, -1:]], axis=1)
+        return vertices, weights, order
+
+    def _gather(self, x, slopes: bool = False):
+        """The simplices of :meth:`_simplices` plus the node values at their vertices (M, m+1, K).
+
+        Values need only the vertices with weight; slopes need the whole simplex.
+        """
+        x = np.atleast_2d(np.asarray(x, dtype=float))
+        # the solver asks for potentials, slopes and Gamma* at the same compositions in turn
+        key = (x.tobytes(), slopes)
+        if self._last is not None and self._last[0] == key:
+            return self._last[1]
+        vertices, weights, order = self._simplices(x)
+        if not slopes:
+            # a composition on a grid line or node gives some vertices zero weight; they may
+            # lie outside the grid, so stand the first vertex in for them
+            vertices = np.where((weights == 0.0)[:, :, None], vertices[:, :1, :], vertices)
+        keys, inverse = np.unique(vertices.reshape(-1, self.m), axis=0, return_inverse=True)
+        table = np.array([self._node(tuple(int(i) for i in key)) for key in keys])
+        result = vertices, weights, order, table[inverse.reshape(-1)].reshape(len(x), self.m + 1, -1)
+        self._last = (key, result)
+        return result
+
+    def _values(self, x) -> np.ndarray:
+        _, weights, _, node_values = self._gather(x)
+        return np.einsum("mv,mvk->mk", weights, node_values)
+
+    def chemical_potentials(self, x) -> np.ndarray:
+        """mu_k at local equilibrium, J/mol, shape (M, n); x holds independent fractions (M, n-1)."""
+        return self._values(x)[:, : self.n]
+
+    def kinetic_factor(self, x) -> np.ndarray:
+        """Gamma*_k in m^2 mol / (J s), shape (M, n), from ln Gamma* interpolated linearly."""
+        return np.exp(self._values(x)[:, self.n : 2 * self.n])
+
+    def phase_fractions(self, x) -> dict[str, np.ndarray]:
+        """Mole fraction of each phase at local equilibrium, keyed by phase name."""
+        vals = self._values(x)[:, 2 * self.n :]
+        return {name: vals[:, i] for i, name in enumerate(self.phase_names)}
+
+    def dmu_dx(self, x) -> np.ndarray:
+        """Exact slopes of the interpolated potentials on each point's simplex, shape (M, n, n-1).
+
+        On a grid line the simplex on the upper side is used.
+        """
+        _, _, order, node_values = self._gather(x, slopes=True)
+        mu = node_values[:, :, : self.n]
+        g = np.empty((len(mu), self.n, self.m))
+        rows = np.arange(len(mu))
+        for k in range(self.m):
+            g[rows, :, order[:, k]] = (mu[:, k + 1] - mu[:, k]) / self.spacing
+        return g
+
+    def admissible(self, x: np.ndarray) -> bool:
+        vertices, _, _ = self._simplices(x)
+        base = vertices[:, 0]
+        return bool(np.all(base >= 1) and np.all(vertices.sum(axis=2) <= self._top))
 
 
 class TemperatureTable:
@@ -233,7 +381,7 @@ class _TableAtTemperature:
 def solve_homogenized(
     z_faces: np.ndarray,
     x0: np.ndarray,
-    table: LocalEquilibriumTable | TemperatureTable,
+    table: LocalEquilibriumTable | OnDemandEquilibriumTable | TemperatureTable,
     t_end: float,
     dt: float,
     left: Boundary = Boundary.no_flux(),
@@ -318,6 +466,11 @@ def solve_homogenized(
                 ag = a @ g[c]
                 put(np.array([c]), np.array([c]), ag[None])
                 rhs[c] -= a @ (mu[c] - mub)
+            # rhs is the residual of the discrete balance at xk; once it is below tol in
+            # mole-fraction units the step has converged. This also ends Newton cycling
+            # between two pieces of a piecewise-linear potential, where delta never shrinks.
+            if it > 1 and np.max(np.abs(rhs) / (widths / dt_step)[:, None]) < tol:
+                return xk, it
             mat = sp.csc_matrix((np.concatenate(vals), (np.concatenate(rows), np.concatenate(cols))),
                                 shape=(n_cells * m, n_cells * m))
             delta = spla.spsolve(mat, rhs.ravel()).reshape(n_cells, m)

@@ -12,7 +12,13 @@ from .diffusivity import (
 )
 from .interstitial import InterstitialPhase
 from .grain_boundary import FisherBoundary, boundary_product_from_slope, solve_fisher
-from .homogenization import LocalEquilibriumTable, TemperatureTable, average_kinetic_factor, solve_homogenized
+from .homogenization import (
+    LocalEquilibriumTable,
+    OnDemandEquilibriumTable,
+    TemperatureTable,
+    average_kinetic_factor,
+    solve_homogenized,
+)
 from .datasets import campbell2002_fcc_ni, helander1999_bcc_alni, jonsson1995_bcc_crfeni
 from .errors import ConvergenceError, MissingParameterError, UnstableCompositionError, UnsupportedPhaseError
 from .mobility import MobilityModel
@@ -63,6 +69,7 @@ __all__ = [
     "MissingParameterError",
     "MobilityModel",
     "MovingBoundaryResult",
+    "OnDemandEquilibriumTable",
     "ParabolicGrowth",
     "PhaseDissolvedError",
     "PrecipitationResult",

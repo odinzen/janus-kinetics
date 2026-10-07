@@ -200,6 +200,27 @@ instead of being extrapolated, so pure-element ends need a finer spacing.
 - `kinetic_factor(self, x) -> 'np.ndarray'`: Gamma*_k in m^2 mol / (J s), shape (M, n).
 - `phase_fractions(self, x) -> 'dict[str, np.ndarray]'`: Volume (mole) fraction of each phase at local equilibrium, keyed by phase name.
 
+### `class OnDemandEquilibriumTable(db: 'Database', phases: 'dict[str, SolutionPhase]', T: 'float', averaging: 'Averaging' = 'hashin_shtrikman_lower', spacing: 'float' = 0.01, pressure: 'float' = 101325.0)`
+
+Local equilibrium computed only where a simulation goes, for any number of elements.
+
+Larsson and Hoglund (2009, section 2.5): composition space is divided into a
+grid of step ``spacing``, equilibrium is calculated at a grid node only when a
+composition near it is first requested, and node results are stored under the
+node's integer index (their hash table) for reuse. Between nodes, values are
+interpolated linearly on the Kuhn simplex of the surrounding grid cell, so the
+potentials are continuous and :meth:`dmu_dx` is the exact slope of that
+simplex; in a binary and on grid lines this equals the full table of
+:class:`LocalEquilibriumTable`. Only one temperature is held, as in the paper,
+where stored data are dropped when T changes. ``calculations`` counts the
+equilibria made. Nodes need every mole fraction, the dependent one included,
+to be at least one step from zero.
+
+- `chemical_potentials(self, x) -> 'np.ndarray'`: mu_k at local equilibrium, J/mol, shape (M, n); x holds independent fractions (M, n-1).
+- `dmu_dx(self, x) -> 'np.ndarray'`: Exact slopes of the interpolated potentials on each point's simplex, shape (M, n, n-1).
+- `kinetic_factor(self, x) -> 'np.ndarray'`: Gamma*_k in m^2 mol / (J s), shape (M, n), from ln Gamma* interpolated linearly.
+- `phase_fractions(self, x) -> 'dict[str, np.ndarray]'`: Mole fraction of each phase at local equilibrium, keyed by phase name.
+
 ### `class TemperatureTable(db: 'Database', phases: 'dict[str, SolutionPhase]', temperatures, **table_options)`
 
 Local-equilibrium tables at several temperatures, for anneals along a schedule.
@@ -219,7 +240,7 @@ Larsson and Hoglund (2009): Wiener upper and lower bounds, eqs. (6)-(7), and the
 Hashin-Shtrikman bounds of eqs. (8)-(11), where the reference phase alpha is the
 one with the lowest (lower bound) or highest (upper bound) Gamma_k present.
 
-### `def solve_homogenized(z_faces: 'np.ndarray', x0: 'np.ndarray', table: 'LocalEquilibriumTable | TemperatureTable', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, max_iter: 'int' = 60, temperature: 'Temperature | None' = None) -> 'DiffusionResult'`
+### `def solve_homogenized(z_faces: 'np.ndarray', x0: 'np.ndarray', table: 'LocalEquilibriumTable | OnDemandEquilibriumTable | TemperatureTable', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, max_iter: 'int' = 60, temperature: 'Temperature | None' = None) -> 'DiffusionResult'`
 
 Integrate planar multiphase diffusion with the homogenization model.
 

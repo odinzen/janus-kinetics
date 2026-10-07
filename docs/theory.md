@@ -227,9 +227,19 @@ of chemical potentials whatever phases it holds (Larsson and Hoglund 2009):
 
 Gamma* is a Wiener bound (eqs. 6-7) or a Hashin-Shtrikman bound (eqs. 8-11) of
 the phases' Gamma^phi weighted by their volume fractions. Local equilibrium is
-tabulated once per temperature with `pycalphad.equilibrium` and interpolated
-linearly. The paper (section 2.5) fills such a table on demand instead, because a
-complete one is impractical beyond three elements; its ideal flux term against
+either tabulated once per temperature with `pycalphad.equilibrium` and
+interpolated linearly (binaries and ternaries), or, as in the paper's section
+2.5, computed on demand: composition space is gridded, equilibrium is calculated
+at a node only when a composition near it is first requested, and node results
+are stored under the node's index. Between nodes the values are interpolated on
+the Kuhn simplex of the grid cell, so potentials are continuous and dmu/dx is the
+exact slope of the simplex. A four-element couple needs a few hundred nodes where
+a complete table at the same step would need about 9000, and in a single-phase
+quaternary couple the result approaches the ordinary solver as the step is
+refined (2.1e-3 at 0.02, 4.8e-4 at 0.01, 1.4e-4 at 0.005). A step is accepted
+when its update or its residual, in mole-fraction units, falls below the
+tolerance; the residual test ends Newton cycling between two pieces of the
+piecewise-linear potential. The paper's ideal flux term against
 oscillations (section 2.4, eq. 13) is not included. For anneals in binaries a
 table is built at each of several temperatures; between them chemical potentials
 are interpolated linearly in T and ln Gamma* linearly in 1/T, which is exact for

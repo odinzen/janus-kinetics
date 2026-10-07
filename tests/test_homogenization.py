@@ -12,7 +12,12 @@ import pytest
 from pycalphad import Database
 
 from calphad_kinetics import SolutionPhase, solve_moving_boundary, solve_planar, uniform_faces
-from calphad_kinetics.homogenization import LocalEquilibriumTable, average_kinetic_factor, solve_homogenized
+from calphad_kinetics.homogenization import (
+    LocalEquilibriumTable,
+    OnDemandEquilibriumTable,
+    average_kinetic_factor,
+    solve_homogenized,
+)
 from calphad_kinetics.moving_boundary import LocalEquilibrium
 from test_moving_boundary import TWO_PHASE
 
@@ -201,3 +206,107 @@ def test_single_temperature_table_refuses_a_schedule(binary):
     _, _, table = binary
     with pytest.raises(ValueError, match="TemperatureTable"):
         solve_homogenized(uniform_faces(1e-4, 10), np.full((10, 1), 0.8), table, 1.0, 0.5, temperature=ANNEAL)
+
+
+# ------------------------------------------------------------- local equilibrium on demand (section 2.5)
+
+def quaternary_db():
+    tdb = (TWO_PHASE.replace("ELEMENT C BLANK 1 0 0 !", "ELEMENT C BLANK 1 0 0 !\nELEMENT D BLANK 1 0 0 !")
+           .replace(":A,B,C:", ":A,B,C,D:"))
+    tdb += "".join(f"PARAMETER MQ({ph}&{a},{b};0) 298.15 -150000; 6000 N !\n"
+                   for ph in ("ALPHA", "BETA") for a in "ABCD" for b in "ABCD" if "D" in (a, b))
+    db = Database(tdb)
+    return db, {name: SolutionPhase(db, name, ["A", "B", "C", "D"]) for name in ("ALPHA", "BETA")}
+
+
+def test_on_demand_table_equals_the_full_table_in_a_binary(binary):
+    """On a 1D grid both interpolate linearly between the same nodes, so values agree
+    and a two-phase couple runs identically, with fewer equilibria."""
+    alpha, beta, table = binary
+    od = OnDemandEquilibriumTable(table_db(), {"ALPHA": alpha, "BETA": beta}, T, spacing=0.0025)
+    x = np.array([[0.1234], [0.5011], [0.77777], [0.9013]])
+    np.testing.assert_allclose(od.chemical_potentials(x), table.chemical_potentials(x), rtol=1e-12)
+    np.testing.assert_allclose(od.kinetic_factor(x), table.kinetic_factor(x), rtol=1e-12)
+    faces = uniform_faces(8e-4, 200)
+    z = 0.5 * (faces[1:] + faces[:-1])
+    x0 = np.where(z < 4e-4, 0.8, 0.1)[:, None]
+    full = solve_homogenized(faces, x0, table, 200.0, 1.0)
+    lazy = solve_homogenized(faces, x0, od, 200.0, 1.0)
+    assert np.max(np.abs(full.x[-1] - lazy.x[-1])) < 1e-10
+    assert od.calculations < len(table.points)
+
+
+def table_db():
+    return Database(TWO_PHASE)
+
+
+def test_on_demand_slopes_are_those_of_its_interpolant():
+    db = table_db()
+    phases = {name: SolutionPhase(db, name, ["A", "B", "C"]) for name in ("ALPHA", "BETA")}
+    od = OnDemandEquilibriumTable(db, phases, T, spacing=0.025)
+    x = np.array([[0.4123, 0.2311], [0.7011, 0.1532]])
+    g = od.dmu_dx(x)
+    for j in range(2):
+        e = np.zeros(2)
+        e[j] = 1e-6  # small enough to stay on one simplex
+        fd = (od.chemical_potentials(x + e) - od.chemical_potentials(x - e)) / 2e-6
+        np.testing.assert_allclose(g[:, :, j], fd, rtol=1e-6, atol=1e-6)
+
+
+def test_on_demand_ternary_agrees_with_the_full_table(ternary_run):
+    """At grid nodes the two tables hold the same equilibrium; between nodes they
+    triangulate differently, so the couple differs by less than the grid allows."""
+    table, faces, res = ternary_run
+    db = table_db()
+    phases = {name: SolutionPhase(db, name, ["A", "B", "C"]) for name in ("ALPHA", "BETA")}
+    od = OnDemandEquilibriumTable(db, phases, T, spacing=0.025)
+    nodes = table.points[::37]
+    np.testing.assert_allclose(od.chemical_potentials(nodes), table.chemical_potentials(nodes), rtol=1e-9)
+    z = 0.5 * (faces[1:] + faces[:-1])
+    x0 = np.where(z[:, None] < 4e-4, [0.75, 0.15], [0.10, 0.75])
+    lazy = solve_homogenized(faces, x0, od, 400.0, 2.0)
+    assert np.max(np.abs(lazy.x[-1] - res.x[-1])) < 2e-3
+    inv = lazy.inventory()
+    assert np.max(np.abs(inv - inv[0])) < 1e-12 * np.abs(inv[0]).max()
+    assert od.calculations < len(table.points) / 4
+
+
+def test_quaternary_single_phase_couple_converges_to_the_phase1_solver():
+    """Inside the alpha field the homogenized result must approach the ordinary solver as
+    the composition grid is refined (2.1e-3 at a 0.02 step, 4.8e-4 at 0.01)."""
+    db, phases = quaternary_db()
+    faces = uniform_faces(4e-4, 100)
+    z = 0.5 * (faces[1:] + faces[:-1])
+    x0 = np.where(z[:, None] < 2e-4, [0.80, 0.06, 0.06], [0.62, 0.14, 0.10])
+    ref = solve_planar(faces, x0, lambda x: phases["ALPHA"].interdiffusion_matrix(x, T), 200.0, 1.0, max_picard=300)
+    errors = []
+    for spacing in (0.02, 0.01):
+        od = OnDemandEquilibriumTable(db, phases, T, spacing=spacing)
+        assert np.all(od.phase_fractions(x0[[0, -1]])["ALPHA"] == pytest.approx(1.0))
+        res = solve_homogenized(faces, x0, od, 200.0, 1.0, max_iter=300)
+        errors.append(np.max(np.abs(res.x[-1] - ref.x[-1])))
+    assert errors[1] < 1e-3 and errors[1] < errors[0] / 3
+
+
+def test_quaternary_two_phase_couple_conserves_with_few_equilibria():
+    db, phases = quaternary_db()
+    od = OnDemandEquilibriumTable(db, phases, T, spacing=0.025)
+    faces = uniform_faces(8e-4, 120)
+    z = 0.5 * (faces[1:] + faces[:-1])
+    x0 = np.where(z[:, None] < 4e-4, [0.75, 0.10, 0.05], [0.10, 0.70, 0.10])
+    res = solve_homogenized(faces, x0, od, 400.0, 2.0)
+    inv = res.inventory()
+    assert np.max(np.abs(inv - inv[0])) < 1e-12 * np.abs(inv[0]).max()
+    f = od.phase_fractions(res.x[-1])
+    assert np.all(np.abs(f["ALPHA"] + f["BETA"] - 1) < 1e-9)
+    assert f["ALPHA"].max() > 0.99 and f["BETA"].max() > 0.99  # both phases are in the couple
+    assert od.calculations < 400  # a full table at this step has about 9100 nodes
+
+
+def test_on_demand_refuses_compositions_beyond_its_grid():
+    db = table_db()
+    phases = {name: SolutionPhase(db, name, ["A", "B"]) for name in ("ALPHA", "BETA")}
+    od = OnDemandEquilibriumTable(db, phases, T, spacing=0.05)
+    assert not od.admissible(np.array([[0.02]]))
+    with pytest.raises(ValueError, match="smaller spacing"):
+        od.chemical_potentials(np.array([[0.02]]))

@@ -47,7 +47,9 @@ Each item is validated against the published source named in its docstring.
 - Homogenization model (Larsson and Hoglund 2009). Validated against the phase 1
   solver and the sharp-interface solver; the paper's multiphase examples use
   commercial databases and are not reproduced. Local equilibrium is tabulated
-  once per temperature, so it is limited to binaries and ternaries.
+  once per temperature for binaries and ternaries, or computed on demand (their
+  section 2.5) for any number of elements, checked in a quaternary against the
+  phase 1 solver.
 
 Stoichiometric reaction layers (added after phase 4): binary couples of line
 compounds with Wagner's integrated diffusivity (van Loo 1990, eq. 17), lattice
@@ -62,7 +64,8 @@ selection by nucleation are not modelled.
 
 Left for later: graded grids next to a moving interface, layers that nucleate
 during a run (today a reaction layer must exist from the start), and an adaptive
-(on-demand) equilibrium table for four or more elements.
+(on-demand) equilibrium table for four or more elements (done: OnDemandEquilibriumTable,
+isothermal only, as in the paper).
 
 ## Phase 3. Precipitation (done for binaries)
 
