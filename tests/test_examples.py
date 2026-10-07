@@ -9,6 +9,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parents[1] / "examples"))
 
 import fe_cr_couple  # noqa: E402
+import oxygen_uptake  # noqa: E402
 import precipitation_table1  # noqa: E402
 import surface_depletion  # noqa: E402
 import thin_film_anneal  # noqa: E402
@@ -72,3 +73,20 @@ def test_thin_film_anneal_follows_the_temperature_schedule():
         np.testing.assert_allclose([res.interface_left[i, 0, 0], res.interface_right[i, 0, 0],
                                     res.interface_left[i, 1, 0], res.interface_right[i, 1, 0]],
                                    [a, b_lo, b_hi, g], atol=2e-4)
+
+
+def test_oxygen_uptake_follows_the_held_potential():
+    """Ideal interstitial: y_O / (1 - y_O) = exp((mu_O - G_M:O + G_M:Va) / RT) at the surface, so the
+    surface holds 0.0645 O per M at 900 K and 0.0360 after cooling to 600 K; cooling then drives some
+    oxygen back out."""
+    from calphad_kinetics import R
+
+    out = oxygen_uptake.run(coarse=True)
+    res, surface = out["result"], out["surface"]
+    for t, temp in ((40.0, 900.0), (80.0, 600.0)):
+        ratio = np.exp((oxygen_uptake.MU_O + 100000.0) / (R * temp))
+        assert surface.face(t, np.array([0.01]), 1)[0][0] == pytest.approx(ratio / (1 + ratio), rel=1e-9)
+    uptake = res.inventory()[:, 0]
+    hold_end = list(res.times).index(70.0)
+    assert np.all(np.diff(uptake[: hold_end + 1]) > 0)
+    assert uptake[-1] < uptake[hold_end]  # outgassing as the surface solubility falls
