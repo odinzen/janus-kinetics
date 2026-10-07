@@ -25,7 +25,7 @@ First version.
   distribution.
 - The fcc Ni-superalloy mobility database of Campbell, Boettinger and Kattner
   (2002), transcribed by a generator and checked against their Tables 3-4,
-  printed values and Figs. 4-5.
+  printed values, Figs. 4-5 and the Ni-Al-Cr matrices of Table 7.
 - Worked examples (including a thin-film stack through a rapid thermal anneal),
   a theory note, a generated API reference and a
   Crossref-checked reference list.

@@ -104,8 +104,36 @@ def test_ni_w_tracer_lines_of_fig4(model, element):
     np.testing.assert_allclose(got, FIG4[element], atol=0.05)
 
 
-@pytest.mark.skip(reason="Campbell et al. Table 7 (p. 788) compares measured Ni-Al-Cr interdiffusion matrices at "
-                         "1100 C with ones calculated from these mobilities and the thermodynamics of Kattner [29] or "
-                         "Saunders [27]; neither is public, and no citable open fcc Ni-Al-Cr assessment is in hand")
+# Table 7 (p. 788), 1e-16 m^2/s, Ni dependent: (D_AlAl, D_CrCr, D_AlCr, D_CrAl) at 1100 C,
+# measured, and calculated by Campbell et al. with Kattner's thermodynamics [29].
+TABLE7 = {
+    (0.06, 0.04): {"measured": (200, 83, 57, 32), "calculated": (170, 65.5, 68.4, 21.5)},
+    (0.075, 0.09): {"measured": (220, 126, 76, 78), "calculated": (227, 85.9, 90.7, 51.2)},
+}
+
+
 def test_ni_al_cr_matrices_against_table7():
-    pass
+    """Table 7 needs a Ni-Al-Cr Gibbs energy. Kattner's [29] is not public; this uses
+    the Al-Co-Cr-Ni test database that ships with pycalphad (alcocrni.tdb, CRALDAD
+    v1 by Liu, Gheno, Lindwall and Lindahl, marked for testing only). With the same
+    mobilities, only the thermodynamic factor differs from Campbell's calculation,
+    and the matrices agree with it to within 6 %; the allowance is 8 %. Against the
+    measured matrices Campbell's calculation is off by up to a factor of 1.52 and
+    this one by up to 1.61 (D_CrAl, both low); the check allows 1.7."""
+    from importlib.resources import files
+
+    from pycalphad import Database
+
+    from calphad_kinetics import SolutionPhase
+
+    path = files("pycalphad") / "tests" / "databases" / "alcocrni.tdb"
+    if not path.is_file():
+        pytest.skip("pycalphad's alcocrni.tdb test database is not installed")
+    with pytest.warns(UserWarning, match="magnetic"):  # fcc Ni is paramagnetic at 1373 K
+        phase = SolutionPhase(Database(str(path)), "FCC_A1", ["AL", "CR", "NI"], mobility_db=campbell2002_fcc_ni())
+    for (x_al, x_cr), ref in TABLE7.items():
+        d = phase.interdiffusion_matrix(np.array([x_al, x_cr]), 1373.15) * 1e16
+        ours = np.array([d[0, 0], d[1, 1], d[0, 1], d[1, 0]])
+        np.testing.assert_allclose(ours, ref["calculated"], rtol=0.08)
+        ratio = ours / np.array(ref["measured"])
+        assert np.all((ratio > 1 / 1.7) & (ratio < 1.7)), ratio

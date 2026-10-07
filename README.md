@@ -76,7 +76,7 @@ pip install -e . --no-deps
 pytest
 ```
 
-The test suite (240 tests, plus 4 skipped for data that is not available) takes
+The test suite (241 tests, plus 3 skipped for data that is not available) takes
 about five minutes. On Windows run inside the activated environment, since
 numpy's MKL libraries are only found on the activated path.
 
