@@ -1,9 +1,8 @@
 """Planar implicit solver against closed-form diffusion solutions.
 
-Analytic solutions are from J. Crank, The Mathematics of Diffusion, 2nd ed.
-(Clarendon Press, Oxford, 1975), chapter 2: the step ("extended initial
-distribution") couple in an infinite medium and the semi-infinite medium with
-constant surface concentration.
+The references are the similarity (error-function) solutions of the diffusion
+equation with constant D: a step couple in an infinite medium, and a
+semi-infinite medium whose surface is held at fixed composition.
 """
 
 import numpy as np
@@ -75,7 +74,7 @@ def test_diagonal_ternary_matches_independent_erfs():
 
 
 def test_coupled_constant_ternary_matches_eigen_solution():
-    """Off-diagonal D, decoupled with D = V diag(lambda) V^-1 (Toor, AIChE J. 10, 1964)."""
+    """Off-diagonal constant D: with D = V diag(lambda) V^-1 the combinations V^-1 x obey independent erf solutions."""
     d = np.array([[1.0e-14, 2.0e-15], [5.0e-15, 4.0e-15]])
     lam, vec = np.linalg.eig(d)
     assert np.all(lam.real > 0) and np.allclose(lam.imag, 0)

@@ -37,7 +37,7 @@ GRID = np.array([[0.2, 0.3, 0.5], [0.7, 0.2, 0.1], [0.1, 0.1, 0.8], [0.45, 0.45,
 
 
 def phi_a_by_hand(x, T):
-    """Phi_A written out term by term from Andersson and Agren (1992) with the Muggianu ternary term."""
+    """Phi_A written out term by term: Andersson and Agren (1992) eq. (67) plus the ternary term of Jonsson (1995) eq. (5)-(6)."""
     xa, xb, xc = x
     mq = xa * -100000 + xb * -120000 + xc * -90000
     mq += xa * xb * (11000 + (-7000 + 2 * T) * (xa - xb) + 3000 * (xa - xb) ** 2)

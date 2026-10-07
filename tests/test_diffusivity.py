@@ -24,7 +24,7 @@ def test_ideal_reduces_to_darken_form(ideal_db):
 
 
 def test_ideal_binary_is_darken(ideal_db):
-    """For a binary D~ = x_B D*_A + x_A D*_B (Darken 1948)."""
+    """For an ideal binary D~ = x_B D*_A + x_A D*_B (van Loo, Prog. Solid State Chem. 20 (1990) 47, eq. 10)."""
     phase = SolutionPhase(ideal_db, "SOL", ["A", "B"])
     x = np.array([[0.1], [0.5], [0.83]])
     d = phase.interdiffusion_matrix(x, T)[:, 0, 0]

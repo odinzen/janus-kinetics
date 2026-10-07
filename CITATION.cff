@@ -1,9 +1,19 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "calphad-kinetics"
-version: 0.1.0.dev0
+abstract: >-
+  Multicomponent diffusion, moving-boundary, homogenization and precipitation
+  kinetics on top of pycalphad, built from the published models with each
+  equation cited to its source.
+version: 0.1.0
 license: MIT
 type: software
+keywords:
+  - CALPHAD
+  - diffusion
+  - kinetics
+  - precipitation
+  - pycalphad
 authors:
   - family-names: Bustamante
     given-names: Michael E.

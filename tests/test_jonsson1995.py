@@ -108,8 +108,9 @@ def test_fe_tracer_in_pure_cr_against_fig2(model):
     assert np.log10(model.tracer_diffusivity(x, 1e4 / 9.5)[1]) == pytest.approx(-21.15, abs=0.2)
 
 
-@pytest.mark.skip(reason="needs data from B. Jonsson, Z. Metallkd. 85 (1994) 498 and 502, and "
-                         "Z. Metallkd. 83 (1992) 349, which define the ferromagnetic factor mg-Omega; not available locally")
+@pytest.mark.skip(reason="needs the ferromagnetic factor mg-Omega of B. Jonsson, Z. Metallkd. 83 (1992) 349, "
+                         "which ISIJ Int. 35 (1995) 1415 cites for it; the restatement in Helander and Agren, "
+                         "Acta Mater. 47 (1999) 1141, eq. (8), is not dimensionally consistent as printed")
 def test_ferromagnetic_factor():
     pass
 

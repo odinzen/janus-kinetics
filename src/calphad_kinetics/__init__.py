@@ -2,6 +2,7 @@
 
 from .diffusivity import intrinsic_matrix, lattice_velocity, number_fixed_matrix, volume_fixed_matrix
 from .homogenization import LocalEquilibriumTable, average_kinetic_factor, solve_homogenized
+from .datasets import jonsson1995_bcc_crfeni
 from .errors import ConvergenceError, MissingParameterError, UnstableCompositionError, UnsupportedPhaseError
 from .mobility import MobilityModel
 from .moving_boundary import (
@@ -24,7 +25,7 @@ from .precipitation import (
 from .solver import Boundary, DiffusionResult, solve_planar, uniform_faces
 from .thermo import GibbsEnergy, R, dmu_dx, reduced_hessian, thermodynamic_factor
 
-__version__ = "0.1.0.dev0"
+__version__ = "0.1.0"
 
 __all__ = [
     "Boundary",
@@ -50,6 +51,7 @@ __all__ = [
     "dmu_dx",
     "growth_rate",
     "intrinsic_matrix",
+    "jonsson1995_bcc_crfeni",
     "lattice_velocity",
     "nucleation_rate",
     "number_fixed_matrix",

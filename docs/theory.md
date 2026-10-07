@@ -1,0 +1,134 @@
+# Theory
+
+The equations calphad-kinetics implements, with the paper and equation number
+each one comes from. Full references are in [references.md](references.md).
+Compositions are mole fractions x_k of n elements with the dependent element
+last; all phases are substitutional with one molar volume V_m unless stated.
+
+## Atomic mobility
+
+For each diffusing element B the database holds MF = RT ln M0_B and MQ = -Q_B,
+each expanded over composition with end-member values, Redlich-Kister binary
+terms and a ternary term (Andersson and Agren 1992, eq. 67; Jonsson 1995,
+eqs. 5-6):
+
+    Phi_B = sum_i x_i Phi_B^i + sum_{i<j} x_i x_j sum_r Phi_B^{ij,r} (x_i - x_j)^r
+            + sum_{i<j<k} x_i x_j x_k sum_s v_ijk^s Phi_B^{ijk,s},
+    v_ijk^s = x_s + (1 - x_i - x_j - x_k)/3
+
+    M_B = exp((MF_B + MQ_B)/RT) / RT          (Jonsson 1995, eqs. 3-4)
+    D*_B = RT M_B                             (Andersson and Agren 1992, eq. 61)
+
+The ferromagnetic factor of Jonsson's eq. 3 is a caller-supplied multiplier
+(default 1) until its defining paper (Jonsson 1992) is checked. The evaluation
+uses pycalphad's own Redlich-Kister machinery, so interaction parameters follow
+pycalphad's ordering. Constituents are sorted alphabetically, and an odd-order
+term written as `B,A;1` multiplies (x_A - x_B).
+
+## Thermodynamic factor
+
+The molar Gibbs energy G comes symbolically from `pycalphad.Model.GM` and is
+differentiated exactly. With x_n eliminated, the curvature is
+G''_kj = H_kj - H_kn - H_nj + H_nn, and the chemical potentials and their
+derivatives are
+
+    mu_i = G + dG/dx_i - sum_k x_k dG/dx_k
+    dmu_i/dx_j = sum_k (delta_ik - x_k) G''_kj      (j < n)
+
+If G'' is not positive definite the composition lies inside a spinodal and the
+single-phase models stop with `UnstableCompositionError`.
+
+## Interdiffusion
+
+Lattice-fixed fluxes of the vacancy mechanism are J'_k = -c_k M_k grad mu_k
+(Andersson and Agren 1992, eqs. 58 and 62). At constant V_m they define the
+intrinsic diffusivities
+
+    D^I_kj = x_k M_k dmu_k/dx_j
+
+and the number-fixed interdiffusion matrix (eqs. 59-60; quoted as eq. 2 of
+Jonsson 1995)
+
+    D_kj = sum_i (delta_ik - x_k) x_i M_i dmu_i/dx_j
+
+The volume-fixed matrix with constant partial molar volumes V_i follows from
+eqs. 28-29, 40 and 50 of Andersson and Agren:
+
+    D^V_kj = sum_i (delta_ik - c_k V_i) c_i M_i dmu_i/dc_j,
+    dx_k/dc_j = V_m [delta_kj - x_k (1 - V_j/V_n)]
+
+## Planar solver
+
+dx_k/dt = d/dz (sum_j D_kj dx_j/dz) is solved by backward Euler on a finite-volume
+grid, with D at each face from the mean of the neighbouring cells and Picard
+iteration for its composition dependence. The face-flux form conserves the
+inventory of every element exactly under no-flux boundaries.
+
+## Kirkendall markers
+
+The number-fixed and lattice frames are related by J_k = J'_k + c_k v (van Loo
+1990, eq. 4). With sum_k J_k = 0 the lattice velocity is
+
+    v = sum_k sum_j D^I_kj dx_j/dz
+
+which for a binary is v = (D_A - D_B) dx_A/dz (eq. 9). Markers are moved by
+dz/dt = v, integrated in sqrt(t), where the parabolic motion of a couple
+(eq. 5) is constant.
+
+## Short-circuit diffusion
+
+An atom spending a fraction f of its time in fast paths sees
+D_eff = f D_path + (1 - f) D_lattice (Hart 1957, eq. 5). Through D* = RT M the
+same average is applied to every element's mobility.
+
+## Moving interface
+
+Two phases share a planar interface at S(t). Each is solved on its own grid,
+stretched with S, where the face flux is F = J - w x_up for a face moving at w.
+Every independent element satisfies the interface flux balance (Zener 1949,
+eq. 8, for any pair of phases):
+
+    dS/dt (x_R^I - x_L^I) = J_R^I - J_L^I
+
+With local equilibrium the interface compositions also make every chemical
+potential equal across the interface. That is n equations, so in a binary the
+tie-line is fixed and only dS/dt is solved for; with more elements the operating
+tie-line and dS/dt are solved together each step.
+
+## Homogenization
+
+Each cell is in local equilibrium at its overall composition, so it has one set
+of chemical potentials whatever phases it holds (Larsson and Hoglund 2009):
+
+    J_k = -(1/V_S) Gamma*_k dmu_k/dz,       Gamma^phi_k = M^phi_k x^phi_k     (eqs. 2-5)
+
+Gamma* is a Wiener bound (eqs. 6-7) or a Hashin-Shtrikman bound (eqs. 8-11) of
+the phases' Gamma^phi weighted by their volume fractions. Local equilibrium is
+tabulated once per temperature with `pycalphad.equilibrium` and interpolated
+linearly (section 2.5). Face fluxes use the difference of chemical potentials
+between cells, so transport across a phase boundary is driven by the actual
+potential jump.
+
+## Precipitation
+
+Perez, Dumont and Acevedo-Reyes 2008, with eqs. 4, 7 and note 3 as corrected in
+the 2009 corrigendum. Spherical precipitates of solute fraction X^P grow in a
+matrix of solute fraction X.
+
+    X^i(R): (1 - X^P) ln X_A^i(R) + X^P ln X_B^i(R)
+            = (1 - X^P) ln X_A^i + X^P ln X_B^i + R0/R,   R0 = 2 gamma v_at^P / kT   (eq. 9)
+    dg = -(kT/v_at^P) [(1 - X^P) ln((1 - X)/(1 - X^i)) + X^P ln(X/X^i)]
+    R* = -2 gamma / dg,    dG* = 16 pi gamma^3 / (3 dg^2)                        (eq. 1)
+    Z = v_at^P / (2 pi R*^2) sqrt(gamma / kT)                                    (eq. 4, corrected)
+    beta* = 4 pi R*^2 D X / a^4                                                  (eq. 5)
+    dN/dt = N0 Z beta* exp(-dG*/kT) exp(-tau/t),  tau = 4 / (2 pi beta* Z^2)     (eq. 6)
+    R_nuc = R* + (1/2) sqrt(kT / (pi gamma))                                     (eq. 7, corrected)
+    dR/dt = (D/R) (X - X^i(R)) / (alpha X^P - X^i(R)),  alpha = v_at^M / v_at^P  (eq. 10)
+    X0 = alpha f X^P + X (1 - alpha f),  f = (4/3) pi sum N_i R_i^3              (eqs. 21-22)
+
+The driving force is not written out in the paper; the form above is the one
+consistent with eq. 9, since a nucleus of radius R* then has exactly the matrix
+composition at its interface. The size distribution lives in fixed classes that
+exchange particles through upwind fluxes at their edges (eq. 24), solved
+implicitly; steps grow by 10% and are halved when X, R* or the mean radius
+change by more than 1% (section 3.4.1).

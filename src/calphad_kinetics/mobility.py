@@ -9,7 +9,8 @@ The Thermo-Calc style mobility database stores, for each diffusing element B,
 Both are expanded over composition exactly like Gibbs energy parameters, and
 pycalphad already parses them into its Database. This module evaluates them
 through ``pycalphad.Model.redlich_kister_sum`` so the interaction ordering and
-the ternary (Muggianu) convention are the same ones pycalphad uses for L
+the ternary convention, v_ijk^s = x_s + (1 - x_i - x_j - x_k)/3 as in eq. (6) of
+Jonsson, ISIJ Int. 35 (1995) 1415, are the same ones pycalphad uses for L
 parameters (constituents sorted alphabetically).
 """
 

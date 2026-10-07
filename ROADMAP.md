@@ -1,19 +1,18 @@
 # Roadmap
 
-Phases 1 to 3 (this version) cover single-phase and two-phase multicomponent
-diffusion and precipitation. Each phase is built on the published method named for it and is accepted only when
-its listed validation passes. Bibliographic details below are working
-references; they will be checked against Crossref before the release in phase 4.
+Phases 1 to 4 make up version 0.1.0: single-phase and two-phase multicomponent
+diffusion, precipitation, worked examples and documentation. Each model is built
+on the published method named for it and is accepted only when its validation
+passes. Every reference is checked against Crossref by tools/check_references.py.
 
 ## Carried over from phase 1
 
-- Ferromagnetic mobility factor of Jonsson (Z. Metallkd. 85, 1994, 498 and 502;
-  Z. Metallkd. 83, 1992, 349). The hook exists (`magnetic_factor`); the formula
+- Ferromagnetic mobility factor of Jonsson (Z. Metallkd. 83, 1992, 349). The hook exists (`magnetic_factor`); the formula
   goes in once the papers are read, with a test against Jonsson, ISIJ Int. 35
   (1995) 1415, Figs. 5 to 8, which are in the ferromagnetic range.
-- Benchmark against measured Cu-Ni-Zn fcc interdiffusion matrices (Kim, 1982, as
-  named in the plan; citation to be confirmed) once a thermodynamic and mobility
-  description is chosen.
+- Benchmark against measured ternary interdiffusion matrices (for example fcc
+  Cu-Ni-Zn); a source with tabulated matrices and an open thermodynamic and
+  mobility description still has to be found.
 - Interstitial solutes (C, N) on a vacancy sublattice, with u-fractions in place
   of mole fractions.
 - Volume-fixed frame in the solver, with a composition-dependent molar volume.
@@ -72,10 +71,13 @@ Left for later, each needing a source to be opened first:
 - the mean-radius approach, whose coarsening fraction (eq. 17) is defined only
   for 0.99 R* < R_mean < 1.01 R* in the paper.
 
-## Phase 4. Release
+## Phase 4. Examples, documentation and release preparation (done)
 
-- Worked examples (diffusion couple, carburizing-type surface boundary, a
-  precipitation case), each tied to a test.
-- API documentation and a short theory note citing the equations used.
-- References verified against Crossref.
-- Zenodo-ready release with CITATION.cff and a versioned DOI.
+- Worked examples in examples/, each run at coarse resolution by tests/test_examples.py.
+- docs/theory.md (equations with sources), docs/api.md (generated from the
+  docstrings, kept current by a test) and docs/references.md (written from Crossref).
+- CITATION.cff, .zenodo.json and CHANGELOG.md for version 0.1.0, with a test that
+  the version and authorship agree across them.
+
+The release itself (public repository, Zenodo DOI, optionally PyPI) is left to the
+maintainer.

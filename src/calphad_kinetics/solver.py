@@ -65,6 +65,7 @@ class DiffusionResult:
 
 
 def uniform_faces(length: float, n_cells: int, origin: float = 0.0) -> np.ndarray:
+    """Face positions (m) of ``n_cells`` equal cells spanning [origin, origin + length]."""
     return origin + np.linspace(0.0, length, n_cells + 1)
 
 

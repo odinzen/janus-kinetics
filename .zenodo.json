@@ -1,0 +1,23 @@
+{
+  "title": "calphad-kinetics",
+  "upload_type": "software",
+  "version": "0.1.0",
+  "description": "Multicomponent diffusion, moving-boundary, homogenization and precipitation kinetics on top of pycalphad, built from the published models with each equation cited to its source.",
+  "creators": [
+    {
+      "name": "Bustamante, Michael E.",
+      "affiliation": "Odinzen LLC",
+      "orcid": "0009-0009-9001-8151"
+    }
+  ],
+  "license": "MIT",
+  "access_right": "open",
+  "keywords": [
+    "CALPHAD",
+    "diffusion",
+    "kinetics",
+    "precipitation",
+    "pycalphad",
+    "materials science"
+  ]
+}

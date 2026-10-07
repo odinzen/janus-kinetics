@@ -1,0 +1,7 @@
+pycalphad>=0.11
+numpy
+scipy
+symengine
+
+[test]
+pytest
