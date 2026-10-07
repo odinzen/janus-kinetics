@@ -26,6 +26,8 @@ First version.
 - The fcc Ni-superalloy mobility database of Campbell, Boettinger and Kattner
   (2002), transcribed by a generator and checked against their Tables 3-4,
   printed values, Figs. 4-5 and the Ni-Al-Cr matrices of Table 7.
+- Ordered B2 phases (Helander and Agren 1999) with the Al-Ni parameters, checked
+  against their Figs. 2 and 7.
 - Mobility and thermodynamic databases may declare vacancy-only sublattices
   differently; each is read in its own layout.
 - Worked examples (including a thin-film stack through a rapid thermal anneal),

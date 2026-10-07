@@ -50,16 +50,20 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
 - **Non-isothermal anneals** along piecewise-linear temperature schedules
   (ramps, holds, spikes) for the diffusion, layered-stack and (binary)
   homogenization solvers.
+- **Ordered B2 phases** (NiAl, FeAl): the ordering contribution to the activation
+  energy from the equilibrium site fractions (Helander and Agren 1999), with tracer
+  and chemical diffusivities that reproduce their Al-Ni figures on the Ni-rich side.
 - **Homogenization model** for diffusion through two-phase mixtures, binaries and
   ternaries (Larsson and Hoglund 2009).
 - **Precipitation**: classical nucleation, growth and coarsening on a size-class
   distribution (Perez, Dumont and Acevedo-Reyes 2008, with its 2009 corrigendum),
   for precipitates of fixed composition in a binary matrix.
 
-Two published mobility databases ship with the package:
-`jonsson1995_bcc_crfeni()` (bcc Cr-Fe-Ni, Jonsson 1995) and `campbell2002_fcc_ni()`
+Three published mobility databases ship with the package:
+`jonsson1995_bcc_crfeni()` (bcc Cr-Fe-Ni, Jonsson 1995), `campbell2002_fcc_ni()`
 (fcc Ni-Al-Co-Cr-Hf-Mo-Re-Ta-Ti-W for Ni-base superalloys, Campbell, Boettinger
-and Kattner 2002), each checked against numbers its paper prints.
+and Kattner 2002) and `helander1999_bcc_alni()` (B2-ordered Al-Ni, Helander and
+Agren 1999), each checked against numbers or figures its paper prints.
 
 The equations are collected in [docs/theory.md](docs/theory.md), the API in
 [docs/api.md](docs/api.md), and the references, checked against Crossref, in
@@ -76,7 +80,7 @@ pip install -e . --no-deps
 pytest
 ```
 
-The test suite (243 tests, plus 3 skipped for data that is not available) takes
+The test suite (260 tests, plus 3 skipped for data that is not available) takes
 about five minutes. On Windows run inside the activated environment, since
 numpy's MKL libraries are only found on the activated path.
 

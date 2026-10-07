@@ -198,6 +198,24 @@ integral of k_p. Inverting them gives the planar k_p from powder or wire
 conversion data. Core and matrix are rigid; stresses and Kirkendall voids are
 not modelled.
 
+## Ordered B2 phases
+
+Chemical order raises the activation energy of element k by (Helander and Agren
+1999, eqs. 11-12)
+
+    dQ_k^ord = sum_i sum_(j != i) dQ^order_kij [ y_i^a y_j^b - x_i x_j ],
+
+with y^a, y^b the site fractions of the two B2 sublattices, x_i their mean and
+vacancies a constituent. For a binary without vacancies this is Girifalco's
+S^2 dQ^order/2 (their Appendix B). Site fractions and chemical potentials come from
+pycalphad equilibrium of the ordered phase at each composition, so order relaxes
+with composition, and dmu/dx is taken by central differences. With their Appendix A
+parameters and pycalphad's Dupin Al-Ni description, the Ni tracer diffusivity
+(their Fig. 7, 1000-1300 C) and the chemical diffusivity (Fig. 2) agree with their
+curves within 0.04 decades for x_Al <= 0.5. Above 0.5, with structural vacancies,
+the chemical diffusivity is about 0.3 decades higher than theirs, and the module
+warns there.
+
 ## Homogenization
 
 Each cell is in local equilibrium at its overall composition, so it has one set

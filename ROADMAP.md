@@ -21,6 +21,10 @@ passes. Every reference is checked against Crossref by tools/check_references.py
   for constant partial molar volumes (planar solver, in concentrations). Partial
   volumes that vary with composition, and the other solvers, still use one V_m.
 - Adaptive time stepping.
+- Ordered B2 phases: done for mobilities and diffusivities at a point (B2Phase,
+  Helander and Agren 1999). Open: the Al-rich vacancy range (0.3 decades off their
+  Fig. 2, cause unresolved without Ansara's thermodynamics), Al-Fe (their eq. 8 for
+  the magnetic term is garbled as printed), and use inside the solvers.
 
 ## Phase 2. Moving boundaries and microstructure-scale transport (done)
 

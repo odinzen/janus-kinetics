@@ -25,10 +25,36 @@ def campbell2002_fcc_ni() -> Database:
     """Atomic mobilities in fcc Ni-Al-Co-Cr-Hf-Mo-Re-Ta-Ti-W, for Ni-base superalloys.
 
     Table 2 of Campbell, Boettinger and Kattner, Acta Mater. 50 (2002) 775, with
-    their estimation rule for end members the table does not list (p. 778). Use it
-    with a thermodynamic description whose FCC_A1 has the same (elements)(VA)
-    sublattices; the authors assessed it against Kattner's Ni-superalloy
-    thermodynamics, so other descriptions shift the chemical diffusivities somewhat
-    (their Tables 5 and 7 show the size of that effect).
+    their estimation rule for end members the table does not list (p. 778). The
+    authors assessed it against Kattner's Ni-superalloy thermodynamics, so other
+    descriptions shift the chemical diffusivities somewhat (their Tables 5 and 7
+    show the size of that effect).
     """
     return Database(str(files("calphad_kinetics") / "data" / "campbell2002_fcc_ni_mob.tdb"))
+
+
+# Appendix A (p. 1151) of Helander and Agren, Acta Mater. 47 (1999) 1141: ordering
+# contributions dQ^order_kij (J/mol) to the activation energy of element k in B2
+# Al-Ni, keyed (k, i, j) with i, j in either order; VA marks structural vacancies.
+HELANDER1999_ALNI_ORDERING = {
+    ("AL", "NI", "AL"): 359700.0,
+    ("AL", "AL", "VA"): -1071200.0,
+    ("AL", "NI", "VA"): 0.0,
+    ("NI", "NI", "AL"): 314400.0,
+    ("NI", "AL", "VA"): -107000.0,
+    ("NI", "NI", "VA"): 0.0,
+}
+
+
+def helander1999_bcc_alni() -> tuple[Database, dict]:
+    """Mobilities of Al and Ni in B2-ordered bcc Al-Ni: the disordered database and the ordering terms.
+
+    Appendix A of Helander and Agren, Acta Mater. 47 (1999) 1141, for
+    :class:`calphad_kinetics.B2Phase`. The disordered parameters are for the
+    hypothetical bcc A2 phase (the same for pure Al and pure Ni by their
+    assumption, p. 1147). The authors fitted them with the Al-Ni thermodynamics of
+    Ansara et al. (1997); Al-Fe is not shipped because its magnetic term (their
+    eq. 8) is not usable as printed.
+    """
+    return (Database(str(files("calphad_kinetics") / "data" / "helander1999_bcc_alni_mob.tdb")),
+            dict(HELANDER1999_ALNI_ORDERING))

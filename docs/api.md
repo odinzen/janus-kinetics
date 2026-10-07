@@ -36,11 +36,21 @@ a binary. ``z_marker`` is the measured marker position in the same frame as z.
 Atomic mobilities in fcc Ni-Al-Co-Cr-Hf-Mo-Re-Ta-Ti-W, for Ni-base superalloys.
 
 Table 2 of Campbell, Boettinger and Kattner, Acta Mater. 50 (2002) 775, with
-their estimation rule for end members the table does not list (p. 778). Use it
-with a thermodynamic description whose FCC_A1 has the same (elements)(VA)
-sublattices; the authors assessed it against Kattner's Ni-superalloy
-thermodynamics, so other descriptions shift the chemical diffusivities somewhat
-(their Tables 5 and 7 show the size of that effect).
+their estimation rule for end members the table does not list (p. 778). The
+authors assessed it against Kattner's Ni-superalloy thermodynamics, so other
+descriptions shift the chemical diffusivities somewhat (their Tables 5 and 7
+show the size of that effect).
+
+### `def helander1999_bcc_alni() -> 'tuple[Database, dict]'`
+
+Mobilities of Al and Ni in B2-ordered bcc Al-Ni: the disordered database and the ordering terms.
+
+Appendix A of Helander and Agren, Acta Mater. 47 (1999) 1141, for
+:class:`calphad_kinetics.B2Phase`. The disordered parameters are for the
+hypothetical bcc A2 phase (the same for pure Al and pure Ni by their
+assumption, p. 1147). The authors fitted them with the Al-Ni thermodynamics of
+Ansara et al. (1997); Al-Fe is not shipped because its magnetic term (their
+eq. 8) is not usable as printed.
 
 ### `def jonsson1995_bcc_crfeni() -> 'Database'`
 
@@ -339,6 +349,32 @@ uniform grids over [0, interface] and [interface, length]; a binary may pass
 1D arrays. ``d_left``/``d_right`` are constant matrices or callables like those
 of :func:`solve_planar`, for example ``lambda x: alpha.interdiffusion_matrix(x, T)``.
 ``left``/``right`` are the conditions at z = 0 and z = length.
+
+## `calphad_kinetics.ordered`
+
+### `class B2Phase(db: 'Database', phase_name: 'str', elements, mobility_db: 'Database', disordered_phase: 'str', ordering: 'Mapping[tuple[str, str, str], float]', dependent: 'str | None' = None)`
+
+Mobilities and diffusivities of a B2-ordered phase.
+
+``db`` holds the Gibbs energy of ``phase_name``, two sublattices of equal site
+number holding the elements (and possibly vacancies) plus any vacancy-only
+sublattices. ``mobility_db`` holds the disordered mobilities of
+``disordered_phase``; ``ordering`` the dQ^order_kij terms. Composition
+arguments follow the package convention: mole fractions of ``elements`` with
+the dependent element last, vacancies excluded.
+
+- `chemical_potentials(self, x, T: 'float') -> 'np.ndarray'`: Equilibrium chemical potentials of :attr:`elements` (J/mol) with order relaxed.
+- `interdiffusion_matrix(self, x, T: 'float', step: 'float' = 0.001) -> 'np.ndarray'`: Number-fixed interdiffusion matrix (m^2/s), dependent element last.
+- `mobility(self, x, T: 'float') -> 'np.ndarray'`: Atomic mobilities M_k in m^2 mol / (J s), in the order of :attr:`elements`.
+- `site_fractions(self, x, T: 'float') -> 'tuple[np.ndarray, np.ndarray]'`: Equilibrium site fractions (y_a, y_b) over :attr:`constituents` at one composition.
+- `tracer_diffusivity(self, x, T: 'float') -> 'np.ndarray'`: D*_k = RT M_k in m^2/s, without the correlation factor.
+
+### `def ordering_energy(terms: 'Mapping[tuple[str, str, str], float]', element: 'str', constituents, y_a, y_b) -> 'np.ndarray'`
+
+Eq. 12: dQ^ord (J/mol) of ``element`` for site fractions y_a, y_b over ``constituents``.
+
+``terms`` maps (k, i, j) to dQ^order_kij, with i and j in either order. The two
+sublattices must have equal site numbers, as in B2, so x_i = (y_i^a + y_i^b) / 2.
 
 ## `calphad_kinetics.particle_reaction`
 

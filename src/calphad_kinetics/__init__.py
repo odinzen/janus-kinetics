@@ -13,9 +13,10 @@ from .diffusivity import (
 from .interstitial import InterstitialPhase
 from .grain_boundary import FisherBoundary, boundary_product_from_slope, solve_fisher
 from .homogenization import LocalEquilibriumTable, TemperatureTable, average_kinetic_factor, solve_homogenized
-from .datasets import campbell2002_fcc_ni, jonsson1995_bcc_crfeni
+from .datasets import campbell2002_fcc_ni, helander1999_bcc_alni, jonsson1995_bcc_crfeni
 from .errors import ConvergenceError, MissingParameterError, UnstableCompositionError, UnsupportedPhaseError
 from .mobility import MobilityModel
+from .ordered import B2Phase, ordering_energy
 from .moving_boundary import (
     FixedInterface,
     Layer,
@@ -45,6 +46,7 @@ from .thermo import GibbsEnergy, R, dmu_dx, reduced_hessian, thermodynamic_facto
 __version__ = "0.1.0"
 
 __all__ = [
+    "B2Phase",
     "Boundary",
     "ConvergenceError",
     "DiffusionResult",
@@ -81,6 +83,7 @@ __all__ = [
     "dmu_dx",
     "growth_constant_from_conversion",
     "growth_rate",
+    "helander1999_bcc_alni",
     "interdiffusion_from_profile",
     "integrated_diffusivity",
     "intrinsic_from_profile",
@@ -90,6 +93,7 @@ __all__ = [
     "layer_thickness",
     "nucleation_rate",
     "number_fixed_matrix",
+    "ordering_energy",
     "parabolic_growth",
     "reduced_hessian",
     "solubility_from_pycalphad",
