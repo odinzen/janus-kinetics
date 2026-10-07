@@ -10,6 +10,17 @@ Constant, value `8.3145`.
 
 ## `calphad_kinetics.datasets`
 
+### `def campbell2002_fcc_ni() -> 'Database'`
+
+Atomic mobilities in fcc Ni-Al-Co-Cr-Hf-Mo-Re-Ta-Ti-W, for Ni-base superalloys.
+
+Table 2 of Campbell, Boettinger and Kattner, Acta Mater. 50 (2002) 775, with
+their estimation rule for end members the table does not list (p. 778). Use it
+with a thermodynamic description whose FCC_A1 has the same (elements)(VA)
+sublattices; the authors assessed it against Kattner's Ni-superalloy
+thermodynamics, so other descriptions shift the chemical diffusivities somewhat
+(their Tables 5 and 7 show the size of that effect).
+
 ### `def jonsson1995_bcc_crfeni() -> 'Database'`
 
 Atomic mobilities of Cr, Fe and Ni in bcc Cr-Fe-Ni, paramagnetic part.

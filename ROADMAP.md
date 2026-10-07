@@ -10,9 +10,10 @@ passes. Every reference is checked against Crossref by tools/check_references.py
 - Ferromagnetic mobility factor of Jonsson (Z. Metallkd. 83, 1992, 349). The hook exists (`magnetic_factor`); the formula
   goes in once the papers are read, with a test against the Fe-rich data of
   Jonsson, ISIJ Int. 35 (1995) 1415, Figs. 5 to 8, where the magnetic factor matters.
-- Benchmark against measured ternary interdiffusion matrices (for example fcc
-  Cu-Ni-Zn); a source with tabulated matrices and an open thermodynamic and
-  mobility description still has to be found.
+- Benchmark against measured ternary interdiffusion matrices. Campbell et al.
+  (2002) Table 7 tabulates measured fcc Ni-Al-Cr matrices at 1100 C, and their
+  mobilities ship with the package; an open fcc Ni-Al-Cr thermodynamic
+  description (Dupin, Ansara and Sundman, Calphad 25 (2001) 279) is still needed.
 - Interstitial solutes (C, N) on a vacancy sublattice, with u-fractions in place
   of mole fractions.
 - Volume-fixed frame in the solver, with a composition-dependent molar volume.
