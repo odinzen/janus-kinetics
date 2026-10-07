@@ -139,6 +139,17 @@ instead of being extrapolated, so pure-element ends need a finer spacing.
 - `kinetic_factor(self, x) -> 'np.ndarray'`: Gamma*_k in m^2 mol / (J s), shape (M, n).
 - `phase_fractions(self, x) -> 'dict[str, np.ndarray]'`: Volume (mole) fraction of each phase at local equilibrium, keyed by phase name.
 
+### `class TemperatureTable(db: 'Database', phases: 'dict[str, SolutionPhase]', temperatures, **table_options)`
+
+Local-equilibrium tables at several temperatures, for anneals along a schedule.
+
+Holds one :class:`LocalEquilibriumTable` per temperature in ``temperatures``
+(binaries only, to keep the cost to one pycalphad grid per temperature). At an
+intermediate T, chemical potentials are interpolated linearly in T and ln Gamma*
+linearly in 1/T, which is exact for Arrhenius mobilities. Space the
+temperatures so that phase boundaries move little between neighbours.
+
+
 ### `def average_kinetic_factor(gamma: 'np.ndarray', fraction: 'np.ndarray', how: 'Averaging') -> 'np.ndarray'`
 
 Gamma* from per-phase Gamma (P, n) and volume fractions (P,), shape (n,).
@@ -147,7 +158,7 @@ Larsson and Hoglund (2009): Wiener upper and lower bounds, eqs. (6)-(7), and the
 Hashin-Shtrikman bounds of eqs. (8)-(11), where the reference phase alpha is the
 one with the lowest (lower bound) or highest (upper bound) Gamma_k present.
 
-### `def solve_homogenized(z_faces: 'np.ndarray', x0: 'np.ndarray', table: 'LocalEquilibriumTable', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, max_iter: 'int' = 60) -> 'DiffusionResult'`
+### `def solve_homogenized(z_faces: 'np.ndarray', x0: 'np.ndarray', table: 'LocalEquilibriumTable | TemperatureTable', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, max_iter: 'int' = 60, temperature: 'Temperature | None' = None) -> 'DiffusionResult'`
 
 Integrate planar multiphase diffusion with the homogenization model.
 
@@ -156,6 +167,8 @@ in the composition change (Newton) and holds Gamma* and the frame correction
 at the current iterate (Picard). Face fluxes use the potential difference
 between neighbouring cells, so transport across a phase boundary is driven by
 the true potential jump rather than by a diffusivity at a mean composition.
+With a :class:`TemperatureTable`, ``temperature`` (a constant or a schedule)
+sets the table used for each step.
 
 ## `calphad_kinetics.interstitial`
 

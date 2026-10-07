@@ -3,7 +3,7 @@
 from .diffusivity import intrinsic_matrix, lattice_velocity, number_fixed_matrix, volume_fixed_matrix
 from .interstitial import InterstitialPhase
 from .grain_boundary import FisherBoundary, boundary_product_from_slope, solve_fisher
-from .homogenization import LocalEquilibriumTable, average_kinetic_factor, solve_homogenized
+from .homogenization import LocalEquilibriumTable, TemperatureTable, average_kinetic_factor, solve_homogenized
 from .datasets import jonsson1995_bcc_crfeni
 from .errors import ConvergenceError, MissingParameterError, UnstableCompositionError, UnsupportedPhaseError
 from .mobility import MobilityModel
@@ -56,6 +56,7 @@ __all__ = [
     "SolutionPhase",
     "StackResult",
     "TemperatureSchedule",
+    "TemperatureTable",
     "UnstableCompositionError",
     "UnsupportedPhaseError",
     "average_kinetic_factor",

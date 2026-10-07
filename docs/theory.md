@@ -140,7 +140,10 @@ the phases' Gamma^phi weighted by their volume fractions. Local equilibrium is
 tabulated once per temperature with `pycalphad.equilibrium` and interpolated
 linearly. The paper (section 2.5) fills such a table on demand instead, because a
 complete one is impractical beyond three elements; its ideal flux term against
-oscillations (section 2.4, eq. 13) is not included. Face fluxes use the difference of chemical potentials
+oscillations (section 2.4, eq. 13) is not included. For anneals in binaries a
+table is built at each of several temperatures; between them chemical potentials
+are interpolated linearly in T and ln Gamma* linearly in 1/T, which is exact for
+Arrhenius mobilities. Face fluxes use the difference of chemical potentials
 between cells, so transport across a phase boundary is driven by the actual
 potential jump.
 

@@ -35,7 +35,8 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   velocity and operating tie-line solved together. Reaction layers grow or are
   consumed; a consumed layer stops the run with the history returned.
 - **Non-isothermal anneals** along piecewise-linear temperature schedules
-  (ramps, holds, spikes) for the diffusion and layered-stack solvers.
+  (ramps, holds, spikes) for the diffusion, layered-stack and (binary)
+  homogenization solvers.
 - **Homogenization model** for diffusion through two-phase mixtures, binaries and
   ternaries (Larsson and Hoglund 2009).
 - **Precipitation**: classical nucleation, growth and coarsening on a size-class

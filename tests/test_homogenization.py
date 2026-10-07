@@ -142,3 +142,62 @@ def test_quaternary_tables_are_refused():
     phases = {name: SolutionPhase(db, name, ["A", "B", "C", "D"]) for name in ("ALPHA", "BETA")}
     with pytest.raises(ValueError, match="binaries and ternaries"):
         LocalEquilibriumTable(db, phases, T)
+
+
+# ------------------------------------------------------------- anneals with a temperature table
+
+from calphad_kinetics import LocalEquilibrium, TemperatureSchedule  # noqa: E402
+from calphad_kinetics.homogenization import TemperatureTable  # noqa: E402
+
+ANNEAL = TemperatureSchedule([0.0, 50.0, 150.0, 200.0], [950.0, 1050.0, 1050.0, 950.0])
+
+
+@pytest.fixture(scope="module")
+def anneal_table():
+    db = Database(TWO_PHASE)
+    alpha = SolutionPhase(db, "ALPHA", ["A", "B"])
+    beta = SolutionPhase(db, "BETA", ["A", "B"])
+    return alpha, beta, TemperatureTable(db, {"ALPHA": alpha, "BETA": beta}, np.arange(940.0, 1061.0, 10.0))
+
+
+def test_temperature_table_reproduces_its_grid_points(anneal_table):
+    _, _, table = anneal_table
+    x = np.array([[0.7], [0.9]])
+    np.testing.assert_allclose(table.at(1000.0).chemical_potentials(x), table.tables[6].chemical_potentials(x), rtol=1e-14)
+    with pytest.raises(ValueError, match="outside the tabulated"):
+        table.at(1100.0)
+
+
+def test_single_phase_couple_under_an_anneal_matches_phase1_solver(anneal_table):
+    alpha, _, table = anneal_table
+    faces = uniform_faces(4e-4, 200)
+    z = 0.5 * (faces[1:] + faces[:-1])
+    x0 = np.where(z < 2e-4, 0.95, 0.75)[:, None]
+    homog = solve_homogenized(faces, x0, table, 200.0, 1.0, temperature=ANNEAL)
+    ref = solve_planar(faces, x0, alpha.interdiffusion_function(ANNEAL), 200.0, 1.0)
+    assert np.max(np.abs(homog.x[-1] - ref.x[-1])) < 2e-3
+
+
+def test_two_phase_couple_under_an_anneal_matches_sharp_interface(anneal_table):
+    """The alpha layer from the homogenized run against the sharp interface whose tie-line follows the schedule."""
+    alpha, beta, table = anneal_table
+    half, n = 4e-4, 400
+    faces = uniform_faces(2 * half, n)
+    z = 0.5 * (faces[1:] + faces[:-1])
+    homog = solve_homogenized(faces, np.where(z < half, 0.8, 0.1)[:, None], table, 200.0, 1.0, temperature=ANNEAL)
+    thickness = np.sum(table.at(950.0).phase_fractions(homog.x[-1])["ALPHA"] * np.diff(faces))
+    xl, xr = LocalEquilibrium(alpha, beta, 950.0, [0.56], [0.27]).tie_line()
+    sharp = solve_moving_boundary(2 * half, half, np.full(n // 2, 0.8), np.full(n // 2, 0.1),
+                                  alpha.interdiffusion_function(ANNEAL), beta.interdiffusion_function(ANNEAL),
+                                  LocalEquilibrium(alpha, beta, ANNEAL, xl, xr), 200.0, 1.0)
+    shift = sharp.interface[-1] - half
+    assert shift > 5e-6
+    assert abs(thickness - sharp.interface[-1]) < 0.08 * shift  # 5.5% at 400 cells, halving with refinement
+    inv = homog.inventory()
+    assert abs(inv[-1, 0] - inv[0, 0]) < 1e-12 * inv[0, 0]
+
+
+def test_single_temperature_table_refuses_a_schedule(binary):
+    _, _, table = binary
+    with pytest.raises(ValueError, match="TemperatureTable"):
+        solve_homogenized(uniform_faces(1e-4, 10), np.full((10, 1), 0.8), table, 1.0, 0.5, temperature=ANNEAL)

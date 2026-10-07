@@ -33,6 +33,7 @@ from scipy.interpolate import LinearNDInterpolator
 
 from .errors import ConvergenceError
 from .phase import SolutionPhase
+from .schedule import Temperature, temperature_at
 from .solver import Boundary, DiffusionResult, _output_schedule
 
 Averaging = Literal["wiener_upper", "wiener_lower", "hashin_shtrikman_upper", "hashin_shtrikman_lower"]
@@ -176,10 +177,63 @@ class LocalEquilibriumTable:
         return bool(np.all(x >= self.lower) and np.all(x <= self.upper) and np.all(x.sum(axis=-1) <= self.max_sum))
 
 
+class TemperatureTable:
+    """Local-equilibrium tables at several temperatures, for anneals along a schedule.
+
+    Holds one :class:`LocalEquilibriumTable` per temperature in ``temperatures``
+    (binaries only, to keep the cost to one pycalphad grid per temperature). At an
+    intermediate T, chemical potentials are interpolated linearly in T and ln Gamma*
+    linearly in 1/T, which is exact for Arrhenius mobilities. Space the
+    temperatures so that phase boundaries move little between neighbours.
+    """
+
+    def __init__(self, db: Database, phases: dict[str, SolutionPhase], temperatures, **table_options):
+        temps = np.sort(np.asarray(temperatures, dtype=float))
+        if temps.size < 2:
+            raise ValueError("give at least two temperatures; use LocalEquilibriumTable for one")
+        if len(next(iter(phases.values())).elements) != 2:
+            raise ValueError("temperature tables are limited to binaries")
+        self.temperatures = temps
+        self.tables = [LocalEquilibriumTable(db, phases, float(T), **table_options) for T in temps]
+
+    def at(self, T: float) -> _TableAtTemperature:
+        temps = self.temperatures
+        if not temps[0] - 1e-9 <= T <= temps[-1] + 1e-9:
+            raise ValueError(f"T = {T:g} K is outside the tabulated {temps[0]:g}-{temps[-1]:g} K")
+        k = int(np.clip(np.searchsorted(temps, T) - 1, 0, temps.size - 2))
+        lo, hi = temps[k], temps[k + 1]
+        w = (T - lo) / (hi - lo)
+        w_inv = (1 / T - 1 / lo) / (1 / hi - 1 / lo)
+        return _TableAtTemperature(self.tables[k], self.tables[k + 1], w, w_inv)
+
+
+class _TableAtTemperature:
+    """Two neighbouring tables blended to one temperature; same interface as a table."""
+
+    def __init__(self, lo: LocalEquilibriumTable, hi: LocalEquilibriumTable, w: float, w_inv: float):
+        self.lo, self.hi, self.w, self.w_inv = lo, hi, w, w_inv
+
+    def chemical_potentials(self, x):
+        return (1 - self.w) * self.lo.chemical_potentials(x) + self.w * self.hi.chemical_potentials(x)
+
+    def kinetic_factor(self, x):
+        return np.exp((1 - self.w_inv) * np.log(self.lo.kinetic_factor(x)) + self.w_inv * np.log(self.hi.kinetic_factor(x)))
+
+    def dmu_dx(self, x):
+        return (1 - self.w) * self.lo.dmu_dx(x) + self.w * self.hi.dmu_dx(x)
+
+    def phase_fractions(self, x):
+        a, b = self.lo.phase_fractions(x), self.hi.phase_fractions(x)
+        return {k: (1 - self.w) * a[k] + self.w * b[k] for k in a}
+
+    def admissible(self, x) -> bool:
+        return self.lo.admissible(x) and self.hi.admissible(x)
+
+
 def solve_homogenized(
     z_faces: np.ndarray,
     x0: np.ndarray,
-    table: LocalEquilibriumTable,
+    table: LocalEquilibriumTable | TemperatureTable,
     t_end: float,
     dt: float,
     left: Boundary = Boundary.no_flux(),
@@ -187,6 +241,7 @@ def solve_homogenized(
     save_times=None,
     tol: float = 1e-10,
     max_iter: int = 60,
+    temperature: Temperature | None = None,
 ) -> DiffusionResult:
     """Integrate planar multiphase diffusion with the homogenization model.
 
@@ -195,7 +250,17 @@ def solve_homogenized(
     at the current iterate (Picard). Face fluxes use the potential difference
     between neighbouring cells, so transport across a phase boundary is driven by
     the true potential jump rather than by a diffusivity at a mean composition.
+    With a :class:`TemperatureTable`, ``temperature`` (a constant or a schedule)
+    sets the table used for each step.
     """
+    if isinstance(table, TemperatureTable):
+        if temperature is None:
+            raise ValueError("a TemperatureTable needs a temperature or schedule")
+        table_at = lambda t: table.at(temperature_at(temperature, t))
+    else:
+        if temperature is not None:
+            raise ValueError("a single-temperature table cannot follow a schedule; build a TemperatureTable")
+        table_at = lambda t: table
     z_faces = np.asarray(z_faces, dtype=float)
     x = np.asarray(x0, dtype=float)
     x = x[:, None] if x.ndim == 1 else x.copy()
@@ -212,8 +277,7 @@ def solve_homogenized(
                 raise ValueError("held-subset, potential and time-dependent boundaries are supported by solve_planar only")
             if b.composition.size != m:
                 raise ValueError(f"a fixed boundary needs the {m} independent mole fractions")
-            xb = b.composition.reshape(1, m)
-            ends[side] = (xb[0], table.chemical_potentials(xb)[0], table.kinetic_factor(xb)[0])
+            ends[side] = b.composition.reshape(m)
     a_idx = np.arange(m)
 
     def operator(xb_face, gamma_face, h):
@@ -221,12 +285,13 @@ def solve_homogenized(
         p = np.eye(n)[:m] - xb_face[..., :, None]
         return p * (gamma_face / h[..., None])[..., None, :]
 
-    def step(x_old, dt_step):
+    def step(x_old, dt_step, t_new):
+        tab = table_at(t_new)
         xk = x_old.copy()
         for it in range(1, max_iter + 1):
-            mu = table.chemical_potentials(xk)
-            g = table.dmu_dx(xk)
-            gam = table.kinetic_factor(xk)
+            mu = tab.chemical_potentials(xk)
+            g = tab.dmu_dx(xk)
+            gam = tab.kinetic_factor(xk)
             rows, cols, vals = [], [], []
             rhs = -(widths / dt_step)[:, None] * (xk - x_old)
 
@@ -246,7 +311,8 @@ def solve_homogenized(
                 put(i, i, ag_i), put(i, j, -ag_j), put(j, i, -ag_i), put(j, j, ag_j)
                 rhs[i] -= f0
                 rhs[j] += f0
-            for side, (xb, mub, gb) in ends.items():
+            for side, xb in ends.items():
+                mub, gb = tab.chemical_potentials(xb[None])[0], tab.kinetic_factor(xb[None])[0]
                 c = 0 if side == "left" else n_cells - 1
                 a = operator(xb, 0.5 * (gb + gam[c]), np.array(h_end[side]))
                 ag = a @ g[c]
@@ -257,7 +323,7 @@ def solve_homogenized(
             delta = spla.spsolve(mat, rhs.ravel()).reshape(n_cells, m)
             full_step = True
             for _ in range(30):  # keep iterates inside the table
-                if table.admissible(xk + delta):
+                if tab.admissible(xk + delta):
                     break
                 delta = 0.5 * delta
                 full_step = False
@@ -273,8 +339,8 @@ def solve_homogenized(
     times, saved, iters, t = [0.0], [x.copy()], [], 0.0
     for target, steps in _output_schedule(t_end, dt, save_times):
         dt_step = (target - t) / steps
-        for _ in range(steps):
-            x, k = step(x, dt_step)
+        for i in range(steps):
+            x, k = step(x, dt_step, t + (i + 1) * dt_step)
             iters.append(k)
         t = target
         times.append(t)
