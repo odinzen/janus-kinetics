@@ -56,7 +56,10 @@ def entry(m: dict) -> str:
     authors = ", ".join(f"{a.get('family', '')} {''.join(p[0] + '.' for p in a.get('given', '').replace('-', ' ').split())}".strip()
                         for a in m.get("author", []))
     year = m["issued"]["date-parts"][0][0]
+    # house style keeps plain ASCII punctuation, so typographic dashes and quotes are folded
     title = " ".join(m["title"][0].split()).rstrip(".")
+    for fancy, plain_char in (("\u2013", "-"), ("\u2014", "-"), ("\u201c", '"'), ("\u201d", '"'), ("\u2019", "'")):
+        title = title.replace(fancy, plain_char)
     journal = (m.get("container-title") or [""])[0]
     vol, page = m.get("volume", ""), m.get("page", "")
     return f"{authors} ({year}). {title}. *{journal}* {vol}" + (f", {page}" if page else "") + f". https://doi.org/{m['DOI']}"

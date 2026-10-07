@@ -11,8 +11,12 @@ kinetic factors Gamma^phi_k = M^phi_k u^phi_k (their eqs. (2)-(5)):
 The second form is the number-fixed (volume-fixed at equal partial volumes)
 frame of their eq. (3). Gamma* is one of the Wiener or Hashin-Shtrikman bounds,
 eqs. (6)-(11). Local equilibrium comes from :func:`pycalphad.equilibrium` on a
-grid of compositions computed once and interpolated linearly, as in their
-section 2.5, which limits practical use to binaries and ternaries.
+grid of compositions computed once and interpolated linearly. Larsson and
+Hoglund (section 2.5) fill such a grid on demand instead, because a complete
+table becomes impractical for four or more elements; for the binaries and
+ternaries handled here the complete table is affordable. Their small ideal flux
+term against oscillations in multiphase regions (section 2.4, eq. 13) is not
+included.
 
 Only substitutional phases are handled, so u-fractions equal mole fractions.
 """

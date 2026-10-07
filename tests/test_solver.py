@@ -95,8 +95,8 @@ def round_off_bound(d_max, dt, widths, n_steps):
 
     Each implicit step sums stiffness terms that are larger than the mass terms by
     the cell Fourier number Fo = D dt / dz^2, so double-precision round-off
-    (about 1e-16) is amplified by Fo per step. The discrete scheme itself
-    conserves exactly: its stiffness matrix has zero column sums.
+    (about 1e-16) is amplified by Fo per step. In exact arithmetic the scheme
+    conserves the inventory, because its stiffness matrix has zero column sums.
     """
     fourier = d_max * dt / widths.min() ** 2
     return 10 * np.finfo(float).eps * fourier * n_steps

@@ -5,8 +5,8 @@ fractions in the number-fixed frame with constant molar volume (Andersson and
 Agren, J. Appl. Phys. 72 (1992) 1350). Time stepping is backward Euler; the
 composition dependence of D is handled by Picard iteration, with D evaluated at
 cell faces from the arithmetic mean of the neighbouring cells. The face-flux
-form makes the discrete inventory sum_i w_i x_i exactly conserved under no-flux
-boundaries, whatever the Picard iterate.
+form conserves the discrete inventory sum_i w_i x_i under no-flux boundaries,
+whatever the Picard iterate, up to floating-point round-off.
 """
 
 from __future__ import annotations

@@ -199,12 +199,13 @@ def solve_kwn(
     """Evolve the precipitate size distribution from an alloy of solute fraction ``x0``.
 
     The class fluxes of eq. (24) are taken implicitly (backward Euler), so a step
-    is not bound by the explicit limit of eq. (25); the step length instead follows
-    the rule of Perez et al. section 3.4.1: grow by ``growth`` after each step and
-    retry with half the step whenever the matrix fraction or the critical radius
-    changes by more than ``max_change`` (relative). The mean radius is held to the
-    same limit; without it a dilute population, which barely changes the matrix,
-    would take steps so long that the implicit fluxes smear the distribution. Particles leaving the smallest
+    is not bound by the explicit limit of eq. (25). The step grows by ``growth``
+    after each step and is halved and retried when the critical radius changes by
+    more than ``max_change`` (relative), the rule Perez et al. give for their
+    Lagrange-like approach (section 3.4.1). The same limit on the matrix fraction
+    and on the mean radius is this package's addition; without the latter a dilute
+    population, which barely changes the matrix, would take steps so long that the
+    implicit fluxes smear the distribution. Particles leaving the smallest
     class through its lower edge have dissolved; their solute returns to the
     matrix through the mass balance of eq. (22). The lower edge must lie above the
     radius where X^i(R) reaches alpha X^P, below which eq. (10) does not hold.

@@ -10,7 +10,9 @@ First version.
 - Implicit 1D solver for single-phase multicomponent diffusion, with Kirkendall
   marker tracking.
 - Short-circuit diffusion by Hart's average.
-- Two-phase moving interface with local equilibrium and the operating tie-line.
+- Moving interfaces in stacks of any number of phase layers, with local
+  equilibrium and the operating tie-line at each interface.
+- Non-isothermal anneals along piecewise-linear temperature schedules.
 - Homogenization model for multiphase diffusion (binaries and ternaries).
 - Precipitation by classical nucleation, growth and coarsening on a size-class
   distribution.

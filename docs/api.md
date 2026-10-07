@@ -15,9 +15,11 @@ Constant, value `8.3145`.
 Atomic mobilities of Cr, Fe and Ni in bcc Cr-Fe-Ni, paramagnetic part.
 
 Transcribed from the Appendix (p. 1421) of B. Jonsson, ISIJ Int. 35 (1995)
-1415. Mobility (MQ/MF) parameters only: combine it with a thermodynamic
-description through ``SolutionPhase(..., mobility_db=...)``. The ferromagnetic
-factor of the paper is not included, so it applies above the Curie temperature.
+1415. It holds mobility (MQ/MF) parameters only, to be combined with a
+thermodynamic description through ``SolutionPhase(..., mobility_db=...)``. The ferromagnetic
+factor of the paper's eq. (3) is not included. It is largest below the Curie
+temperature but still lowers Fe-rich mobilities some way above it, so results
+for Fe-rich alloys within a few hundred kelvin of Tc are approximate.
 
 ## `calphad_kinetics.diffusivity`
 
@@ -54,9 +56,9 @@ with c_j = x_j / V_m and a constant molar volume.
 
 Interdiffusion matrix in the volume-fixed frame, shape (..., n-1, n-1), m^2/s.
 
-Andersson and Agren, J. Appl. Phys. 72 (1992) 1350, eqs. (28)-(29), (40) and
-(50), kept with general partial volumes rather than their later equal-volume
-approximation. With constant partial molar volumes V_i, c_i = x_i / V_m and
+Andersson and Agren, J. Appl. Phys. 72 (1992) 1350, eqs. (28)-(29), (40),
+(50), (54) and (58), kept with general partial volumes rather than their later
+equal-volume approximation. With constant partial molar volumes V_i, c_i = x_i / V_m and
 sum_i V_i c_i = 1, so c_n is dependent:
 
     D^V_kj = sum_i (delta_ik - c_k V_i) c_i M_i dmu_i/dc_j
@@ -207,8 +209,8 @@ Integrate planar diffusion through a stack of phase layers with moving interface
 ``positions`` are the layer boundaries from 0 to the stack thickness (len(layers)
 + 1 values); the inner ones are the initial interfaces. ``conditions[i]`` holds
 interface i, between layers i and i+1, at fixed compositions or in local
-equilibrium. Every interface moves to conserve every element (Zener, J. Appl.
-Phys. 20 (1949) 950, eq. 8), and all interface velocities and operating
+equilibrium. Every interface moves to conserve every element (the flux balance
+of the module docstring), and all interface velocities and operating
 tie-lines are solved together each step. A reaction layer must be present from
 the start, if only a few nanometres thick. If a layer is consumed,
 :class:`PhaseDissolvedError` is raised and carries the results up to the last
@@ -228,14 +230,16 @@ of :func:`solve_planar`, for example ``lambda x: alpha.interdiffusion_matrix(x, 
 
 ### `class ShortCircuit(fraction: 'float', mobility_db: 'Database') -> None`
 
-Fast diffusion paths (grain boundaries or dislocations) averaged into the lattice.
+Fast diffusion paths (dislocations or grain boundaries) averaged into the lattice.
 
-Hart, Acta Metall. 5 (1957) 597, eq. (5): an atom that spends a fraction f of
-its time in the paths sees D_eff = f D_path + (1 - f) D_lattice. With D* = RT M
-(Andersson and Agren, J. Appl. Phys. 72 (1992) 1350, eq. (61)) the same average
-applies to each element's mobility, and so to every diffusion matrix built from
-it. Hart's condition is that a diffusion distance spans many paths; a coarse
-microstructure with isolated boundaries is outside it.
+Hart, Acta Metall. 5 (1957) 597, eq. (5), for self-diffusion along dislocations:
+an atom that spends a fraction f of its time in the paths sees
+D_eff = f D_path + (1 - f) D_lattice. Two extensions are this package's, not
+Hart's. The same time-fraction argument is applied to grain boundaries, and,
+through D* = RT M (Andersson and Agren, J. Appl. Phys. 72 (1992) 1350,
+eq. (61)), to each element's mobility and so to every diffusion matrix built
+from it. Hart's condition is that a diffusion distance spans many paths; a
+coarse microstructure with isolated boundaries is outside it.
 
 ``fraction`` is Hart's f, the fraction of atoms in the paths. ``mobility_db``
 holds MQ/MF parameters for diffusion along the paths, entered under the same
@@ -329,12 +333,13 @@ thermodynamic input that eqs. (9)-(10) of Perez et al. (2008) take as X^i and X^
 Evolve the precipitate size distribution from an alloy of solute fraction ``x0``.
 
 The class fluxes of eq. (24) are taken implicitly (backward Euler), so a step
-is not bound by the explicit limit of eq. (25); the step length instead follows
-the rule of Perez et al. section 3.4.1: grow by ``growth`` after each step and
-retry with half the step whenever the matrix fraction or the critical radius
-changes by more than ``max_change`` (relative). The mean radius is held to the
-same limit; without it a dilute population, which barely changes the matrix,
-would take steps so long that the implicit fluxes smear the distribution. Particles leaving the smallest
+is not bound by the explicit limit of eq. (25). The step grows by ``growth``
+after each step and is halved and retried when the critical radius changes by
+more than ``max_change`` (relative), the rule Perez et al. give for their
+Lagrange-like approach (section 3.4.1). The same limit on the matrix fraction
+and on the mean radius is this package's addition; without the latter a dilute
+population, which barely changes the matrix, would take steps so long that the
+implicit fluxes smear the distribution. Particles leaving the smallest
 class through its lower edge have dissolved; their solute returns to the
 matrix through the mass balance of eq. (22). The lower edge must lie above the
 radius where X^i(R) reaches alpha X^P, below which eq. (10) does not hold.

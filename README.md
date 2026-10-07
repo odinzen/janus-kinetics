@@ -20,11 +20,15 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   intrinsic (lattice-frame) diffusivities.
 - **Planar diffusion solver**, implicit and conservative, with no-flux or
   fixed-composition boundaries and **Kirkendall marker** tracking (van Loo 1990).
-- **Short-circuit diffusion** along grain boundaries or dislocations by Hart's
-  average (Hart 1957).
-- **Moving interface between two phases** with local equilibrium; with three or
-  more elements the operating tie-line is solved with the flux balances
-  (Zener 1949, eq. 8).
+- **Short-circuit diffusion** by Hart's time-fraction average (Hart 1957, derived
+  for dislocations; applied here also to grain boundaries and to multicomponent
+  mobilities).
+- **Moving interfaces in layered stacks**: any number of phase layers, each
+  interface in local equilibrium or at fixed compositions, with every interface
+  velocity and operating tie-line solved together. Reaction layers grow or are
+  consumed; a consumed layer stops the run with the history returned.
+- **Non-isothermal anneals** along piecewise-linear temperature schedules
+  (ramps, holds, spikes) for the diffusion and layered-stack solvers.
 - **Homogenization model** for diffusion through two-phase mixtures, binaries and
   ternaries (Larsson and Hoglund 2009).
 - **Precipitation**: classical nucleation, growth and coarsening on a size-class
@@ -35,7 +39,7 @@ The equations are collected in [docs/theory.md](docs/theory.md), the API in
 [docs/api.md](docs/api.md), and the references, checked against Crossref, in
 [docs/references.md](docs/references.md). What is not done yet is listed in
 [ROADMAP.md](ROADMAP.md); the main gaps are the ferromagnetic mobility factor,
-interstitial elements, and multicomponent precipitates.
+interstitial elements and ionic (oxide) phases, and multicomponent precipitates.
 
 ## Install
 
@@ -46,9 +50,9 @@ pip install -e . --no-deps
 pytest
 ```
 
-The test suite (100 tests, plus 3 skipped for data that is not available) takes about
-two minutes. On Windows run inside the activated environment, since numpy's MKL
-libraries are only found on the activated path.
+The test suite (113 tests, plus 3 skipped for data that is not available) takes
+about three minutes. On Windows run inside the activated environment, since
+numpy's MKL libraries are only found on the activated path.
 
 ## Example
 

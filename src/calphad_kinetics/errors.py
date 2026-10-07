@@ -21,7 +21,7 @@ class UnstableCompositionError(ValueError):
         self.elements = elements
         first = ", ".join(f"{el}={val:.6g}" for el, val in zip(elements, self.compositions[0]))
         super().__init__(
-            f"Thermodynamic factor is not positive definite at {len(self.compositions)} "
+            f"Gibbs energy curvature is not positive definite at {len(self.compositions)} "
             f"composition(s), first at ({first}), smallest curvature eigenvalue "
             f"{self.eigenvalues[0].min():.6g} J/mol. The composition is inside a "
             "miscibility gap or two-phase field; use a multiphase model instead."

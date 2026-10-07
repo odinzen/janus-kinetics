@@ -54,9 +54,9 @@ def volume_fixed_matrix(
 ) -> np.ndarray:
     """Interdiffusion matrix in the volume-fixed frame, shape (..., n-1, n-1), m^2/s.
 
-    Andersson and Agren, J. Appl. Phys. 72 (1992) 1350, eqs. (28)-(29), (40) and
-    (50), kept with general partial volumes rather than their later equal-volume
-    approximation. With constant partial molar volumes V_i, c_i = x_i / V_m and
+    Andersson and Agren, J. Appl. Phys. 72 (1992) 1350, eqs. (28)-(29), (40),
+    (50), (54) and (58), kept with general partial volumes rather than their later
+    equal-volume approximation. With constant partial molar volumes V_i, c_i = x_i / V_m and
     sum_i V_i c_i = 1, so c_n is dependent:
 
         D^V_kj = sum_i (delta_ik - c_k V_i) c_i M_i dmu_i/dc_j

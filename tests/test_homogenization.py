@@ -1,6 +1,6 @@
 """Homogenization model of Larsson and Hoglund, Calphad 33 (2009) 495.
 
-The paper's example simulations use commercial databases, so they are not
+The paper's multiphase examples use commercial databases, so they are not
 reproduced. The checks are the mathematical properties of the averaging
 functions, the single-phase limit (which must match the phase-1 solver), and a
 binary two-phase couple, where no two-phase zone can grow at constant T and the

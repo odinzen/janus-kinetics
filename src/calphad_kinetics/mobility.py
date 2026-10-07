@@ -6,23 +6,25 @@ The Thermo-Calc style mobility database stores, for each diffusing element B,
   R*T*LN(M0) folded in), and
 * ``MF(PHASE&B, ...)``, the frequency-factor term R*T*LN(M0_B), optional.
 
-Both are expanded over composition exactly like Gibbs energy parameters, and
-pycalphad already parses them into its Database. This module evaluates them
-through ``pycalphad.Model.redlich_kister_sum`` so the interaction ordering and
-the ternary convention, v_ijk^s = x_s + (1 - x_i - x_j - x_k)/3 as in eq. (6) of
-Jonsson, ISIJ Int. 35 (1995) 1415, are the same ones pycalphad uses for L
-parameters (constituents sorted alphabetically).
+Both are expanded over composition like Gibbs energy parameters, and pycalphad
+already parses them into its Database, with the constituents of each parameter
+sorted alphabetically. The expansion is written out here per diffusing element.
+pycalphad's own Redlich-Kister routine is not used for it, because its check for
+higher-order ternary terms does not filter by diffusing species, so one element's
+ternary parameters would change another element's mobility.
 """
 
 from __future__ import annotations
 
 import numpy as np
 import symengine as se
+from collections import defaultdict
+
 from pycalphad import Database, Model, variables as v
 from tinydb import where
 
 from ._lattice import SubstitutionalLattice
-from .errors import MissingParameterError
+from .errors import MissingParameterError, UnsupportedPhaseError
 from .thermo import R
 
 MOBILITY_TYPES = ("MF", "MQ")  # order of the compiled outputs
@@ -46,11 +48,8 @@ class MobilityModel:
 
     def __init__(self, db: Database, lattice: SubstitutionalLattice):
         self.lattice = lattice
-        model = Model(db, lattice.pycalphad_components, lattice.phase_name)
-        phase = db.phases[lattice.phase_name]
         active = {v.Species(s) for s in lattice.pycalphad_components}
         functions = {se.Symbol(name): value for name, value in db.symbols.items()}
-        subs = lattice.site_fraction_map()
 
         def valid(array) -> bool:
             return all(set(subl) <= active for subl in array)
@@ -59,20 +58,52 @@ class MobilityModel:
         for ptype in MOBILITY_TYPES:
             for el in lattice.elements:
                 self._require_end_members(db, el)
-                query = (
+                params = db.search(
                     (where("phase_name") == lattice.phase_name)
                     & (where("parameter_type") == ptype)
                     & (where("diffusing_species") == v.Species(el))
                     & (where("constituent_array").test(valid))
                 )
-                expr = model.redlich_kister_sum(phase, db.search, query)
-                expr = Model.symbol_replace(expr, functions).xreplace(subs)
-                exprs.append(expr)
+                exprs.append(Model.symbol_replace(self._expansion(params), functions))
         args = list(lattice.x_symbols) + [v.T]
         stray = {s for e in exprs for s in e.free_symbols} - set(args)
         if stray:
             raise ValueError(f"unresolved symbols in mobility parameters: {sorted(map(str, stray))}")
         self._f = se.Lambdify(args, exprs, cse=True)
+
+    def _expansion(self, params) -> se.Basic:
+        """Phi for one diffusing element from its own parameters only.
+
+        End members x_i Phi^i, binary terms x_i x_j Phi^{ij,r} (x_i - x_j)^r with i, j
+        in pycalphad's sorted order, and ternary terms x_i x_j x_k sum_s v_s Phi^{ijk,s}
+        with v_s = x_s + (1 - x_i - x_j - x_k)/3 (Jonsson, ISIJ Int. 35 (1995) 1415,
+        eqs. 5-6); a ternary given at order 0 only is the symmetric term x_i x_j x_k Phi^0.
+        """
+        lat = self.lattice
+        x = dict(zip(lat.elements, lat.x_symbols))
+        total = se.Integer(0)
+        ternary = defaultdict(dict)
+        for p in params:
+            names = [str(s.name) for s in p["constituent_array"][lat.mixing_sublattice]]
+            order, value = int(p["parameter_order"]), p["parameter"]
+            if len(names) == 1:
+                total += x[names[0]] * value
+            elif len(names) == 2:
+                i, j = names
+                total += x[i] * x[j] * value * (x[i] - x[j]) ** order
+            elif len(names) == 3:
+                ternary[tuple(names)][order] = value
+            else:
+                raise UnsupportedPhaseError(f"mobility interactions among {len(names)} elements are not supported: {names}")
+        for names, orders in ternary.items():
+            product = x[names[0]] * x[names[1]] * x[names[2]]
+            if set(orders) == {0}:
+                total += product * orders[0]
+                continue
+            rest = (1 - x[names[0]] - x[names[1]] - x[names[2]]) / 3
+            for s, value in orders.items():
+                total += product * (x[names[s]] + rest) * value
+        return total
 
     def _require_end_members(self, db: Database, element: str) -> None:
         lat = self.lattice

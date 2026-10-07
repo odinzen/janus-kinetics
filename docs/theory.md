@@ -52,7 +52,7 @@ Jonsson 1995)
     D_kj = sum_i (delta_ik - x_k) x_i M_i dmu_i/dx_j
 
 The volume-fixed matrix with constant partial molar volumes V_i follows from
-eqs. 28-29, 40 and 50 of Andersson and Agren:
+eqs. 28-29, 40, 50, 54 and 58 of Andersson and Agren:
 
     D^V_kj = sum_i (delta_ik - c_k V_i) c_i M_i dmu_i/dc_j,
     dx_k/dc_j = V_m [delta_kj - x_k (1 - V_j/V_n)]
@@ -62,7 +62,7 @@ eqs. 28-29, 40 and 50 of Andersson and Agren:
 dx_k/dt = d/dz (sum_j D_kj dx_j/dz) is solved by backward Euler on a finite-volume
 grid, with D at each face from the mean of the neighbouring cells and Picard
 iteration for its composition dependence. The face-flux form conserves the
-inventory of every element exactly under no-flux boundaries.
+inventory of every element under no-flux boundaries, to floating-point round-off.
 
 ## Kirkendall markers
 
@@ -78,15 +78,17 @@ dz/dt = v, integrated in sqrt(t), where the parabolic motion of a couple
 ## Short-circuit diffusion
 
 An atom spending a fraction f of its time in fast paths sees
-D_eff = f D_path + (1 - f) D_lattice (Hart 1957, eq. 5). Through D* = RT M the
-same average is applied to every element's mobility.
+D_eff = f D_path + (1 - f) D_lattice (Hart 1957, eq. 5, derived for
+self-diffusion along dislocations). Applying the same average to grain
+boundaries, and through D* = RT M to every element's mobility, is this
+package's extension of Hart's argument.
 
 ## Moving interface
 
 Two phases share a planar interface at S(t). Each is solved on its own grid,
 stretched with S, where the face flux is F = J - w x_up for a face moving at w.
-Every independent element satisfies the interface flux balance (Zener 1949,
-eq. 8, for any pair of phases):
+Every independent element satisfies the interface flux balance, Zener's eq. 8
+(Zener 1949) generalized to diffusion on both sides:
 
     dS/dt (x_R^I - x_L^I) = J_R^I - J_L^I
 
@@ -105,7 +107,9 @@ of chemical potentials whatever phases it holds (Larsson and Hoglund 2009):
 Gamma* is a Wiener bound (eqs. 6-7) or a Hashin-Shtrikman bound (eqs. 8-11) of
 the phases' Gamma^phi weighted by their volume fractions. Local equilibrium is
 tabulated once per temperature with `pycalphad.equilibrium` and interpolated
-linearly (section 2.5). Face fluxes use the difference of chemical potentials
+linearly. The paper (section 2.5) fills such a table on demand instead, because a
+complete one is impractical beyond three elements; its ideal flux term against
+oscillations (section 2.4, eq. 13) is not included. Face fluxes use the difference of chemical potentials
 between cells, so transport across a phase boundary is driven by the actual
 potential jump.
 
@@ -130,5 +134,6 @@ The driving force is not written out in the paper; the form above is the one
 consistent with eq. 9, since a nucleus of radius R* then has exactly the matrix
 composition at its interface. The size distribution lives in fixed classes that
 exchange particles through upwind fluxes at their edges (eq. 24), solved
-implicitly; steps grow by 10% and are halved when X, R* or the mean radius
-change by more than 1% (section 3.4.1).
+implicitly. Steps grow by 10% and are halved when R* changes by more than 1%,
+the rule of section 3.4.1 (given there for the Lagrange-like approach); the same
+limit on X and on the mean radius is this package's addition.

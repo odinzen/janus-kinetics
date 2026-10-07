@@ -77,10 +77,18 @@ def table1():
     return solve_kwn(THERMO, KIN, 0.06, 1e7, EDGES, save_times=[1e3, 3e3, 1e4, 3e4, 1e5, 1e6])
 
 
-def test_solute_mass_balance_eq22(table1):
-    f = table1.volume_fraction
-    x = table1.matrix_fraction
-    np.testing.assert_allclose(f * 1.0 + x * (1 - f), 0.06, rtol=1e-12)
+def test_undersaturated_alloy_dissolves_every_particle():
+    """Below the solubility every particle shrinks (eq. 10) and leaves through the
+    lowest class edge, so the population vanishes and all solute is back in the matrix."""
+    edges = np.arange(0.2e-9, 20e-9, 0.05e-9)
+    c = 0.5 * (edges[1:] + edges[:-1])
+    n0 = np.exp(-0.5 * ((c - 3e-9) / 0.4e-9) ** 2)
+    n0 *= 0.002 / (4 / 3 * np.pi * (n0 @ c**3))
+    res = solve_kwn(THERMO, KIN, 0.006, 1e8, edges, number0=n0, save_times=[1e3, 1e5])
+    f = res.volume_fraction
+    assert np.all(np.diff(f) <= 0) and f[-1] < 1e-9 * f[0]
+    assert res.number_density[-1] < 1e-9 * res.number_density[0]
+    assert res.matrix_fraction[-1] == pytest.approx(0.006, rel=1e-6)
 
 
 def test_nucleation_growth_coarsening_sequence(table1):
@@ -99,7 +107,7 @@ def test_mean_radius_meets_critical_radius_after_growth(table1):
     np.testing.assert_allclose(table1.mean_radius[late], table1.critical_radius[late], rtol=2e-2)
 
 
-def test_size_grid_and_step_convergence(table1):
+def test_results_insensitive_to_size_grid_and_step(table1):
     fine = solve_kwn(THERMO, KIN, 0.06, 1e7, np.arange(0.2e-9, 60e-9, 0.025e-9), save_times=[3e4], max_change=0.005)
     i = list(table1.times).index(3e4)
     assert fine.number_density[1] == pytest.approx(table1.number_density[i], rel=3e-2)

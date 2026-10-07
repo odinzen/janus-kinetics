@@ -8,7 +8,8 @@ an interface condition, and moves at the velocity that conserves every element:
 
     w (x_R^I - x_L^I) = J_R^I - J_L^I        (one equation per independent element)
 
-which is eq. (8) of Zener, J. Appl. Phys. 20 (1949) 950, for any pair of phases.
+the generalization of eq. (8) of Zener, J. Appl. Phys. 20 (1949) 950, to
+diffusion on both sides of the interface.
 With local equilibrium the interface compositions are not known in advance when
 there are three or more elements: the tie-line is the one whose compositions make
 the chemical potentials equal and the flux balances hold together, which gives
@@ -253,8 +254,8 @@ def solve_layers(
     ``positions`` are the layer boundaries from 0 to the stack thickness (len(layers)
     + 1 values); the inner ones are the initial interfaces. ``conditions[i]`` holds
     interface i, between layers i and i+1, at fixed compositions or in local
-    equilibrium. Every interface moves to conserve every element (Zener, J. Appl.
-    Phys. 20 (1949) 950, eq. 8), and all interface velocities and operating
+    equilibrium. Every interface moves to conserve every element (the flux balance
+    of the module docstring), and all interface velocities and operating
     tie-lines are solved together each step. A reaction layer must be present from
     the start, if only a few nanometres thick. If a layer is consumed,
     :class:`PhaseDissolvedError` is raised and carries the results up to the last

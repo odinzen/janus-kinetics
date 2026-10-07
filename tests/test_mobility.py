@@ -10,8 +10,8 @@ from conftest import HEADER
 
 T = 1200.0
 
-# Every parameter written with constituents out of alphabetical order, to pin the
-# convention: pycalphad sorts them, so order 1 multiplies (x_A - x_B), not (x_B - x_A).
+# Every parameter is written with constituents out of alphabetical order to pin the
+# convention. pycalphad sorts them, so order 1 multiplies (x_A - x_B), not (x_B - x_A).
 RK_TDB = HEADER + """
 PHASE SOL % 1 1 !
 CONSTITUENT SOL :A,B,C: !
@@ -114,3 +114,40 @@ def test_unsupported_constitution_is_refused():
     db = Database(HEADER + "PHASE TWO % 2 1 1 !\nCONSTITUENT TWO :A,B:A,C: !\n")
     with pytest.raises(UnsupportedPhaseError):
         SubstitutionalLattice.from_database(db, "TWO", ["A", "B", "C"])
+
+
+QUATERNARY = HEADER.replace("ELEMENT C BLANK 1 0 0 !", "ELEMENT C BLANK 1 0 0 !\nELEMENT D BLANK 1 0 0 !") + """
+PHASE SOL % 1 1 !
+CONSTITUENT SOL :A,B,C,D: !
+""" + "".join(f"PARAMETER MQ(SOL&{a},{b};0) 298.15 -100000; 6000 N !\n" for a in "ABCD" for b in "ABCD")
+
+
+def ternary_term(extra: str, x: np.ndarray, elements=("A", "B", "C", "D")) -> np.ndarray:
+    db = Database(QUATERNARY + extra)
+    model = MobilityModel(db, SubstitutionalLattice.from_database(db, "SOL", list(elements)))
+    return model.parameters(x, T)[1] + 100000.0  # remove the end members, leave the ternary term
+
+
+def test_one_elements_ternary_terms_do_not_change_another_elements_mobility():
+    x = np.array([0.2, 0.3, 0.4, 0.1])
+    only_a = ternary_term("PARAMETER MQ(SOL&A,A,B,C;0) 298.15 30000; 6000 N !\n", x)
+    with_b = ternary_term("PARAMETER MQ(SOL&A,A,B,C;0) 298.15 30000; 6000 N !\n"
+                          "PARAMETER MQ(SOL&B,A,B,C;1) 298.15 5000; 6000 N !\n", x)
+    assert only_a[0] == pytest.approx(0.2 * 0.3 * 0.4 * 30000, rel=1e-12)  # order 0 alone: symmetric term
+    assert with_b[0] == pytest.approx(only_a[0], rel=1e-12)
+
+
+def test_ternary_weights_with_a_fourth_element_present():
+    """v_s = x_s + (1 - x_i - x_j - x_k)/3 (Jonsson 1995, eq. 6); the 1/3 share only matters with x_D > 0."""
+    x = np.array([0.2, 0.3, 0.4, 0.1])
+    got = ternary_term("PARAMETER MQ(SOL&C,A,B,C;0) 298.15 1000; 6000 N !\n"
+                       "PARAMETER MQ(SOL&C,A,B,C;1) 298.15 2000; 6000 N !\n"
+                       "PARAMETER MQ(SOL&C,A,B,C;2) 298.15 4000; 6000 N !\n", x)
+    rest = 0.1 / 3
+    expected = 0.2 * 0.3 * 0.4 * ((0.2 + rest) * 1000 + (0.3 + rest) * 2000 + (0.4 + rest) * 4000)
+    assert got[2] == pytest.approx(expected, rel=1e-12)
+
+
+def test_quaternary_interaction_parameters_are_refused():
+    with pytest.raises(UnsupportedPhaseError, match="4 elements"):
+        ternary_term("PARAMETER MQ(SOL&A,A,B,C,D;0) 298.15 1000; 6000 N !\n", np.array([0.25] * 4))

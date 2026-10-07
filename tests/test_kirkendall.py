@@ -96,7 +96,7 @@ def test_markers_move_toward_the_fast_diffuser_side(couple):
 
 
 def test_marker_shift_is_parabolic(couple):
-    """Eq. (5): the Kirkendall plane moves as sqrt(t), so quadrupling t doubles the shift."""
+    """By eq. (5) the Kirkendall plane moves as sqrt(t), so quadrupling t doubles the shift."""
     res, _, _ = couple
     assert res.markers[2, 0] / res.markers[1, 0] == pytest.approx(2.0, rel=2e-3)
 

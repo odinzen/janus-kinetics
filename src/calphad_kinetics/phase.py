@@ -23,14 +23,16 @@ COMPOSITION_FLOOR = 1e-12
 
 @dataclass(frozen=True)
 class ShortCircuit:
-    """Fast diffusion paths (grain boundaries or dislocations) averaged into the lattice.
+    """Fast diffusion paths (dislocations or grain boundaries) averaged into the lattice.
 
-    Hart, Acta Metall. 5 (1957) 597, eq. (5): an atom that spends a fraction f of
-    its time in the paths sees D_eff = f D_path + (1 - f) D_lattice. With D* = RT M
-    (Andersson and Agren, J. Appl. Phys. 72 (1992) 1350, eq. (61)) the same average
-    applies to each element's mobility, and so to every diffusion matrix built from
-    it. Hart's condition is that a diffusion distance spans many paths; a coarse
-    microstructure with isolated boundaries is outside it.
+    Hart, Acta Metall. 5 (1957) 597, eq. (5), for self-diffusion along dislocations:
+    an atom that spends a fraction f of its time in the paths sees
+    D_eff = f D_path + (1 - f) D_lattice. Two extensions are this package's, not
+    Hart's. The same time-fraction argument is applied to grain boundaries, and,
+    through D* = RT M (Andersson and Agren, J. Appl. Phys. 72 (1992) 1350,
+    eq. (61)), to each element's mobility and so to every diffusion matrix built
+    from it. Hart's condition is that a diffusion distance spans many paths; a
+    coarse microstructure with isolated boundaries is outside it.
 
     ``fraction`` is Hart's f, the fraction of atoms in the paths. ``mobility_db``
     holds MQ/MF parameters for diffusion along the paths, entered under the same
@@ -132,7 +134,8 @@ class SolutionPhase:
     ) -> np.ndarray:
         """Reduced interdiffusion matrix D~ in m^2/s, shape (..., n-1, n-1).
 
-        ``frame="number"`` is the number-fixed (lattice-fixed reduced) frame;
+        ``frame="number"`` is the number-fixed frame (the lattice frame differs by
+        the Kirkendall velocity; see :meth:`intrinsic_matrix`);
         ``frame="volume"`` needs ``partial_volumes`` (m^3/mol, one per element).
         """
         x = self._x(x)
