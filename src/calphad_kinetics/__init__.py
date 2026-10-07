@@ -1,6 +1,7 @@
 """Multicomponent diffusion kinetics built on pycalphad."""
 
 from .diffusivity import intrinsic_matrix, lattice_velocity, number_fixed_matrix, volume_fixed_matrix
+from .interstitial import InterstitialPhase
 from .homogenization import LocalEquilibriumTable, average_kinetic_factor, solve_homogenized
 from .datasets import jonsson1995_bcc_crfeni
 from .errors import ConvergenceError, MissingParameterError, UnstableCompositionError, UnsupportedPhaseError
@@ -38,6 +39,7 @@ __all__ = [
     "DiluteSolution",
     "FixedInterface",
     "GibbsEnergy",
+    "InterstitialPhase",
     "Kinetics",
     "Layer",
     "LocalEquilibriumTable",

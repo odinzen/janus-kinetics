@@ -285,6 +285,8 @@ def solve_layers(
     n_if = n_layers - 1
 
     def outer(b: Boundary) -> _End:
+        if b.kind == "fixed" and (callable(b.composition) or b.held is not None):
+            raise ValueError("held-subset, potential and time-dependent boundaries are supported by solve_planar only")
         return _End() if b.kind == "no_flux" else _End(b.composition.reshape(m), 0.0)
 
     end_0, end_l = outer(left), outer(right)

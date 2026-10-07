@@ -20,7 +20,7 @@ import scipy.sparse as sp
 import scipy.sparse.linalg as spla
 
 from .errors import ConvergenceError
-from .schedule import with_time
+from .schedule import temperature_at, with_time
 
 Diffusivity = Callable[[np.ndarray], np.ndarray] | np.ndarray
 LatticeVelocity = Callable[[np.ndarray, np.ndarray], np.ndarray]
@@ -28,25 +28,32 @@ LatticeVelocity = Callable[[np.ndarray, np.ndarray], np.ndarray]
 
 @dataclass(frozen=True)
 class Boundary:
-    """Planar boundary condition, either zero flux or a fixed composition held at the face.
+    """Planar boundary condition: zero flux, or some or all components held at the face.
 
-    Build it with :meth:`no_flux` or :meth:`fixed`; the composition holds the n-1
-    independent mole fractions in the order of ``phase.elements``.
+    Build it with :meth:`no_flux`, :meth:`fixed` or :meth:`potential`. Compositions
+    are the n-1 independent fractions in the order the phase lists them. With
+    ``held`` naming a subset of components, only those are held and the others
+    pass no flux through the face.
     """
 
     kind: Literal["no_flux", "fixed"]
-    composition: np.ndarray | None = None
+    composition: np.ndarray | Callable | None = None
+    held: tuple[int, ...] | None = None
 
     def __post_init__(self):
         if self.kind not in ("no_flux", "fixed"):
             raise ValueError(f"boundary kind must be 'no_flux' or 'fixed', got {self.kind!r}")
-        if self.kind == "fixed":
-            if self.composition is None:
-                raise ValueError("a fixed boundary needs a composition")
+        if self.kind == "no_flux":
+            return
+        if self.composition is None:
+            raise ValueError("a fixed boundary needs a composition")
+        if not callable(self.composition):
             comp = np.atleast_1d(np.asarray(self.composition, dtype=float))
             if np.any(comp < 0) or np.any(comp > 1) or comp.sum() > 1:
                 raise ValueError(f"boundary composition {comp} is not a set of mole fractions")
             object.__setattr__(self, "composition", comp)
+        if self.held is not None:
+            object.__setattr__(self, "held", tuple(int(i) for i in self.held))
 
     @classmethod
     def no_flux(cls) -> Boundary:
@@ -54,9 +61,59 @@ class Boundary:
         return cls("no_flux")
 
     @classmethod
-    def fixed(cls, composition) -> Boundary:
-        """Composition held at the face (independent mole fractions)."""
-        return cls("fixed", composition)
+    def fixed(cls, composition, components=None) -> Boundary:
+        """Composition held at the face (independent fractions), constant or a function of time.
+
+        ``components`` lists the indices held; the rest pass no flux. A callable
+        composition takes (t) or (t, x_cell), x_cell being the adjacent cell.
+        """
+        return cls("fixed", composition, None if components is None else tuple(components))
+
+    @classmethod
+    def potential(cls, phase, potentials: dict, temperature) -> Boundary:
+        """Hold the chemical potentials of some components at the face, as a gas atmosphere does.
+
+        ``potentials`` maps element names to mu in J/mol, constant or a function of
+        time. Each step the held components take the composition whose potentials
+        match, with the other components at the adjacent cell's composition; those
+        pass no flux. Works with :class:`SolutionPhase` and :class:`InterstitialPhase`.
+        """
+        independent = list(getattr(phase, "independent", None) or phase.elements[:-1])
+        full = list(getattr(phase, "components", None) or phase.elements)
+        names = [k.upper() for k in potentials]
+        idx = [independent.index(k) for k in names]
+        rows = [full.index(k) for k in names]
+        targets = list(potentials.values())
+        dmu = getattr(phase, "dmu_du", None) or phase.dmu_dx
+
+        def composition(t, x_cell):
+            temp = temperature_at(temperature, t)
+            goal = np.array([temperature_at(m, t) for m in targets])
+            x = np.array(x_cell, dtype=float)
+            s = np.log(np.clip(x[idx], 1e-12, None))  # Newton in ln x: mu ~ RT ln x when dilute
+            for _ in range(60):
+                x[idx] = np.exp(s)
+                res = phase.chemical_potentials(x, temp)[rows] - goal
+                jac = dmu(x, temp, check=False) if dmu.__name__ == "dmu_du" else dmu(x, temp)
+                step = np.linalg.solve(jac[rows][:, idx] * x[idx], -res)
+                step = np.clip(step, -2.0, 2.0)
+                s = s + step
+                if np.max(np.abs(step)) < 1e-12:
+                    x[idx] = np.exp(s)
+                    return x
+            raise ConvergenceError(f"no composition gives potentials {dict(zip(names, goal))} at T = {temp:g} K")
+
+        return cls("fixed", composition, tuple(idx))
+
+    def face(self, t: float, x_cell: np.ndarray, m: int) -> tuple[np.ndarray, np.ndarray]:
+        """Face composition and the mask of held components at time t."""
+        comp = self.composition
+        if callable(comp):
+            comp = np.atleast_1d(np.asarray(with_time(comp, 1)(t, x_cell), dtype=float))
+        if comp.size != m:
+            raise ValueError(f"a fixed boundary needs the {m} independent mole fractions, got {comp.size}")
+        mask = np.ones(m, dtype=bool) if self.held is None else np.isin(np.arange(m), self.held)
+        return comp, mask
 
 
 @dataclass
@@ -196,20 +253,30 @@ def solve_planar(
     asm = _Assembler(z_faces, m)
 
     for b in (left, right):
-        if b.kind == "fixed" and b.composition.size != m:
+        if b.kind == "fixed" and not callable(b.composition) and b.composition.size != m:
             raise ValueError(f"a fixed boundary needs the {m} independent mole fractions, got {b.composition.size}")
 
-    def boundary(b: Boundary, h: float, t: float):
+    def boundary(b: Boundary, h: float, t: float, x_cell: np.ndarray):
+        """Face conductance and held composition. Components that are not held get zero
+        flux, so their face values are eliminated: the held ones see the Schur complement
+        D_hh - D_hf D_ff^-1 D_fh of the diffusivity matrix."""
         if b.kind == "no_flux":
             return None, None
-        xb = b.composition.reshape(m)
-        return dfun(xb[None], t)[0] / h, xb
+        xb, held = b.face(t, x_cell, m)
+        d = dfun(np.where(held, xb, x_cell)[None], t)[0]
+        if held.all():
+            return d / h, xb
+        free = ~held
+        schur = d[np.ix_(held, held)] - d[np.ix_(held, free)] @ np.linalg.solve(d[np.ix_(free, free)], d[np.ix_(free, held)])
+        c = np.zeros((m, m))
+        c[np.ix_(held, held)] = schur / h
+        return c, np.where(held, xb, 0.0)
 
     def step_matrix(xk: np.ndarray, step: float, t: float):
         faces = 0.5 * (xk[1:] + xk[:-1])
         c_inner = dfun(faces, t) / asm.h_inner[:, None, None]
-        c_left, xl = boundary(left, asm.h_left, t)
-        c_right, xr = boundary(right, asm.h_right, t)
+        c_left, xl = boundary(left, asm.h_left, t, xk[0])
+        c_right, xr = boundary(right, asm.h_right, t, xk[-1])
         rhs_bc = np.zeros_like(xk)
         if c_left is not None:
             rhs_bc[0] += c_left @ xl
@@ -218,13 +285,16 @@ def solve_planar(
         return asm.matrix(step, c_inner, c_left, c_right), rhs_bc
 
     cache: dict[float, tuple] = {}
+    # held compositions that change with time or with the adjacent cell need the Picard path
+    moving_boundary_values = any(b.kind == "fixed" and (callable(b.composition) or b.held is not None)
+                                 for b in (left, right))
 
     def advance(x_old: np.ndarray, step: float, t_new: float) -> tuple[np.ndarray, int]:
         # Each solve is for the increment from the current iterate, so solver round-off
         # scales with the (small) increment and the inventory drifts far less than it
         # would if the full composition were solved for.
         rhs = ((asm.widths / step)[:, None] * x_old).ravel()
-        if constant:
+        if constant and not moving_boundary_values:
             # A constant D gives the same matrix every step, so factorize once per step size.
             if step not in cache:
                 a, rhs_bc = step_matrix(x_old, step, t_new)

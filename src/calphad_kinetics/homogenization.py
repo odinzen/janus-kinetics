@@ -208,6 +208,8 @@ def solve_homogenized(
     ends = {}
     for side, b in (("left", left), ("right", right)):
         if b.kind == "fixed":
+            if callable(b.composition) or b.held is not None:
+                raise ValueError("held-subset, potential and time-dependent boundaries are supported by solve_planar only")
             if b.composition.size != m:
                 raise ValueError(f"a fixed boundary needs the {m} independent mole fractions")
             xb = b.composition.reshape(1, m)

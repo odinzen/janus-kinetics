@@ -30,6 +30,57 @@ from .thermo import R
 MOBILITY_TYPES = ("MF", "MQ")  # order of the compiled outputs
 
 
+def sublattice_expansion(params, y_of: dict) -> se.Basic:
+    """Composition expansion of one diffusing element's MQ or MF parameters.
+
+    ``y_of[s][name]`` is the site fraction (symbol or expression) of constituent
+    ``name`` on sublattice s. Each parameter contributes its value times the product
+    of the site fractions it names, a wildcard ``*`` sublattice contributing 1. An
+    interaction on one sublattice adds (y_i - y_j)^r for two constituents in
+    pycalphad's sorted order, or for three the weights v_s = y_s + (1 - y_i - y_j - y_k)/3
+    (Jonsson, ISIJ Int. 35 (1995) 1415, eqs. 5-6), with a ternary given at order 0
+    only taken as the symmetric term. This is the expansion of Andersson and Agren,
+    J. Appl. Phys. 72 (1992) 1350, eq. (67), written per sublattice. Interactions on
+    two sublattices at once (reciprocal terms) are refused.
+    """
+    total = se.Integer(0)
+    ternary = defaultdict(dict)
+    for p in params:
+        order, value = int(p["parameter_order"]), p["parameter"]
+        weight, mixing = se.Integer(1), []
+        for idx, subl in enumerate(p["constituent_array"]):
+            names = [str(sp.name) for sp in subl]
+            if names == ["*"]:
+                continue
+            for name in names:
+                weight = weight * y_of[idx][name]
+            if len(names) > 1:
+                mixing.append((idx, names))
+        if not mixing:
+            total += weight * value
+        elif len(mixing) > 1:
+            raise UnsupportedPhaseError(f"reciprocal mobility parameters are not supported: {p['constituent_array']}")
+        else:
+            idx, names = mixing[0]
+            y = y_of[idx]
+            if len(names) == 2:
+                total += weight * value * (y[names[0]] - y[names[1]]) ** order
+            elif len(names) == 3:
+                ternary[(p["constituent_array"], idx)][order] = (weight, value, names)
+            else:
+                raise UnsupportedPhaseError(f"mobility interactions among {len(names)} elements are not supported: {names}")
+    for (_, idx), orders in ternary.items():
+        y = y_of[idx]
+        if set(orders) == {0}:
+            weight, value, _ = orders[0]
+            total += weight * value
+            continue
+        for s, (weight, value, names) in orders.items():
+            rest = (1 - y[names[0]] - y[names[1]] - y[names[2]]) / 3
+            total += weight * (y[names[s]] + rest) * value
+    return total
+
+
 class MobilityModel:
     """Andersson-Agren atomic mobilities M_B(x, T) for one substitutional phase.
 
@@ -79,41 +130,11 @@ class MobilityModel:
         self._f = se.Lambdify(args, exprs, cse=True)
 
     def _expansion(self, params) -> se.Basic:
-        """Phi for one diffusing element from its own parameters only.
-
-        End members x_i Phi^i, binary terms x_i x_j Phi^{ij,r} (x_i - x_j)^r with i, j
-        in pycalphad's sorted order, and ternary terms x_i x_j x_k sum_s v_s Phi^{ijk,s}
-        with v_s = x_s + (1 - x_i - x_j - x_k)/3 (Jonsson, ISIJ Int. 35 (1995) 1415,
-        eqs. 5-6); a ternary given at order 0 only is the symmetric term x_i x_j x_k Phi^0.
-        """
+        """Phi for one diffusing element from its own parameters only (see :func:`sublattice_expansion`)."""
         lat = self.lattice
-        x = dict(zip(lat.elements, lat.x_symbols))
-        total = se.Integer(0)
-        ternary = defaultdict(dict)
-        for p in params:
-            names = [str(s.name) for s in p["constituent_array"][lat.mixing_sublattice]]
-            order, value = int(p["parameter_order"]), p["parameter"]
-            if names == ["*"]:
-                # the wildcard applies whatever the constituent; the x_i sum to one
-                total += value
-            elif len(names) == 1:
-                total += x[names[0]] * value
-            elif len(names) == 2:
-                i, j = names
-                total += x[i] * x[j] * value * (x[i] - x[j]) ** order
-            elif len(names) == 3:
-                ternary[tuple(names)][order] = value
-            else:
-                raise UnsupportedPhaseError(f"mobility interactions among {len(names)} elements are not supported: {names}")
-        for names, orders in ternary.items():
-            product = x[names[0]] * x[names[1]] * x[names[2]]
-            if set(orders) == {0}:
-                total += product * orders[0]
-                continue
-            rest = (1 - x[names[0]] - x[names[1]] - x[names[2]]) / 3
-            for s, value in orders.items():
-                total += product * (x[names[s]] + rest) * value
-        return total
+        y_of = {lat.mixing_sublattice: dict(zip(lat.elements, lat.x_symbols))}
+        y_of.update({idx: {"VA": se.Integer(1)} for idx in lat.vacancy_sublattices})
+        return sublattice_expansion(params, y_of)
 
     def _require_end_members(self, db: Database, element: str) -> None:
         lat = self.lattice

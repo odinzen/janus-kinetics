@@ -120,7 +120,7 @@ Larsson and Hoglund (2009): Wiener upper and lower bounds, eqs. (6)-(7), and the
 Hashin-Shtrikman bounds of eqs. (8)-(11), where the reference phase alpha is the
 one with the lowest (lower bound) or highest (upper bound) Gamma_k present.
 
-### `def solve_homogenized(z_faces: 'np.ndarray', x0: 'np.ndarray', table: 'LocalEquilibriumTable', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None), save_times=None, tol: 'float' = 1e-10, max_iter: 'int' = 60) -> 'DiffusionResult'`
+### `def solve_homogenized(z_faces: 'np.ndarray', x0: 'np.ndarray', table: 'LocalEquilibriumTable', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, max_iter: 'int' = 60) -> 'DiffusionResult'`
 
 Integrate planar multiphase diffusion with the homogenization model.
 
@@ -129,6 +129,24 @@ in the composition change (Newton) and holds Gamma* and the frame correction
 at the current iterate (Picard). Face fluxes use the potential difference
 between neighbouring cells, so transport across a phase boundary is driven by
 the true potential jump rather than by a diffusivity at a mean composition.
+
+## `calphad_kinetics.interstitial`
+
+### `class InterstitialPhase(db: 'Database', phase_name: 'str', substitutional, interstitial, dependent=None, mobility_db: 'Database | None' = None, pressure: 'float' = 101325.0)`
+
+Thermodynamics, mobilities and diffusivities of a phase with interstitial elements, in u-fractions.
+
+Composition arguments are u-fractions in the order of :attr:`independent`
+(substitutional elements except the dependent one, then the interstitials), or
+all of them in the order of :attr:`components`.
+
+- `chemical_potentials(self, u, T) -> 'np.ndarray'`: mu_k in J/mol for every component, shape (..., n).
+- `dmu_du(self, u, T, check: 'bool' = True) -> 'np.ndarray'`: dmu_k/du_j for every component k and independent j, shape (..., n, n-1).
+- `full_composition(self, u) -> 'np.ndarray'`: All u-fractions (..., n) from the independent ones (..., n-1), or checked if already full.
+- `interdiffusion_function(self, temperature: 'Temperature')`: D as a function of (u, t) for the solvers, at a constant T or along a schedule.
+- `interdiffusion_matrix(self, u, T) -> 'np.ndarray'`: Eq. (64)-(65) of Andersson and Agren in the independent u-fractions, shape (..., n-1, n-1), m^2/s.
+- `mobility(self, u, T) -> 'np.ndarray'`: Omega_k = exp((MF + MQ)/RT)/RT for every component, shape (..., n), m^2 mol/(J s).
+- `u_from_x(self, x) -> 'np.ndarray'`: Independent u-fractions from mole fractions given in the order of :attr:`components`.
 
 ## `calphad_kinetics.mobility`
 
@@ -207,7 +225,7 @@ Saved state of a layered run; index [t] is a saved time, [j] a layer, [i] an int
 - `profile(self, index: 'int' = -1) -> 'tuple[np.ndarray, np.ndarray]'`: Cell centres (m) and compositions through the whole stack at one saved time.
 - `thickness(self) -> 'np.ndarray'`: Layer thicknesses [t, j] in m.
 
-### `def solve_layers(positions, layers: 'list[Layer]', conditions: 'list', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50) -> 'StackResult'`
+### `def solve_layers(positions, layers: 'list[Layer]', conditions: 'list', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50) -> 'StackResult'`
 
 Integrate planar diffusion through a stack of phase layers with moving interfaces.
 
@@ -221,7 +239,7 @@ the start, if only a few nanometres thick. If a layer is consumed,
 :class:`PhaseDissolvedError` is raised; it and any :class:`ConvergenceError`
 carry the results up to the last saved time as ``.result``.
 
-### `def solve_moving_boundary(length: 'float', interface: 'float', x0_left, x0_right, d_left: 'Diffusivity', d_right: 'Diffusivity', condition: 'FixedInterface | LocalEquilibrium', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50) -> 'MovingBoundaryResult'`
+### `def solve_moving_boundary(length: 'float', interface: 'float', x0_left, x0_right, d_left: 'Diffusivity', d_right: 'Diffusivity', condition: 'FixedInterface | LocalEquilibrium', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50) -> 'MovingBoundaryResult'`
 
 Integrate two-phase planar diffusion with a moving interface, as two layers of :func:`solve_layers`.
 
@@ -363,15 +381,19 @@ are lists of points, e.g. ``TemperatureSchedule([0, 10, 70, 80], [300, 1300, 130
 
 ## `calphad_kinetics.solver`
 
-### `class Boundary(kind: "Literal['no_flux', 'fixed']", composition: 'np.ndarray | None' = None) -> None`
+### `class Boundary(kind: "Literal['no_flux', 'fixed']", composition: 'np.ndarray | Callable | None' = None, held: 'tuple[int, ...] | None' = None) -> None`
 
-Planar boundary condition, either zero flux or a fixed composition held at the face.
+Planar boundary condition: zero flux, or some or all components held at the face.
 
-Build it with :meth:`no_flux` or :meth:`fixed`; the composition holds the n-1
-independent mole fractions in the order of ``phase.elements``.
+Build it with :meth:`no_flux`, :meth:`fixed` or :meth:`potential`. Compositions
+are the n-1 independent fractions in the order the phase lists them. With
+``held`` naming a subset of components, only those are held and the others
+pass no flux through the face.
 
-- `fixed(composition) -> 'Boundary'`: Composition held at the face (independent mole fractions).
+- `face(self, t: 'float', x_cell: 'np.ndarray', m: 'int') -> 'tuple[np.ndarray, np.ndarray]'`: Face composition and the mask of held components at time t.
+- `fixed(composition, components=None) -> 'Boundary'`: Composition held at the face (independent fractions), constant or a function of time.
 - `no_flux() -> 'Boundary'`: Zero flux of every element through the face.
+- `potential(phase, potentials: 'dict', temperature) -> 'Boundary'`: Hold the chemical potentials of some components at the face, as a gas atmosphere does.
 
 ### `class DiffusionResult(times: 'np.ndarray', z_faces: 'np.ndarray', x: 'np.ndarray', picard_iterations: 'list[int]' = <factory>, markers: 'np.ndarray | None' = None) -> None`
 
@@ -379,7 +401,7 @@ Saved profiles: ``x[t_index, cell, component]`` for the independent components.
 
 - `inventory(self) -> 'np.ndarray'`: Integral of each mole fraction over the domain at every saved time, shape (n_t, n-1).
 
-### `def solve_planar(z_faces: 'np.ndarray', x0: 'np.ndarray', diffusivity: 'Diffusivity', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None), save_times=None, picard_tol: 'float' = 1e-10, max_picard: 'int' = 50, markers=None, lattice_velocity: 'LatticeVelocity | None' = None) -> 'DiffusionResult'`
+### `def solve_planar(z_faces: 'np.ndarray', x0: 'np.ndarray', diffusivity: 'Diffusivity', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, picard_tol: 'float' = 1e-10, max_picard: 'int' = 50, markers=None, lattice_velocity: 'LatticeVelocity | None' = None) -> 'DiffusionResult'`
 
 Integrate planar interdiffusion from ``x0`` to ``t_end``.
 
