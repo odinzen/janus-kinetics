@@ -260,3 +260,52 @@ def test_line_compound_from_pycalphad():
     c = LineCompound.from_pycalphad(Database(TDB), "A2B", ("A", "B"), 1.1e-5)
     assert c.x == pytest.approx(1 / 3)
     assert c.gibbs(1000.0) == pytest.approx((-90000 + 6 * 1000.0) / 3, rel=1e-10)
+
+
+def wagner_eq20(phases, widths, t):
+    """Wagner, Acta Metall. 17 (1969) 99, eq. 20: the integrated diffusivity of each
+    line compound i in a couple of pure end members, from all layer widths dx,
+
+        D_int(i) = (1 - N_i) sum_(v<i) (V_i/V_v) N_v dx_i dx_v / 2t + N_i (1 - N_i) dx_i^2 / 2t
+                   + N_i sum_(v>i) (V_i/V_v) (1 - N_v) dx_i dx_v / 2t
+    """
+    out = {}
+    inner = range(1, len(phases) - 1)
+    for i in inner:
+        n_i, v_i, d_i = phases[i].x, phases[i].molar_volume, widths[phases[i].name]
+        total = n_i * (1 - n_i) * d_i**2 / (2 * t)
+        for j in inner:
+            ratio = v_i / phases[j].molar_volume * d_i * widths[phases[j].name] / (2 * t)
+            if j < i:
+                total += (1 - n_i) * ratio * phases[j].x
+            elif j > i:
+                total += n_i * ratio * (1 - phases[j].x)
+        out[phases[i].name] = total
+    return out
+
+
+THREE_COMPOUNDS = [
+    LineCompound("A", 0.0, 1.0e-5),
+    LineCompound("A3B", 0.25, 0.9e-5, integrated_diffusivity=2e-14, tracer_ratio=0.3),
+    LineCompound("AB", 0.5, 1.3e-5, integrated_diffusivity=5e-15, tracer_ratio=3.0),
+    LineCompound("AB3", 0.75, 1.1e-5, integrated_diffusivity=1e-14, tracer_ratio=1.0),
+    LineCompound("B", 1.0, 1.6e-5),
+]
+
+
+@pytest.mark.parametrize("couple", ["thermo", "three"])
+def test_multilayer_growth_satisfies_wagner_eq_20(couple):
+    """Every layer's D_int, from mobilities and Gibbs energies or given directly, is
+    recovered from the simulated widths of all layers, with unequal molar volumes."""
+    phases, T = (thermo_couple(), 1100.0) if couple == "thermo" else (THREE_COMPOUNDS, 1000.0)
+    expected = {p.name: integrated_diffusivity(*phases[k - 1:k + 2], T) for k, p in enumerate(phases[1:-1], 1)}
+    g = parabolic_growth(phases, T)
+    t = 1.0
+    widths = {name: np.sqrt(2 * k * t) for name, k in g.growth_constants.items()}
+    for name, value in wagner_eq20(phases, widths, t).items():
+        assert value == pytest.approx(expected[name], rel=1e-10)
+    t = 5000.0
+    res = solve_reaction_layers(phases, t, T)  # the same from the time-stepped widths
+    widths = {name: res.thickness[name][-1] for name in expected}
+    for name, value in wagner_eq20(phases, widths, t).items():
+        assert value == pytest.approx(expected[name], rel=1e-5)

@@ -178,7 +178,10 @@ relaxing in ln t and polishing with Newton. A finite end member that is used up
 hands its role to the next phase. The model reproduces van Loo's Ni3Sn2 analysis
 (pp. 64-65: consumption ratio 125/103, marker split 0.5 or 2 when one element
 moves, and the 3.4 um marker shift between D_Ni/D_Sn = 5 and infinity) and the
-wustite couples of p. 78 (d1 = 2 d2). Interface-reaction control and nucleation
+wustite couples of p. 78 (d1 = 2 d2). For several layers grown from pure end
+members, Wagner's eq. 20 (Acta Metall. 17 (1969) 99) gives each layer's D_int from
+the widths of all of them, weighted by the ratios of molar volumes; the simulated
+widths satisfy it to round-off. Interface-reaction control and nucleation
 barriers are not included.
 
 ## Conversion of plates, wires and particles
