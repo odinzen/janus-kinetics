@@ -119,3 +119,36 @@ def test_ferromagnetic_factor():
                          "Jonsson, ISIJ Int. 35 (1995) 1415, Figs. 3-4, plus mg-Omega; neither is available locally")
 def test_chemical_diffusivity_fe_cr_against_fig4():
     pass
+
+
+# Fig. 5 (p. 1419): Fe tracer diffusivity in bcc Cr-Fe, assessed lines read by eye (+-0.05 in log10 D)
+FIG5 = {1250: {0.0: -11.93, 0.6: -12.73, 0.8: -13.45, 1.0: -14.85}, 1145: {0.0: -12.55, 0.8: -14.28, 1.0: -15.88},
+        1060: {0.0: -13.12, 0.8: -15.15, 1.0: -16.82}, 960: {0.0: -13.95, 0.8: -16.30, 1.0: -18.12}}
+
+
+@pytest.fixture(scope="module")
+def binary(jonsson_db):
+    return MobilityModel(jonsson_db, SubstitutionalLattice.from_database(jonsson_db, "BCC_A2", ["CR", "FE"], dependent="FE"))
+
+
+def log_d_fe(binary, x_cr, celsius):
+    x = np.array([[min(max(x_cr, 1e-12), 1 - 1e-12)]])
+    return np.log10(binary.tracer_diffusivity(x, celsius + 273.15)[0][1])
+
+
+def test_cr_rich_fe_tracer_matches_fig5(binary):
+    """Where Cr dominates there is no ferromagnetic contribution, so the paramagnetic model must
+    follow the assessed lines; this checks the Cr-Fe interaction parameters against the figure."""
+    for celsius, points in FIG5.items():
+        for x_cr, expected in points.items():
+            if x_cr >= 0.6:
+                assert log_d_fe(binary, x_cr, celsius) == pytest.approx(expected, abs=0.1), (celsius, x_cr)
+
+
+def test_fe_rich_gap_is_the_missing_magnetic_factor(binary):
+    """In pure Fe the paramagnetic model runs above Fig. 5 by 0.12 decades at 1250 C, growing toward
+    the Curie temperature (770 C, p. 1418): the size of the omitted factor of eq. (3). When that factor
+    is implemented this test should turn into agreement."""
+    excess = [log_d_fe(binary, 0.0, c) - FIG5[c][0.0] for c in (1250, 1145, 1060, 960)]
+    assert all(e > 0.05 for e in excess)
+    assert all(b > a for a, b in zip(excess, excess[1:]))

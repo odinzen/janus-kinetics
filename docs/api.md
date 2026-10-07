@@ -29,8 +29,9 @@ Transcribed from the Appendix (p. 1421) of B. Jonsson, ISIJ Int. 35 (1995)
 1415. It holds mobility (MQ/MF) parameters only, to be combined with a
 thermodynamic description through ``SolutionPhase(..., mobility_db=...)``. The ferromagnetic
 factor of the paper's eq. (3) is not included. It is largest below the Curie
-temperature but still lowers Fe-rich mobilities some way above it, so results
-for Fe-rich alloys within a few hundred kelvin of Tc are approximate.
+temperature but still lowers Fe-rich mobilities above it: against the paper's
+Fig. 5 the Fe tracer diffusivity in pure bcc Fe comes out 0.12 decades too high
+at 1250 C and 0.38 at 960 C, while Cr-rich alloys agree within 0.07.
 
 ## `calphad_kinetics.diffusivity`
 
