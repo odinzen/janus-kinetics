@@ -10,6 +10,20 @@ from pycalphad import Database
 
 from calphad_kinetics.datasets import jonsson1995_bcc_crfeni
 
+_pytest_approx = pytest.approx
+
+
+def _relative_approx(expected, rel=None, abs=None, nan_ok=False):
+    """pytest.approx without its silent default abs = 1e-12.
+
+    That floor passes any pair of diffusivities (~1e-15 m^2/s) or mobilities
+    whatever their ratio. Here the tolerance is relative unless a test names abs.
+    """
+    return _pytest_approx(expected, rel=1e-6 if rel is None else rel, abs=0.0 if abs is None else abs, nan_ok=nan_ok)
+
+
+pytest.approx = _relative_approx
+
 HEADER = """
 ELEMENT VA VACUUM 0 0 0 !
 ELEMENT A BLANK 1 0 0 !

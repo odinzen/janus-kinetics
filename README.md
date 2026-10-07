@@ -34,6 +34,10 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   interface in local equilibrium or at fixed compositions, with every interface
   velocity and operating tie-line solved together. Reaction layers grow or are
   consumed; a consumed layer stops the run with the history returned.
+- **Stoichiometric reaction layers** (silicides, intermetallics, oxide scales):
+  a binary couple of line compounds grown from mobilities and Gibbs energies or
+  from measured integrated diffusivities (Wagner's D_int, van Loo 1990), with
+  Kirkendall markers, finite films that are used up in turn, and anneal schedules.
 - **Non-isothermal anneals** along piecewise-linear temperature schedules
   (ramps, holds, spikes) for the diffusion, layered-stack and (binary)
   homogenization solvers.
@@ -63,7 +67,7 @@ pip install -e . --no-deps
 pytest
 ```
 
-The test suite (182 tests, plus 4 skipped for data that is not available) takes
+The test suite (212 tests, plus 4 skipped for data that is not available) takes
 about five minutes. On Windows run inside the activated environment, since
 numpy's MKL libraries are only found on the activated path.
 
@@ -104,7 +108,8 @@ above with a figure, chromium loss to a surface in a ternary, a precipitation
 run, an alpha/beta couple solved by both two-phase models, and a reaction layer
 growing between two thin films during a rapid thermal anneal, with both
 interfaces following the tie-lines as the temperature ramps, holds and cools,
-and oxygen dissolving into a metal film from an atmosphere during an anneal.
+oxygen dissolving into a metal film from an atmosphere during an anneal, a metal
+film reacting into two line compounds, and van Loo's Ni-Sn Kirkendall analysis.
 
 Conventions worth knowing:
 

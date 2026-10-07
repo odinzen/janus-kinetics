@@ -41,6 +41,15 @@ Each item is validated against the published source named in its docstring.
   commercial databases and are not reproduced. Local equilibrium is tabulated
   once per temperature, so it is limited to binaries and ternaries.
 
+Stoichiometric reaction layers (added after phase 4): binary couples of line
+compounds with Wagner's integrated diffusivity (van Loo 1990, eq. 17), lattice
+and marker motion, finite films and anneal schedules. Validated against van Loo's
+Ni3Sn4/Ni3Sn couple (pp. 64-65) and wustite couples (p. 78). Wagner's general
+multilayer formula (Acta Metall. 17 (1969) 99) has not been opened, so the
+multilayer case is checked by conservation and against the single-layer limits
+only. Interface-reaction control (Dybkov, cited by van Loo) and first-phase
+selection by nucleation are not modelled.
+
 Left for later: graded grids next to a moving interface, layers that nucleate
 during a run (today a reaction layer must exist from the start), and an adaptive
 (on-demand) equilibrium table for four or more elements.

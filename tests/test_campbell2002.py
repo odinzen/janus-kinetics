@@ -55,10 +55,16 @@ def test_self_diffusion_activation_energies_of_table4(model, element):
 
 
 def test_mo_solute_diffusivity_in_ni_at_1382K(model):
-    """p. 781: 'the calculated diffusivity is 5.50 x 10^-15 m^2/s' for Mo in Ni at 1382 K."""
+    """p. 781: 'the calculated diffusivity is 5.50 x 10^-15 m^2/s' for Mo in Ni at 1382 K.
+
+    Table 2 gives 5.42e-15 at infinite dilution, 1.5 % lower. The paper does not
+    say at what Mo content it evaluated the number; about 1.7 at.% Mo, through the
+    Mo end member, would give 5.50e-15. The check therefore allows 2 %.
+    """
     x = composition(model, {"NI": 1.0})
     d = np.exp(mq(model, "MO", x, 1382.0) / (R * 1382.0))  # D* = RT M = exp(MQ / RT), eqs. (4) and (6)
-    assert d == pytest.approx(5.50e-15, rel=1e-2)
+    assert d == pytest.approx(5.42e-15, rel=1e-3)
+    assert d == pytest.approx(5.50e-15, rel=2e-2)
 
 
 def test_cr_in_cobalt_activation_energy(model):

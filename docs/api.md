@@ -420,6 +420,73 @@ class through its lower edge have dissolved; their solute returns to the
 matrix through the mass balance of eq. (22). The lower edge must lie above the
 radius where X^i(R) reaches alpha X^P, below which eq. (10) does not hold.
 
+## `calphad_kinetics.reaction_layers`
+
+### `class LineCompound(name: 'str', x: 'float', molar_volume: 'float', gibbs: 'Value | None' = None, mobility: 'tuple[float, float] | Callable[[float], tuple[float, float]] | None' = None, integrated_diffusivity: 'Value | None' = None, tracer_ratio: 'float | None' = None) -> None`
+
+A phase of fixed composition in an A-B couple.
+
+``x`` is the mole fraction of B and ``molar_volume`` is per mole of atoms
+(m^3/mol). ``gibbs`` is the Gibbs energy per mole of atoms (J/mol), a number
+or a function of T. A phase that grows as a layer needs its transport, given
+either as ``mobility`` = (M_A, M_B) in m^2 mol/(J s) (the tracer diffusivity
+is D* = R T M), constant or a function of T, or as a measured
+``integrated_diffusivity`` (m^2/s, constant or a function of T) together with
+``tracer_ratio`` = M_B / M_A, which only sets how the flux splits between the
+elements and so where markers end up. End members need neither.
+
+- `from_pycalphad(db, phase: 'str', elements: 'Sequence[str]', molar_volume: 'float', name: 'str | None' = None, **transport) -> 'LineCompound'`: A stoichiometric pycalphad phase; ``elements`` = (A, B) and G(T) is read from the database.
+
+### `class ParabolicGrowth(names: 'tuple[str, ...]', interfaces: 'np.ndarray', growth_constants: 'dict[str, float]', consumed: 'dict[str, float]', marker: 'float', marker_phase: 'str', lattice_velocity: 'np.ndarray') -> None`
+
+Similarity solution of a couple started at t = 0 at constant T.
+
+Positions scale with sqrt(t) in the frame of the anchored end member, with the
+original interface at 0: interface j sits at ``interfaces[j] * sqrt(t)``, and
+layer k has d^2 = 2 k_p t (van Loo's growth constant, p. 55) with k_p in
+``growth_constants``. ``consumed`` gives the thickness of each end member used
+up, divided by sqrt(t); ``marker`` is the Kirkendall plane position divided by
+sqrt(t) and ``marker_phase`` the phase it lies in.
+
+
+### `class ReactionResult(times: 'np.ndarray', thickness: 'dict[str, np.ndarray]', interfaces: 'list[np.ndarray]', markers: 'np.ndarray', consumed: 'list[tuple[float, str]]') -> None`
+
+Layer thicknesses (m) of every phase at ``times``.
+
+``thickness[name]`` is inf for a semi-infinite end member and 0 once a phase is
+used up. ``interfaces[i]`` holds the interface positions at ``times[i]`` in the
+anchored end member's frame, original interface at 0 for a fresh couple.
+``markers`` has one column per marker. ``consumed`` lists (time, name) for
+every end member used up during the run.
+
+
+### `def integrated_diffusivity(left: 'LineCompound', layer: 'LineCompound', right: 'LineCompound', T: 'float') -> 'float'`
+
+Wagner's D_int (van Loo eq. 17) of ``layer`` between its neighbours at T, in m^2/s.
+
+### `def parabolic_growth(phases: 'Sequence[LineCompound]', temperature: 'float', anchor: 'str' = 'left') -> 'ParabolicGrowth'`
+
+Parabolic growth constants of every layer in a fresh couple at constant T.
+
+All layers start together (van Loo p. 61, item c). With d_k = delta_k sqrt(t)
+every velocity scales as 1/sqrt(t), so delta_k = 2 (V_k - V_(k-1)) where V are
+the interface velocity coefficients computed with thicknesses delta. That
+nonlinear system is solved in log(delta).
+
+### `def solve_reaction_layers(phases: 'Sequence[LineCompound]', t_end: 'float', temperature: 'Temperature', thickness: 'Sequence[float] | None' = None, end_thickness: 'tuple[float | None, float | None]' = (None, None), markers: 'Sequence[float]' = (0.0,), save_times=None, anchor: 'str | None' = None, rtol: 'float' = 1e-09) -> 'ReactionResult'`
+
+Grow the layers of a binary couple of line compounds over an anneal.
+
+``phases`` runs from the left end member to the right one in order of
+increasing x. ``thickness`` gives the starting thickness of each interior
+layer; None starts a fresh couple from the similarity solution at T(0).
+``end_thickness`` makes an end member a film of finite thickness; when one is
+used up the next phase becomes the end member, as a metal film turns into its
+first compound and then into the next. Markers start at the given positions,
+measured from the original interface (the first interface for a pre-grown
+stack). The frame is the lattice of the semi-infinite end member, or of
+``anchor`` ('left' or 'right') when given.
+
 ## `calphad_kinetics.schedule`
 
 ### `class TemperatureSchedule(times, temperatures)`

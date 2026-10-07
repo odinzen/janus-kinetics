@@ -9,6 +9,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parents[1] / "examples"))
 
 import fe_cr_couple  # noqa: E402
+import film_reaction  # noqa: E402
+import ni_sn_kirkendall  # noqa: E402
 import oxygen_uptake  # noqa: E402
 import precipitation_table1  # noqa: E402
 import surface_depletion  # noqa: E402
@@ -90,3 +92,18 @@ def test_oxygen_uptake_follows_the_held_potential():
     hold_end = list(res.times).index(70.0)
     assert np.all(np.diff(uptake[: hold_end + 1]) > 0)
     assert uptake[-1] < uptake[hold_end]  # outgassing as the surface solubility falls
+
+
+def test_ni_sn_kirkendall():
+    out = ni_sn_kirkendall.run(coarse=True)
+    split = out["x2_over_x1"]
+    assert np.all(np.diff(split) > 0) and 0.5 < split[0] and split[-1] < 2.0  # Table 2.1 limits
+    assert ni_sn_kirkendall.marker_ratio(9.5) == pytest.approx(1.839, abs=1e-3)
+
+
+def test_film_reaction_ends_with_the_film_inventory_in_ms():
+    res = film_reaction.run(coarse=True)["result"]
+    assert [name for _, name in res.consumed] == ["M", "M2S"]
+    metal, ms = film_reaction.PHASES[0], film_reaction.PHASES[2]
+    expected = film_reaction.FILM * metal.concentrations()[0] / ms.concentrations()[0]
+    assert res.thickness["MS"][-1] == pytest.approx(expected, rel=1e-6)

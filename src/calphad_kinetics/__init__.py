@@ -27,6 +27,7 @@ from .precipitation import (
     solubility_from_pycalphad,
     solve_kwn,
 )
+from .reaction_layers import LineCompound, ParabolicGrowth, ReactionResult, integrated_diffusivity, parabolic_growth, solve_reaction_layers
 from .schedule import TemperatureSchedule
 from .solver import Boundary, DiffusionResult, solve_planar, uniform_faces
 from .thermo import GibbsEnergy, R, dmu_dx, reduced_hessian, thermodynamic_factor
@@ -44,14 +45,17 @@ __all__ = [
     "InterstitialPhase",
     "Kinetics",
     "Layer",
+    "LineCompound",
     "LocalEquilibriumTable",
     "LocalEquilibrium",
     "MissingParameterError",
     "MobilityModel",
     "MovingBoundaryResult",
+    "ParabolicGrowth",
     "PhaseDissolvedError",
     "PrecipitationResult",
     "R",
+    "ReactionResult",
     "ShortCircuit",
     "SolutionPhase",
     "StackResult",
@@ -64,11 +68,13 @@ __all__ = [
     "boundary_product_from_slope",
     "dmu_dx",
     "growth_rate",
+    "integrated_diffusivity",
     "intrinsic_matrix",
     "jonsson1995_bcc_crfeni",
     "lattice_velocity",
     "nucleation_rate",
     "number_fixed_matrix",
+    "parabolic_growth",
     "reduced_hessian",
     "solubility_from_pycalphad",
     "solve_fisher",
@@ -77,6 +83,7 @@ __all__ = [
     "solve_layers",
     "solve_moving_boundary",
     "solve_planar",
+    "solve_reaction_layers",
     "thermodynamic_factor",
     "uniform_faces",
     "volume_fixed_matrix",

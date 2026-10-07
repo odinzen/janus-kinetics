@@ -13,6 +13,8 @@ First version.
 - Moving interfaces in stacks of any number of phase layers, with local
   equilibrium and the operating tie-line at each interface.
 - Non-isothermal anneals along piecewise-linear temperature schedules.
+- Stoichiometric reaction layers in binary couples (Wagner's integrated
+  diffusivity, van Loo 1990), checked against van Loo's Ni-Sn and Fe-O analyses.
 - Homogenization model for multiphase diffusion (binaries and ternaries).
 - Precipitation by classical nucleation, growth and coarsening on a size-class
   distribution.

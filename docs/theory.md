@@ -128,6 +128,36 @@ potential equal across the interface. That is n equations, so in a binary the
 tie-line is fixed and only dS/dt is solved for; with more elements the operating
 tie-line and dS/dt are solved together each step.
 
+## Stoichiometric reaction layers
+
+A line compound has no measurable gradient, so its flux is described by Wagner's
+integrated diffusion coefficient (van Loo 1990, eq. 17), D_int = integral of D~ dN
+across the layer. With D~ = x_A D_B + x_B D_A (eq. 10 at equal partial volumes)
+and D_i = M_i x_i dmu_i/dx_i, a layer of thickness d and molar volume V carries the
+intrinsic fluxes
+
+    J_A = x_A x_B M_A dS / (V d),    J_B = -x_A x_B M_B dS / (V d)
+    D_int = x_A x_B (x_A M_B + x_B M_A) dS
+
+where dS is the jump of mu_B - mu_A across it. Local equilibrium puts mu_B - mu_A
+at each interface on the chord between the two neighbouring compounds, so dS is
+the difference of the chord slopes at the layer, positive when the compound is
+below the line joining its neighbours. Each layer's lattice moves rigidly, and
+conservation of each element across each moving interface,
+
+    c_R (v - w_R) - c_L (v - w_L) = J_R - J_L,
+
+gives every interface velocity v and lattice velocity w, solved outward from one
+end member. Markers move with the lattice they sit in. In a fresh couple every
+length grows as sqrt(t) (van Loo p. 61); the growth constants solve
+delta_k = 2 (v_k - v_(k-1)) with v computed at thicknesses delta, reached by
+relaxing in ln t and polishing with Newton. A finite end member that is used up
+hands its role to the next phase. The model reproduces van Loo's Ni3Sn2 analysis
+(pp. 64-65: consumption ratio 125/103, marker split 0.5 or 2 when one element
+moves, and the 3.4 um marker shift between D_Ni/D_Sn = 5 and infinity) and the
+wustite couples of p. 78 (d1 = 2 d2). Interface-reaction control and nucleation
+barriers are not included.
+
 ## Homogenization
 
 Each cell is in local equilibrium at its overall composition, so it has one set
