@@ -1,7 +1,7 @@
 # Roadmap
 
-Phase 1 (this version) covers single-phase multicomponent diffusion. Each later
-phase is built on the published method named for it and is accepted only when
+Phases 1 and 2 (this version) cover single-phase and two-phase multicomponent
+diffusion. Each phase is built on the published method named for it and is accepted only when
 its listed validation passes. Bibliographic details below are working
 references; they will be checked against Crossref before the release in phase 4.
 
@@ -19,40 +19,27 @@ references; they will be checked against Crossref before the release in phase 4.
 - Volume-fixed frame in the solver, with a composition-dependent molar volume.
 - Adaptive time stepping.
 
-## Phase 2. Moving boundaries and microstructure-scale transport
+## Phase 2. Moving boundaries and microstructure-scale transport (done)
 
-**Planar sharp-interface moving boundary**, for a two-phase diffusion couple and
-for layer growth. Each interface carries local equilibrium, solved together with
-the flux balance across it (the Stefan condition), on grids that follow the
-interface.
+Each item is validated against the published source named in its docstring.
 
-- Agren, J. Phys. Chem. Solids 43 (1982) 385, numerical treatment of diffusional
-  reactions in multicomponent alloys.
-- Crusius, Inden, Knoop, Hoglund and Agren, Z. Metallkd. 83 (1992) 673, on the
-  numerical treatment of moving boundary problems.
-- Validation against the exact parabolic growth solution of Zener, J. Appl. Phys.
-  20 (1949) 950, for a binary planar interface, and against mass balance of the
-  whole couple.
+- Kirkendall marker velocity from the intrinsic fluxes (van Loo 1990, eqs. 4,
+  5, 9, 11). Validated by recovering both intrinsic diffusivities from a
+  simulated couple with van Loo's eq. 11.
+- Short-circuit diffusion by Hart's average (Hart 1957, eq. 5). Hart's regime
+  only; isolated boundaries (Fisher 1951, type B) are not modelled.
+- Planar two-phase moving interface with local equilibrium and the operating
+  tie-line (Zener 1949, eq. 8). Validated against Zener's eqs. 10-12, a
+  two-sided similarity solution and pycalphad tie-lines. The interface gradient
+  is one-sided, so the position converges at first order in the grid step.
+- Homogenization model (Larsson and Hoglund 2009). Validated against the phase 1
+  solver and the sharp-interface solver; the paper's own examples need
+  commercial databases and are not reproduced. Local equilibrium is tabulated
+  once per temperature, so it is limited to binaries and ternaries.
 
-**Kirkendall marker velocity** from the intrinsic (lattice-frame) fluxes.
-
-- Darken, Trans. AIME 175 (1948) 184; Smigelskas and Kirkendall, Trans. AIME 171
-  (1947) 130.
-- Validation against the closed-form marker shift of a binary couple with
-  constant intrinsic diffusivities.
-
-**Grain-boundary short-circuit diffusion** through an effective diffusivity.
-
-- Hart, Acta Metall. 5 (1957) 597.
-- Validation with the limiting cases f -> 0 (lattice only) and f -> 1.
-
-**Homogenization model** for multiphase diffusion couples, which is the supported
-route for compositions that phase 1 rejects as inside a two-phase field.
-
-- Larsson and Engstrom, Acta Mater. 54 (2006) 2431.
-- Validation against the diffusion couples reported in that paper if the required
-  databases are available, otherwise against a sharp-interface phase 2
-  calculation on the same couple.
+Left for later: graded grids next to a moving interface, more than two phases
+in the sharp-interface solver, and an adaptive (on-demand) equilibrium table
+for four or more elements.
 
 ## Phase 3. Precipitation
 
