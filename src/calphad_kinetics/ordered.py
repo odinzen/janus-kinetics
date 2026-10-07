@@ -19,12 +19,13 @@ so tabulate before using these in a solver loop.
 
 Validated against the paper's Al-Ni Figs. 2 and 7 for x_Al <= 0.5 to within 0.04
 decades. On the Al-rich side, where structural vacancies form, the chemical
-diffusivity comes out about 0.3 decades above their Fig. 2 at x_Al = 0.53-0.54.
-The thermodynamics is not the cause: the Al-Ni B2 parameters used in the tests
-are those of Ansara et al. (1997), which the paper used, as printed by Dupin et
-al. (2001). Taking x_i in eq. 12 as atom fractions instead of site averages makes
-it three decades worse, so how the paper treats vacancies remains open, and a
-vacancy site fraction above 1 % raises a warning.
+diffusivity comes out 0.3 to 0.5 decades above their Fig. 2 at x_Al = 0.53-0.54,
+both with the B2 model the paper used, Ansara et al. (1997) (Al,Ni)(Ni,Va), and
+with Dupin et al.'s (2001) (Al,Ni,Va)(Al,Ni,Va) reformulation of it, so the
+choice between those descriptions is not the cause. Taking x_i in eq. 12 as atom
+fractions instead of site averages makes it three decades worse; how the paper
+treats vacancies remains open, and a vacancy site fraction above 1 % raises a
+warning.
 """
 
 from __future__ import annotations
@@ -64,9 +65,9 @@ def ordering_energy(terms: Mapping[tuple[str, str, str], float], element: str, c
 class B2Phase:
     """Mobilities and diffusivities of a B2-ordered phase.
 
-    ``db`` holds the Gibbs energy of ``phase_name``, two sublattices of equal site
-    number holding the elements (and possibly vacancies) plus any vacancy-only
-    sublattices. ``mobility_db`` holds the disordered mobilities of
+    ``db`` holds the Gibbs energy of ``phase_name``: two sublattices of equal site
+    number that together hold the elements (and possibly vacancies), plus any
+    vacancy-only sublattices. ``mobility_db`` holds the disordered mobilities of
     ``disordered_phase``; ``ordering`` the dQ^order_kij terms. Composition
     arguments follow the package convention: mole fractions of ``elements`` with
     the dependent element last, vacancies excluded.
@@ -87,11 +88,16 @@ class B2Phase:
         phase = db.phases.get(self.phase_name)
         if phase is None:
             raise UnsupportedPhaseError(f"phase {self.phase_name} is not in the database")
+        # The two B2 sublattices are those holding any of the elements; they need not
+        # hold the same ones, as in Ansara's (Al,Ni)(Ni,Va).
         wanted = set(self.elements)
-        mixing = [k for k, subl in enumerate(phase.constituents) if wanted <= {str(s.name) for s in subl}]
-        if len(mixing) != 2 or phase.sublattices[mixing[0]] != phase.sublattices[mixing[1]]:
+        names = [{str(s.name) for s in subl} for subl in phase.constituents]
+        mixing = [k for k, held in enumerate(names) if held & wanted]
+        if (len(mixing) != 2 or phase.sublattices[mixing[0]] != phase.sublattices[mixing[1]]
+                or not wanted <= names[mixing[0]] | names[mixing[1]]):
             raise UnsupportedPhaseError(
-                f"{self.phase_name} needs exactly two sublattices of equal site number holding {sorted(wanted)}")
+                f"{self.phase_name} needs exactly two sublattices of equal site number that together hold "
+                f"{sorted(wanted)}")
         self.components = list(self.elements) + ["VA"]
         model = Model(db, self.components, self.phase_name)
         self._sites = [[str(y.species.name) for y in model.site_fractions if y.sublattice_index == k] for k in mixing]

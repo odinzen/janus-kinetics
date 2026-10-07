@@ -356,9 +356,9 @@ of :func:`solve_planar`, for example ``lambda x: alpha.interdiffusion_matrix(x, 
 
 Mobilities and diffusivities of a B2-ordered phase.
 
-``db`` holds the Gibbs energy of ``phase_name``, two sublattices of equal site
-number holding the elements (and possibly vacancies) plus any vacancy-only
-sublattices. ``mobility_db`` holds the disordered mobilities of
+``db`` holds the Gibbs energy of ``phase_name``: two sublattices of equal site
+number that together hold the elements (and possibly vacancies), plus any
+vacancy-only sublattices. ``mobility_db`` holds the disordered mobilities of
 ``disordered_phase``; ``ordering`` the dQ^order_kij terms. Composition
 arguments follow the package convention: mole fractions of ``elements`` with
 the dependent element last, vacancies excluded.

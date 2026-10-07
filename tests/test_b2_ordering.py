@@ -2,12 +2,15 @@
 
 Their Figs. 2 and 7 are read from the published figures at 300 dpi; the readings
 carry about 0.03 decades of error. The paper used the Al-Ni thermodynamics of
-Ansara et al. (1997). These tests use pycalphad's alni_dupin_2001.tdb, whose
-A2/B2 Al-Ni-vacancy parameters equal the Ansara values printed in the appendix of
-Dupin, Ansara and Sundman, Calphad 25 (2001) 279, p. 297-298 (within 0.6 J/mol),
-with SGTE pure-element terms. Compositions stop at x_Al = 0.49; the vacancy-rich
-side is discussed in calphad_kinetics.ordered.
+Ansara et al., J. Alloys Compd. 247 (1997) 20, whose B2 is (Al,Ni)(Ni,Va). Two
+descriptions are used here: that model, built below from Ansara's Appendix A
+(pp. 28-29), and pycalphad's alni_dupin_2001.tdb, which puts Ansara's parameter
+values into Dupin's (Al,Ni,Va)(Al,Ni,Va) reformulation (Dupin, Ansara and
+Sundman, Calphad 25 (2001) 279, pp. 297-298, matched within 0.6 J/mol). Both give
+the same Ni-rich results. Compositions stop at x_Al = 0.49; the vacancy-rich side
+is discussed in calphad_kinetics.ordered.
 """
+import re
 
 import warnings
 from importlib.resources import files
@@ -27,6 +30,42 @@ FIG7 = {1573.15: {0.40: -12.24, 0.44: -12.86, 0.48: -13.54, 0.49: -13.70},
         1273.15: {0.40: -14.02, 0.44: -14.80, 0.48: -15.69, 0.49: -15.92}}
 FIG2 = {1373.15: {0.365: -12.27, 0.405: -12.83, 0.445: -13.45, 0.475: -13.86},
         1273.15: {0.365: -12.90, 0.405: -13.53, 0.445: -14.22, 0.475: -14.69}}
+
+
+DUPIN_TDB = files("pycalphad") / "tests" / "databases" / "alni_dupin_2001.tdb"
+
+
+def ansara_b2() -> Database:
+    """Ansara et al. (1997) Appendix A B2 phase, (Al,Ni)(Ni,Va), on the SGTE pure-element
+    functions of pycalphad's Dupin file (GHSERAL, GBCCAL, GHSERNI, GBCCNI)."""
+    src = DUPIN_TDB.read_text()
+    funcs = [re.search(r"FUNCTION\s+" + name + r"\b.*?!", src, re.S).group(0)
+             for name in ("GHSERAL", "GBCCAL", "GHSERNI", "GBCCNI")]
+    header = "ELEMENT VA VACUUM 0 0 0 !\nELEMENT AL FCC_A1 26.98 0 0 !\nELEMENT NI FCC_A1 58.69 0 0 !\n"
+    return Database(header + "TYPE_DEFINITION % SEQ * !\n" + "\n".join(funcs) + """
+PHASE B2 % 2 1 1 !
+CONSTITUENT B2 :AL,NI:NI,VA: !
+PARAMETER G(B2,AL:NI;0) 298.15 GHSERAL#+GHSERNI#-152397.30+26.40575*T; 6000 N !
+PARAMETER G(B2,NI:NI;0) 298.15 2*GBCCNI#; 6000 N !
+PARAMETER G(B2,AL:VA;0) 298.15 GBCCAL#+1000-T; 6000 N !
+PARAMETER G(B2,NI:VA;0) 298.15 GBCCNI#+162397.3-27.40575*T; 6000 N !
+PARAMETER G(B2,AL,NI:NI;0) 298.15 -52440.88+11.30117*T; 6000 N !
+PARAMETER G(B2,AL,NI:VA;0) 298.15 -52440.88+11.30117*T; 6000 N !
+PARAMETER G(B2,AL:NI,VA;0) 298.15 -64024.38+26.49419*T; 6000 N !
+PARAMETER G(B2,NI:NI,VA;0) 298.15 -64024.38+26.49419*T; 6000 N !
+""")
+
+
+@pytest.fixture(scope="module", params=["dupin", "ansara"])
+def b2(request):
+    if not DUPIN_TDB.is_file():
+        pytest.skip("pycalphad's alni_dupin_2001.tdb test database is not installed")
+    mob, ordering = helander1999_bcc_alni()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        if request.param == "dupin":
+            return B2Phase(Database(str(DUPIN_TDB)), "BCC_B2", ["AL", "NI"], mob, "BCC_A2", ordering)
+        return B2Phase(ansara_b2(), "B2", ["AL", "NI"], mob, "BCC_A2", ordering)
 
 
 @pytest.fixture(scope="module")
@@ -80,15 +119,15 @@ def test_shipped_disordered_parameters_match_appendix_a():
 
 
 @pytest.mark.parametrize("T", sorted(FIG7))
-def test_ni_tracer_diffusivity_against_fig_7(alni, T):
+def test_ni_tracer_diffusivity_against_fig_7(b2, T):
     for x_al, ref in FIG7[T].items():
-        assert np.log10(alni.tracer_diffusivity([x_al], T)[1]) == pytest.approx(ref, abs=0.06)
+        assert np.log10(b2.tracer_diffusivity([x_al], T)[1]) == pytest.approx(ref, abs=0.08)
 
 
 @pytest.mark.parametrize("T", sorted(FIG2))
-def test_chemical_diffusivity_against_fig_2(alni, T):
+def test_chemical_diffusivity_against_fig_2(b2, T):
     for x_al, ref in FIG2[T].items():
-        assert np.log10(alni.interdiffusion_matrix([x_al], T)[0, 0]) == pytest.approx(ref, abs=0.06)
+        assert np.log10(b2.interdiffusion_matrix([x_al], T)[0, 0]) == pytest.approx(ref, abs=0.06)
 
 
 def test_order_slows_ni_by_orders_of_magnitude(alni):

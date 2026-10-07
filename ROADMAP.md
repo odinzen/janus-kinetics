@@ -23,8 +23,8 @@ passes. Every reference is checked against Crossref by tools/check_references.py
 - Adaptive time stepping.
 - Ordered B2 phases: done for mobilities and diffusivities at a point (B2Phase,
   Helander and Agren 1999). Open: the Al-rich vacancy range (0.3 decades off their
-  Fig. 2 with the same Ansara thermodynamics, so the cause is their vacancy
-  treatment, which the paper does not spell out), Al-Fe (their eq. 8 for
+  Fig. 2 with Ansara's own B2 model as well as Dupin's reformulation, so the cause
+  is their vacancy treatment, which the paper does not spell out), Al-Fe (their eq. 8 for
   the magnetic term is garbled as printed), and use inside the solvers.
 
 ## Phase 2. Moving boundaries and microstructure-scale transport (done)
