@@ -18,3 +18,6 @@ First version.
   distribution.
 - Worked examples, a theory note, a generated API reference and a
   Crossref-checked reference list.
+- Input checks from an adversarial review: compositions outside [0, 1],
+  misspelled boundaries, unit slips in precipitation inputs and compositions
+  beyond a homogenization table now raise instead of running on silently.

@@ -97,17 +97,20 @@ The phase constitution is outside what this version can model.
 
 ## `calphad_kinetics.homogenization`
 
-### `class LocalEquilibriumTable(db: 'Database', phases: 'dict[str, SolutionPhase]', T: 'float', averaging: 'Averaging' = 'hashin_shtrikman_lower', spacing: 'float' = 0.0025, pressure: 'float' = 101325.0)`
+### `class LocalEquilibriumTable(db: 'Database', phases: 'dict[str, SolutionPhase]', T: 'float', averaging: 'Averaging' = 'hashin_shtrikman_lower', spacing: 'float | None' = None, pressure: 'float' = 101325.0)`
 
 Chemical potentials and Gamma* at local equilibrium, tabulated over composition.
 
 ``phases`` maps pycalphad phase names to :class:`SolutionPhase` objects that
 supply each phase's mobilities; all must list the same elements in the same
-order. ``spacing`` is the grid step in mole fraction.
+order. ``spacing`` is the grid step in mole fraction (default 0.0025 for a
+binary, 0.02 for a ternary). Compositions outside the tabulated range raise
+instead of being extrapolated, so pure-element ends need a finer spacing.
 
 - `chemical_potentials(self, x) -> 'np.ndarray'`: mu_k at local equilibrium, J/mol, shape (M, n); x holds independent fractions (M, n-1).
 - `dmu_dx(self, x) -> 'np.ndarray'`: Slopes of the interpolated potentials, shape (M, n, n-1).
 - `kinetic_factor(self, x) -> 'np.ndarray'`: Gamma*_k in m^2 mol / (J s), shape (M, n).
+- `phase_fractions(self, x) -> 'dict[str, np.ndarray]'`: Volume (mole) fraction of each phase at local equilibrium, keyed by phase name.
 
 ### `def average_kinetic_factor(gamma: 'np.ndarray', fraction: 'np.ndarray', how: 'Averaging') -> 'np.ndarray'`
 
@@ -176,7 +179,9 @@ Equal chemical potentials of every element across the interface.
 
 ``x_left`` and ``x_right`` are starting compositions for the tie-line (n-1
 independent fractions each, the dependent element last as in the phases), for
-example from :func:`pycalphad.equilibrium`. Both phases must list the same
+example from :func:`pycalphad.equilibrium`. Newton follows the tie-line
+nearest the start, so when a phase has a miscibility gap the starting
+compositions decide which branch is found. Both phases must list the same
 elements in the same order. ``temperature`` is a constant or a
 :class:`TemperatureSchedule`; the tie-line follows it during an anneal.
 
@@ -213,8 +218,8 @@ equilibrium. Every interface moves to conserve every element (the flux balance
 of the module docstring), and all interface velocities and operating
 tie-lines are solved together each step. A reaction layer must be present from
 the start, if only a few nanometres thick. If a layer is consumed,
-:class:`PhaseDissolvedError` is raised and carries the results up to the last
-saved time as ``.result``.
+:class:`PhaseDissolvedError` is raised; it and any :class:`ConvergenceError`
+carry the results up to the last saved time as ``.result``.
 
 ### `def solve_moving_boundary(length: 'float', interface: 'float', x0_left, x0_right, d_left: 'Diffusivity', d_right: 'Diffusivity', condition: 'FixedInterface | LocalEquilibrium', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50) -> 'MovingBoundaryResult'`
 
@@ -288,6 +293,7 @@ composition at its interface.
 - `critical_radius(self, x) -> 'np.ndarray'`: R* = -2 gamma / dg; infinite where the matrix is not supersaturated.
 - `driving_force(self, x) -> 'np.ndarray'`: Chemical driving force per unit precipitate volume, J/m^3; negative when supersaturated.
 - `interface_composition(self, radius) -> 'np.ndarray'`: X^i(R), the matrix solute fraction in equilibrium with a particle of radius R (eq. 9).
+- `smallest_radius` (property): Radius below which eq. (9) has no matrix composition below X^P.
 
 ### `class Kinetics(diffusivity: 'float', lattice_parameter: 'float', sites: 'float') -> None`
 
@@ -361,6 +367,11 @@ are lists of points, e.g. ``TemperatureSchedule([0, 10, 70, 80], [300, 1300, 130
 
 Planar boundary condition, either zero flux or a fixed composition held at the face.
 
+Build it with :meth:`no_flux` or :meth:`fixed`; the composition holds the n-1
+independent mole fractions in the order of ``phase.elements``.
+
+- `fixed(composition) -> 'Boundary'`: Composition held at the face (independent mole fractions).
+- `no_flux() -> 'Boundary'`: Zero flux of every element through the face.
 
 ### `class DiffusionResult(times: 'np.ndarray', z_faces: 'np.ndarray', x: 'np.ndarray', picard_iterations: 'list[int]' = <factory>, markers: 'np.ndarray | None' = None) -> None`
 

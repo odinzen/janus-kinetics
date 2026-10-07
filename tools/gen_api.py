@@ -37,12 +37,13 @@ def render() -> str:
                 parts += [inspect.cleandoc(obj.__doc__ or "(no docstring)"), ""]
                 if inspect.isclass(obj):
                     for meth, member in inspect.getmembers(obj):
-                        if meth.startswith("_") or not (inspect.isfunction(member) or isinstance(member, property)):
+                        if meth.startswith("_") or not (inspect.isfunction(member) or inspect.ismethod(member)
+                                                          or isinstance(member, property)):
                             continue
                         doc = inspect.getdoc(member)
                         if not doc:
                             continue
-                        if inspect.isfunction(member):
+                        if inspect.isfunction(member) or inspect.ismethod(member):
                             parts += [f"- `{meth}{inspect.signature(member)}`: {doc.splitlines()[0]}"]
                         else:
                             parts += [f"- `{meth}` (property): {doc.splitlines()[0]}"]

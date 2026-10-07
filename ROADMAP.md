@@ -39,9 +39,9 @@ Each item is validated against the published source named in its docstring.
   commercial databases and are not reproduced. Local equilibrium is tabulated
   once per temperature, so it is limited to binaries and ternaries.
 
-Left for later: graded grids next to a moving interface, more than two phases
-in the sharp-interface solver, and an adaptive (on-demand) equilibrium table
-for four or more elements.
+Left for later: graded grids next to a moving interface, layers that nucleate
+during a run (today a reaction layer must exist from the start), and an adaptive
+(on-demand) equilibrium table for four or more elements.
 
 ## Phase 3. Precipitation (done for binaries)
 

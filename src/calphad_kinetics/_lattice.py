@@ -15,8 +15,8 @@ from .errors import UnsupportedPhaseError
 class SubstitutionalLattice:
     """One mixing sublattice holding every element, other sublattices vacancy-only.
 
-    ``elements`` is ordered with the dependent (solvent) element last, which is
-    the order used for every composition array in the package.
+    ``elements`` keeps the order the caller gave, with the dependent (solvent)
+    element moved last; every composition array in the package uses this order.
     """
 
     phase_name: str
@@ -32,7 +32,11 @@ class SubstitutionalLattice:
         phase_name = phase_name.upper()
         if phase_name not in db.phases:
             raise UnsupportedPhaseError(f"phase {phase_name} is not in the database")
-        names = sorted({el.upper() for el in elements} - {"VA"})
+        # Keep the caller's order so composition arrays mean what the caller wrote;
+        # only the dependent element moves to the end.
+        names = [el.upper() for el in elements if el.upper() != "VA"]
+        if len(set(names)) != len(names):
+            raise UnsupportedPhaseError(f"element listed twice in {list(elements)}")
         if len(names) < 2:
             raise UnsupportedPhaseError("at least two elements are needed for diffusion")
         dependent = names[-1] if dependent is None else dependent.upper()
@@ -54,9 +58,12 @@ class SubstitutionalLattice:
             elif active == {va}:
                 vacancy.append(idx)
             else:
+                others = sorted(str(s) for s in subl)
                 raise UnsupportedPhaseError(
-                    f"{phase_name}: sublattice {idx} holds {sorted(str(s) for s in active)}; this version "
-                    "handles one substitutional sublattice plus vacancy-only interstitial sublattices"
+                    f"{phase_name}: sublattice {idx} holds {others} and of the requested elements "
+                    f"{sorted(str(s) for s in active)}. This version handles one substitutional sublattice "
+                    "holding every element plus vacancy-only sublattices; interstitial elements (C, N, O, H "
+                    "on a second sublattice), ionic species and ordered multi-sublattice phases are not yet supported"
                 )
         if mixing is None:
             raise UnsupportedPhaseError(f"{phase_name}: no sublattice contains all of {list(ordered)}")
@@ -77,13 +84,28 @@ class SubstitutionalLattice:
         subs.update({v.Y(self.phase_name, idx, "VA"): se.Integer(1) for idx in self.vacancy_sublattices})
         return subs
 
-    def full_composition(self, x: np.ndarray) -> np.ndarray:
-        """Accept (..., n-1) independent or (..., n) full mole fractions; return (..., n)."""
+    def full_composition(self, x: np.ndarray, tol: float = 1e-6) -> np.ndarray:
+        """Accept (..., n-1) independent or (..., n) full mole fractions; return (..., n).
+
+        A scalar is taken as the single independent fraction of a binary. Fractions
+        outside [0, 1] by more than ``tol`` raise, since clipping them would
+        silently evaluate a different alloy.
+        """
         x = np.asarray(x, dtype=float)
+        if x.ndim == 0:
+            x = x[None]
         if x.shape[-1] == self.n - 1:
-            return np.concatenate([x, 1.0 - x.sum(axis=-1, keepdims=True)], axis=-1)
-        if x.shape[-1] == self.n:
+            full = np.concatenate([x, 1.0 - x.sum(axis=-1, keepdims=True)], axis=-1)
+        elif x.shape[-1] == self.n:
             if not np.allclose(x.sum(axis=-1), 1.0, atol=1e-10):
                 raise ValueError("full mole fractions must sum to one")
-            return x
-        raise ValueError(f"last axis must have length {self.n - 1} or {self.n}, got {x.shape[-1]}")
+            full = x
+        else:
+            raise ValueError(f"last axis must have length {self.n - 1} or {self.n}, got {x.shape[-1]}")
+        lo, hi = full.min(), full.max()
+        if lo < -tol or hi > 1 + tol:
+            raise ValueError(
+                f"mole fractions of {self.elements} must lie in [0, 1]; got values from {lo:.4g} to {hi:.4g} "
+                "(percent instead of fractions, independent fractions summing above one, or an oscillating "
+                "profile that needs a finer grid or a shorter step)")
+        return full

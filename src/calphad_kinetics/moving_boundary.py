@@ -144,7 +144,9 @@ class LocalEquilibrium:
 
     ``x_left`` and ``x_right`` are starting compositions for the tie-line (n-1
     independent fractions each, the dependent element last as in the phases), for
-    example from :func:`pycalphad.equilibrium`. Both phases must list the same
+    example from :func:`pycalphad.equilibrium`. Newton follows the tie-line
+    nearest the start, so when a phase has a miscibility gap the starting
+    compositions decide which branch is found. Both phases must list the same
     elements in the same order. ``temperature`` is a constant or a
     :class:`TemperatureSchedule`; the tie-line follows it during an anneal.
     """
@@ -189,10 +191,14 @@ class LocalEquilibrium:
         u = self._u.copy()
         for _ in range(max_iter):
             step = np.linalg.solve(self.jacobian(u), -self.residual(u))
+            step *= min(1.0, 0.05 / max(np.max(np.abs(step)), 1e-300))  # at most 0.05 in mole fraction per step
+            while np.any(u + step <= 0) or np.any(u + step >= 1):
+                step *= 0.5
             u = u + step
             if np.max(np.abs(step)) < tol:
                 return self.unpack(u)
-        raise ConvergenceError("binary tie-line did not converge")
+        raise ConvergenceError("binary tie-line did not converge; start from the compositions pycalphad.equilibrium "
+                               "gives for the intended two-phase field")
 
 
 @dataclass
@@ -258,8 +264,8 @@ def solve_layers(
     of the module docstring), and all interface velocities and operating
     tie-lines are solved together each step. A reaction layer must be present from
     the start, if only a few nanometres thick. If a layer is consumed,
-    :class:`PhaseDissolvedError` is raised and carries the results up to the last
-    saved time as ``.result``.
+    :class:`PhaseDissolvedError` is raised; it and any :class:`ConvergenceError`
+    carry the results up to the last saved time as ``.result``.
     """
     pos = np.asarray(positions, dtype=float)
     n_layers = len(layers)
@@ -367,6 +373,11 @@ def solve_layers(
                 jac = jacobian(y, res, out)
             last = size
             delta = np.linalg.solve(jac, -res)
+            # interface compositions move at most 0.05 per iteration; larger jumps
+            # land far from the tie-line and can stall the layer solves
+            comp = np.concatenate([np.arange(offsets[i], offsets[i] + sizes[i]) for i in range(n_if)]).astype(int)
+            if comp.size:
+                delta *= min(1.0, 0.05 / max(np.max(np.abs(delta[comp])), 1e-300))
             for _ in range(30):  # damp steps that would leave the composition simplex
                 if admissible(y + delta):
                     break
@@ -396,18 +407,30 @@ def solve_layers(
             np.array([v[4] for v in saved]).reshape(k, n_if, m),
             tuple(layer.name for layer in layers))
 
+    initial = np.diff(pos)
     saved, times, t = [snapshot()], [0.0], 0.0
     try:
         for target, steps in _output_schedule(t_end, dt, save_times):
             step = (target - t) / steps
             for k in range(steps):
-                u_ifaces, w_prev, s, xs = solve_step(s, step, t + (k + 1) * step)
+                try:
+                    u_ifaces, w_prev, s, xs = solve_step(s, step, t + (k + 1) * step)
+                except ConvergenceError as err:
+                    # a layer a few cells from vanishing makes the interface Newton fail
+                    # before any thickness reaches zero; report that as what it is
+                    left_frac = np.diff(bounds(s)) / initial
+                    j = int(np.argmin(left_frac))
+                    if left_frac[j] < 0.02:
+                        raise PhaseDissolvedError(
+                            f"layer {j} ({layers[j].name or 'unnamed'}) was nearly consumed "
+                            f"({left_frac[j]:.2%} of its initial thickness) near t = {t + (k + 1) * step:g} s") from err
+                    raise
                 for reg, xj in zip(regions, xs):
                     reg.x = xj
             t = target
             times.append(t)
             saved.append(snapshot())
-    except PhaseDissolvedError as err:
+    except (PhaseDissolvedError, ConvergenceError) as err:
         err.result = collect(saved, times)
         raise
     return collect(saved, times)

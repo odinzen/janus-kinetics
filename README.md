@@ -50,8 +50,8 @@ pip install -e . --no-deps
 pytest
 ```
 
-The test suite (113 tests, plus 3 skipped for data that is not available) takes
-about three minutes. On Windows run inside the activated environment, since
+The test suite (137 tests, plus 3 skipped for data that is not available) takes
+about four minutes. On Windows run inside the activated environment, since
 numpy's MKL libraries are only found on the activated path.
 
 ## Example
@@ -92,13 +92,18 @@ run, and an alpha/beta couple solved by both two-phase models.
 
 Conventions worth knowing:
 
-- Compositions are mole fractions ordered as `phase.elements`, with the
-  dependent element last; functions take the independent fractions or all of them.
+- Compositions are mole fractions in the order you list the elements, with the
+  dependent element moved last (see `phase.elements`); functions take the
+  independent fractions or all of them. Fractions outside [0, 1] raise.
 - Interaction parameters follow pycalphad's ordering, with constituents sorted
   alphabetically, so order 1 of `MQ(FCC_A1&NI,ZN,CU;1)` multiplies (x_CU - x_ZN).
-- A TDB parameter evaluates to zero outside its temperature range, as in pycalphad.
+  Wildcard parameters such as `MQ(FCC_A1&NI,*:VA;0)` apply at every composition.
+- Outside a parameter's temperature ranges pycalphad extends the nearest range;
+  nothing warns that T is outside the assessed range.
 - The solvers run in the number-fixed frame with one molar volume for all
-  substitutional elements.
+  substitutional elements. Temperatures are in kelvin throughout.
+- A thermodynamic description with a magnetic contribution triggers a warning,
+  because the mobilities omit Jonsson's ferromagnetic factor.
 
 ## How to cite
 

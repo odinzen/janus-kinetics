@@ -28,18 +28,35 @@ LatticeVelocity = Callable[[np.ndarray, np.ndarray], np.ndarray]
 
 @dataclass(frozen=True)
 class Boundary:
-    """Planar boundary condition, either zero flux or a fixed composition held at the face."""
+    """Planar boundary condition, either zero flux or a fixed composition held at the face.
+
+    Build it with :meth:`no_flux` or :meth:`fixed`; the composition holds the n-1
+    independent mole fractions in the order of ``phase.elements``.
+    """
 
     kind: Literal["no_flux", "fixed"]
     composition: np.ndarray | None = None
 
+    def __post_init__(self):
+        if self.kind not in ("no_flux", "fixed"):
+            raise ValueError(f"boundary kind must be 'no_flux' or 'fixed', got {self.kind!r}")
+        if self.kind == "fixed":
+            if self.composition is None:
+                raise ValueError("a fixed boundary needs a composition")
+            comp = np.atleast_1d(np.asarray(self.composition, dtype=float))
+            if np.any(comp < 0) or np.any(comp > 1) or comp.sum() > 1:
+                raise ValueError(f"boundary composition {comp} is not a set of mole fractions")
+            object.__setattr__(self, "composition", comp)
+
     @classmethod
     def no_flux(cls) -> Boundary:
+        """Zero flux of every element through the face."""
         return cls("no_flux")
 
     @classmethod
     def fixed(cls, composition) -> Boundary:
-        return cls("fixed", np.atleast_1d(np.asarray(composition, dtype=float)))
+        """Composition held at the face (independent mole fractions)."""
+        return cls("fixed", composition)
 
 
 @dataclass
@@ -177,6 +194,10 @@ def solve_planar(
         raise ValueError("x0 needs one row per cell")
     dfun, constant = _as_callable(diffusivity)
     asm = _Assembler(z_faces, m)
+
+    for b in (left, right):
+        if b.kind == "fixed" and b.composition.size != m:
+            raise ValueError(f"a fixed boundary needs the {m} independent mole fractions, got {b.composition.size}")
 
     def boundary(b: Boundary, h: float, t: float):
         if b.kind == "no_flux":

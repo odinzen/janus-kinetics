@@ -48,7 +48,14 @@ class MobilityModel:
 
     def __init__(self, db: Database, lattice: SubstitutionalLattice):
         self.lattice = lattice
-        active = {v.Species(s) for s in lattice.pycalphad_components}
+        if lattice.phase_name not in db.phases:
+            raise MissingParameterError(f"the mobility database has no phase {lattice.phase_name}")
+        n_subl = len(db.phases[lattice.phase_name].constituents)
+        if n_subl != 1 + len(lattice.vacancy_sublattices):
+            raise MissingParameterError(
+                f"{lattice.phase_name} has {n_subl} sublattices in the mobility database but "
+                f"{1 + len(lattice.vacancy_sublattices)} in the thermodynamic one; they must be declared alike")
+        active = {v.Species(s) for s in lattice.pycalphad_components} | {v.Species("*")}
         functions = {se.Symbol(name): value for name, value in db.symbols.items()}
 
         def valid(array) -> bool:
@@ -86,7 +93,10 @@ class MobilityModel:
         for p in params:
             names = [str(s.name) for s in p["constituent_array"][lat.mixing_sublattice]]
             order, value = int(p["parameter_order"]), p["parameter"]
-            if len(names) == 1:
+            if names == ["*"]:
+                # the wildcard applies whatever the constituent; the x_i sum to one
+                total += value
+            elif len(names) == 1:
                 total += x[names[0]] * value
             elif len(names) == 2:
                 i, j = names
@@ -112,11 +122,13 @@ class MobilityModel:
             array[lat.mixing_sublattice] = (v.Species(host),)
             for idx in lat.vacancy_sublattices:
                 array[idx] = (v.Species("VA"),)
+            wildcard = list(array)
+            wildcard[lat.mixing_sublattice] = (v.Species("*"),)
             found = db.search(
                 (where("phase_name") == lat.phase_name)
                 & (where("parameter_type").one_of(MOBILITY_TYPES))
                 & (where("diffusing_species") == v.Species(element))
-                & (where("constituent_array") == tuple(array))
+                & ((where("constituent_array") == tuple(array)) | (where("constituent_array") == tuple(wildcard)))
             )
             if not found:
                 raise MissingParameterError(

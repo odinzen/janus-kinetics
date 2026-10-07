@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
 from pycalphad import Database
+from tinydb import where
 
 from ._lattice import SubstitutionalLattice
 from .diffusivity import intrinsic_matrix, lattice_velocity, number_fixed_matrix, volume_fixed_matrix
@@ -66,8 +68,22 @@ class SolutionPhase:
         self.lattice = SubstitutionalLattice.from_database(db, phase_name, elements, dependent)
         self.gibbs = GibbsEnergy(db, self.lattice)
         self.mobility_model = MobilityModel(mobility_db or db, self.lattice)
+        self._warn_about_omitted_terms(db, mobility_db or db)
         self.short_circuit = short_circuit
         self._path_model = MobilityModel(short_circuit.mobility_db, self.lattice) if short_circuit else None
+
+    def _warn_about_omitted_terms(self, db: Database, mob_db: Database) -> None:
+        """Say so when the databases ask for physics the mobilities here leave out."""
+        name = self.lattice.phase_name
+        magnetic = db.search((where("phase_name") == name) & (where("parameter_type").one_of(["TC", "BMAGN"])))
+        if magnetic:
+            warnings.warn(f"{name} has a magnetic Gibbs energy, but the mobilities omit the ferromagnetic factor "
+                          "(pass magnetic_factor to scale them); Fe-rich mobilities near or below Tc will be too high",
+                          stacklevel=3)
+        unused = mob_db.search((where("phase_name") == name) & ~(where("parameter_type").one_of(["G", "L", "TC", "BMAGN", "MQ", "MF"])))
+        kinds = sorted({p["parameter_type"] for p in unused})
+        if kinds:
+            warnings.warn(f"{name}: parameters of type {kinds} are present but not used by this package", stacklevel=3)
 
     def _mobility(self, x: np.ndarray, T, magnetic_factor) -> np.ndarray:
         m = self.mobility_model.mobility(x, T, magnetic_factor)

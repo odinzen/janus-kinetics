@@ -68,7 +68,9 @@ class LocalEquilibriumTable:
 
     ``phases`` maps pycalphad phase names to :class:`SolutionPhase` objects that
     supply each phase's mobilities; all must list the same elements in the same
-    order. ``spacing`` is the grid step in mole fraction.
+    order. ``spacing`` is the grid step in mole fraction (default 0.0025 for a
+    binary, 0.02 for a ternary). Compositions outside the tabulated range raise
+    instead of being extrapolated, so pure-element ends need a finer spacing.
     """
 
     def __init__(
@@ -77,7 +79,7 @@ class LocalEquilibriumTable:
         phases: dict[str, SolutionPhase],
         T: float,
         averaging: Averaging = "hashin_shtrikman_lower",
-        spacing: float = 0.0025,
+        spacing: float | None = None,
         pressure: float = 101325.0,
     ):
         orders = {p.elements for p in phases.values()}
@@ -88,6 +90,9 @@ class LocalEquilibriumTable:
         self.m = self.n - 1
         if self.m > 2:
             raise ValueError("the tabulated local equilibrium is limited to binaries and ternaries")
+        if spacing is None:
+            # the ternary grid grows as 1/spacing^2 and pycalphad cost with it
+            spacing = 0.0025 if self.m == 1 else 0.02
         self.T, self.spacing, self.averaging = T, spacing, averaging
         self.phase_names = sorted(phases)
 
@@ -123,12 +128,18 @@ class LocalEquilibriumTable:
         else:
             self._interp = LinearNDInterpolator(self.points, values)
         self.lower, self.upper = self.points.min(axis=0), self.points.max(axis=0)
+        self.max_sum = float(self.points.sum(axis=1).max())
 
     def _values(self, x: np.ndarray) -> np.ndarray:
         x = np.atleast_2d(np.asarray(x, dtype=float))
+        tol = 1e-12
+        inside = np.all(x >= self.lower - tol, axis=1) & np.all(x <= self.upper + tol, axis=1) \
+            & (x.sum(axis=1) <= self.max_sum + tol)
         out = self._interp(x)
-        if not np.all(np.isfinite(out)):
-            raise ValueError("composition outside the tabulated range")
+        if not np.all(inside) or not np.all(np.isfinite(out)):
+            bad = x[~inside | ~np.all(np.isfinite(out), axis=1)][0]
+            raise ValueError(f"composition {bad} is outside the tabulated range {self.lower}..{self.upper}; "
+                             "rebuild the table with a smaller spacing to reach it")
         return out
 
     def chemical_potentials(self, x) -> np.ndarray:
@@ -140,6 +151,7 @@ class LocalEquilibriumTable:
         return np.exp(self._values(x)[:, self.n : 2 * self.n])
 
     def phase_fractions(self, x) -> dict[str, np.ndarray]:
+        """Volume (mole) fraction of each phase at local equilibrium, keyed by phase name."""
         vals = self._values(x)[:, 2 * self.n :]
         return {name: vals[:, i] for i, name in enumerate(self.phase_names)}
 
@@ -161,7 +173,7 @@ class LocalEquilibriumTable:
         return np.stack(cols, axis=-1)
 
     def admissible(self, x: np.ndarray) -> bool:
-        return bool(np.all(x >= self.lower) and np.all(x <= self.upper) and np.all(x.sum(axis=-1) <= self.upper.max()))
+        return bool(np.all(x >= self.lower) and np.all(x <= self.upper) and np.all(x.sum(axis=-1) <= self.max_sum))
 
 
 def solve_homogenized(
@@ -196,6 +208,8 @@ def solve_homogenized(
     ends = {}
     for side, b in (("left", left), ("right", right)):
         if b.kind == "fixed":
+            if b.composition.size != m:
+                raise ValueError(f"a fixed boundary needs the {m} independent mole fractions")
             xb = b.composition.reshape(1, m)
             ends[side] = (xb[0], table.chemical_potentials(xb)[0], table.kinetic_factor(xb)[0])
     a_idx = np.arange(m)
@@ -239,12 +253,18 @@ def solve_homogenized(
             mat = sp.csc_matrix((np.concatenate(vals), (np.concatenate(rows), np.concatenate(cols))),
                                 shape=(n_cells * m, n_cells * m))
             delta = spla.spsolve(mat, rhs.ravel()).reshape(n_cells, m)
+            full_step = True
             for _ in range(30):  # keep iterates inside the table
                 if table.admissible(xk + delta):
                     break
                 delta = 0.5 * delta
+                full_step = False
+            else:
+                raise ConvergenceError("the composition left the tabulated range during a step; "
+                                       "rebuild the table to cover it or reduce dt")
             xk = xk + delta
-            if np.max(np.abs(delta)) < tol:
+            # a damped step is small by construction, so it cannot signal convergence
+            if full_step and np.max(np.abs(delta)) < tol:
                 return xk, it
         raise ConvergenceError(f"homogenization step did not converge (last change {np.max(np.abs(delta)):.3g}); reduce dt")
 

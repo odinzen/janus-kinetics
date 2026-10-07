@@ -48,6 +48,19 @@ class DiluteSolution:
     gamma: float
     T: float
 
+    def __post_init__(self):
+        if not 0.0 < self.x_eq < self.x_p <= 1.0:
+            raise ValueError(f"need 0 < x_eq < x_p <= 1 as mole fractions, got x_eq={self.x_eq}, x_p={self.x_p}")
+        for name in ("v_at_p", "v_at_m"):
+            value = getattr(self, name)
+            if not 1e-31 < value < 1e-27:
+                raise ValueError(f"{name} = {value:g} m^3 is not an atomic volume (about 1e-29 m^3; "
+                                 "a molar volume must be divided by Avogadro's number)")
+        if self.gamma <= 0:
+            raise ValueError(f"interface energy must be positive, got {self.gamma}")
+        if self.T <= 0:
+            raise ValueError(f"temperature must be in kelvin, got {self.T}")
+
     @property
     def alpha(self) -> float:
         """v_at^M / v_at^P, the ratio in Perez et al. eq. (8)."""
@@ -72,21 +85,34 @@ class DiluteSolution:
         with np.errstate(divide="ignore"):
             return np.where(dg < 0, -2.0 * self.gamma / np.where(dg < 0, dg, -1.0), np.inf)
 
+    @property
+    def smallest_radius(self) -> float:
+        """Radius below which eq. (9) has no matrix composition below X^P.
+
+        The left side of eq. (9) peaks at X = X^P, so a particle smaller than
+        R0 / (pot(X^P) - pot(X^i)) has no equilibrium interface composition.
+        """
+        gap = float(self._potential(self.x_p) - self._potential(self.x_eq)) if self.x_p < 1.0 else np.inf
+        return self.capillary_length / gap if gap > 0 else np.inf
+
     def interface_composition(self, radius) -> np.ndarray:
-        """X^i(R), the matrix solute fraction in equilibrium with a particle of radius R (eq. 9)."""
+        """X^i(R), the matrix solute fraction in equilibrium with a particle of radius R (eq. 9).
+
+        NaN where R is below :attr:`smallest_radius` and no such composition exists.
+        """
         radius = np.asarray(radius, dtype=float)
         target = self._potential(self.x_eq) + self.capillary_length / radius
         if self.x_p == 1.0:
             return np.exp(target)
-        x = np.full_like(radius, self.x_eq)  # Newton on the monotonic potential
-        for _ in range(100):
-            f = self._potential(x) - target
-            dfdx = self.x_p / x - (1.0 - self.x_p) / (1.0 - x)
-            step = f / dfdx
-            x = np.clip(x - step, 1e-300, 1 - 1e-15)
-            if np.max(np.abs(step)) < 1e-15:
-                break
-        return x
+        # bisection in ln x on (0, X^P), where the potential rises monotonically
+        lo = np.full_like(radius, np.log(1e-300))
+        hi = np.full_like(radius, np.log(self.x_p))
+        for _ in range(200):
+            mid = 0.5 * (lo + hi)
+            below = self._potential(np.exp(mid)) < target
+            lo, hi = np.where(below, mid, lo), np.where(below, hi, mid)
+        x = np.exp(0.5 * (lo + hi))
+        return np.where(target <= self._potential(self.x_p), x, np.nan)
 
 
 def solubility_from_pycalphad(db, components, matrix: str, precipitate: str, solute: str, T: float,
@@ -122,6 +148,15 @@ class Kinetics:
     diffusivity: float
     lattice_parameter: float
     sites: float
+
+    def __post_init__(self):
+        if self.diffusivity < 0:
+            raise ValueError(f"diffusivity must not be negative, got {self.diffusivity}")
+        if not 1e-11 < self.lattice_parameter < 1e-8:
+            raise ValueError(f"lattice parameter {self.lattice_parameter:g} m is not a lattice parameter "
+                             "(about 4e-10 m; give it in metres, not angstrom)")
+        if self.sites < 0:
+            raise ValueError(f"number of nucleation sites must not be negative, got {self.sites}")
 
 
 def growth_rate(thermo: DiluteSolution, kin: Kinetics, x, radius) -> np.ndarray:
@@ -213,8 +248,14 @@ def solve_kwn(
     edges = np.asarray(radius_edges, dtype=float)
     if np.any(np.diff(edges) <= 0) or edges[0] <= 0:
         raise ValueError("radius_edges must be positive and increasing")
-    if thermo.interface_composition(edges[0]) >= thermo.alpha * thermo.x_p:
-        raise ValueError("the lowest class edge is below the radius where X^i(R) reaches alpha X^P; raise it")
+    xi0 = float(thermo.interface_composition(edges[0]))
+    if not xi0 < thermo.alpha * thermo.x_p:
+        cutoff = max(thermo.smallest_radius, thermo.capillary_length / max(
+            float(thermo._potential(min(thermo.alpha * thermo.x_p, 1 - 1e-12)) - thermo._potential(thermo.x_eq)), 1e-300))
+        raise ValueError(
+            f"the lowest class edge {edges[0]:.3g} m is below the cut-off radius {cutoff:.3g} m of eq. (10) "
+            f"(capillary length 2 gamma v/kT = {thermo.capillary_length:.3g} m); start the classes above it, "
+            "and check the units of gamma, the atomic volumes and T if the cut-off looks unphysical")
     width = np.diff(edges)
     centers = 0.5 * (edges[1:] + edges[:-1])
     n_cls = len(centers)
