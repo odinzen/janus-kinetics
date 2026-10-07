@@ -69,14 +69,15 @@ def _region_step(region: _Region, z_old, z_new, dt, t, left: _End, right: _End, 
     n, m = x_old.shape
     asm = _Assembler(z_new, m)
     v_inner = ((z_new - z_old) / dt)[1:-1]
-    i, j = np.arange(n - 1), np.arange(1, n)
-    up = np.where(v_inner > 0, j, i)
-    a = np.arange(m)
-    adv = sp.csc_matrix((
-        np.concatenate([np.repeat(-v_inner, m), np.repeat(v_inner, m)]),
-        (np.concatenate([(i[:, None] * m + a).ravel(), (j[:, None] * m + a).ravel()]),
-         np.concatenate([(up[:, None] * m + a).ravel()] * 2)),
-    ), shape=(n * m, n * m))
+    # moving-face term -v x_up: from the right cell when the face moves right, else the left one
+    eye = np.eye(m)
+    right_up = (v_inner > 0)[:, None, None]
+    vb = v_inner[:, None, None] * eye
+    adv_diag = np.zeros((n, m, m))
+    adv_diag[:-1] -= np.where(right_up, 0.0, vb)  # cell i loses -v x_i through its right face
+    adv_diag[1:] += np.where(right_up, vb, 0.0)  # cell j gains -v x_j through its left face
+    adv_upper = -np.where(right_up, vb, 0.0)
+    adv_lower = np.where(right_up, 0.0, vb)
 
     rhs = (np.diff(z_old) / dt)[:, None] * x_old
     conductance, cells = {}, {"left": 0, "right": n - 1}
@@ -90,13 +91,20 @@ def _region_step(region: _Region, z_old, z_new, dt, t, left: _End, right: _End, 
         rhs[cells[side]] += c @ end.composition + sign * end.velocity * end.composition
 
     xk = x_old.copy()
+    if max_picard == 0:  # a single linear solve with D at the old profile, for Jacobian estimates
+        max_picard, linear = 1, True
+    else:
+        linear = False
     for k in range(1, max_picard + 1):
         c_inner = region.dfun(0.5 * (xk[1:] + xk[:-1]), t) / asm.h_inner[:, None, None]
-        mat = asm.matrix(dt, c_inner, conductance["left"], conductance["right"]) + adv
-        x_next = spla.spsolve(mat, rhs.ravel()).reshape(n, m)
+        mat = asm.matrix(dt, c_inner, conductance["left"], conductance["right"])
+        mat.diag += adv_diag
+        mat.upper += adv_upper
+        mat.lower += adv_lower
+        x_next = mat.solve(rhs.ravel()).reshape(n, m)
         change = np.max(np.abs(x_next - xk))
         xk = x_next
-        if region.constant or (k > 1 and change < picard_tol):
+        if region.constant or linear or (k > 1 and change < picard_tol):
             break
     else:
         raise ConvergenceError(f"Picard iteration in a phase region did not converge (last change {change:.3g})")
@@ -302,12 +310,14 @@ def solve_layers(
     def bounds(s_vec):
         return np.concatenate([[0.0], s_vec, [length]])
 
-    def layer_step(j, b_old, b_new, iface_x, w, step, t_new):
+    def layer_step(j, b_old, b_new, iface_x, w, step, t_new, linear=False):
         lo = end_0 if j == 0 else _End(np.atleast_1d(iface_x[j - 1][1]), w[j - 1])
         hi = end_l if j == n_layers - 1 else _End(np.atleast_1d(iface_x[j][0]), w[j])
         reg = regions[j]
         return _region_step(reg, reg.faces(b_old[j], b_old[j + 1]), reg.faces(b_new[j], b_new[j + 1]),
-                            step, t_new, lo, hi, picard_tol, max_picard)
+                            step, t_new, lo, hi, picard_tol, 0 if linear else max_picard)
+
+    saved_jacobian = [None]
 
     def solve_step(s_old, step, t_new):
         for c in conditions:
@@ -322,8 +332,9 @@ def solve_layers(
             w = np.array([y[offsets[i] + sizes[i]] for i in range(n_if)]) * ws
             return us, w
 
-        def evaluate(y, base=None, changed=None):
-            """Layer results and residual; with ``base`` only the layers in ``changed`` are re-solved."""
+        def evaluate(y, base=None, changed=None, linear=False):
+            """Layer results and residual; with ``base`` only the layers in ``changed`` are re-solved,
+            and with ``linear`` each by one linear solve (enough for a Jacobian estimate)."""
             us, w = unpack(y)
             s_new = s_old + w * step
             b_new = bounds(s_new)
@@ -333,7 +344,7 @@ def solve_layers(
             iface_x = [conditions[i].unpack(us[i]) for i in range(n_if)]
             out = list(base) if base is not None else [None] * n_layers
             for j in (changed if base is not None else range(n_layers)):
-                out[j] = layer_step(j, b_old, b_new, iface_x, w, step, t_new)
+                out[j] = layer_step(j, b_old, b_new, iface_x, w, step, t_new, linear)
             res = []
             for i in range(n_if):
                 xl_i, xr_i = (np.atleast_1d(v) for v in iface_x[i])
@@ -351,6 +362,9 @@ def solve_layers(
             return True
 
         def jacobian(y, res, out):
+            # differences of linear layer solves against a linear base, so the linearization
+            # error cancels; Newton still converges on the full residual
+            res, out, _ = evaluate(y, linear=True)
             jac = np.zeros((len(y), len(y)))
             us, _ = unpack(y)
             for i in range(n_if):
@@ -362,17 +376,18 @@ def solve_layers(
                     yp = y.copy()
                     yp[k] += hk
                     # the unknowns of interface i reach only layers i and i+1
-                    rp, _, _ = evaluate(yp, base=out, changed=(i, i + 1))
+                    rp, _, _ = evaluate(yp, base=out, changed=(i, i + 1), linear=True)
                     jac[flux_rows, k] = (rp[flux_rows] - res[flux_rows]) / hk
             return jac
 
-        # Chord Newton: the Jacobian is rebuilt only when the residual stops falling fast.
-        jac, last = None, np.inf
+        # Chord Newton: the Jacobian, kept from the previous step since interface conditions
+        # change slowly, is rebuilt only when the residual stops falling fast.
+        jac, last, fresh = saved_jacobian[0], np.inf, False
         for _ in range(max_newton):
             res, out, s_new = evaluate(y)
             size = np.max(np.abs(res))
             if jac is None or size > 0.25 * last:
-                jac = jacobian(y, res, out)
+                jac, fresh = jacobian(y, res, out), True
             last = size
             delta = np.linalg.solve(jac, -res)
             # interface compositions move at most 0.05 per iteration; larger jumps
@@ -385,10 +400,22 @@ def solve_layers(
                     break
                 delta = 0.5 * delta
             y = y + delta
-            if np.max(np.abs(delta)) < tol and np.max(np.abs(res)) < 1e3 * tol:
+            if np.max(np.abs(delta)) < tol and np.max(np.abs(res)) < tol:
                 res, out, s_new = evaluate(y)
+                # A reused Jacobian converges only linearly, which would leave a small flux
+                # imbalance each step that adds up to a mass error; a few cheap chord steps
+                # take the residual down to round-off.
+                for _ in range(5):
+                    if np.max(np.abs(res)) < 1e-3 * tol:
+                        break
+                    y = y + np.linalg.solve(jac, -res)
+                    res, out, s_new = evaluate(y)
                 us, w = unpack(y)
+                saved_jacobian[0] = jac
                 return [u.copy() for u in us], w, s_new, [o[0] for o in out]
+        if not fresh:
+            saved_jacobian[0] = None
+            return solve_step(s_old, step, t_new)  # retry once with a Jacobian built for this step
         raise ConvergenceError(f"interface conditions did not converge near t = {t_new:g} s "
                                f"(residual {np.max(np.abs(res)):.3g}); reduce dt")
 

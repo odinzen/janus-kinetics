@@ -110,7 +110,10 @@ class SolutionPhase:
 
         Raises UnstableCompositionError if any composition is inside a spinodal.
         """
-        x = self._x(x)
+        return self._dmu(self._x(x), T)
+
+    def _dmu(self, x: np.ndarray, T) -> np.ndarray:
+        """dmu_dx for compositions already checked and floored by ``_x``."""
         g2 = reduced_hessian(self.gibbs.hessian(x, T))
         check_stability(x, g2, self.elements)
         return dmu_dx(x, g2)
@@ -131,7 +134,7 @@ class SolutionPhase:
     def intrinsic_matrix(self, x, T, magnetic_factor=1.0) -> np.ndarray:
         """Lattice-frame diffusivities D^I_kj in m^2/s, shape (..., n, n-1)."""
         x = self._x(x)
-        return intrinsic_matrix(x, self._mobility(x, T, magnetic_factor), self.dmu_dx(x, T))
+        return intrinsic_matrix(x, self._mobility(x, T, magnetic_factor), self._dmu(x, T))
 
     def lattice_velocity(self, x, dx_dz, T, magnetic_factor=1.0) -> np.ndarray:
         """Kirkendall (marker) velocity relative to the number-fixed frame, m/s.
@@ -155,7 +158,7 @@ class SolutionPhase:
         ``frame="volume"`` needs ``partial_volumes`` (m^3/mol, one per element).
         """
         x = self._x(x)
-        dmu = self.dmu_dx(x, T)
+        dmu = self._dmu(x, T)
         mob = self._mobility(x, T, magnetic_factor)
         if frame == "number":
             return number_fixed_matrix(x, mob, dmu)

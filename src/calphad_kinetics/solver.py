@@ -18,6 +18,7 @@ from typing import Literal
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
+from scipy.linalg import solve_banded
 
 from .errors import ConvergenceError
 from .schedule import temperature_at, with_time
@@ -153,8 +154,62 @@ def _as_callable(diffusivity: Diffusivity) -> tuple[Callable[[np.ndarray, float]
     return (lambda x, t: np.broadcast_to(d, x.shape[:-1] + d.shape)), True
 
 
+class _BlockTridiagonal:
+    """Matrix of (m, m) blocks on three block diagonals, the shape every 1D finite-volume
+    operator here has: diag[i], lower[i] at block (i+1, i) and upper[i] at block (i, i+1).
+
+    Solved as a banded system; that avoids building a general sparse matrix and is
+    several times faster at the sizes these solvers use.
+    """
+
+    def __init__(self, diag: np.ndarray, lower: np.ndarray, upper: np.ndarray):
+        self.diag, self.lower, self.upper = diag, lower, upper
+        self.n, self.m = diag.shape[0], diag.shape[1]
+
+    def matvec(self, x: np.ndarray) -> np.ndarray:
+        xb = x.reshape(self.n, self.m)
+        out = np.einsum("iab,ib->ia", self.diag, xb)
+        out[1:] += np.einsum("iab,ib->ia", self.lower, xb[:-1])
+        out[:-1] += np.einsum("iab,ib->ia", self.upper, xb[1:])
+        return out.ravel()
+
+    def __matmul__(self, x):
+        return self.matvec(x)
+
+    _layout_cache: dict = {}
+
+    @classmethod
+    def _layout(cls, n: int, m: int):
+        """Row and column of every block entry, in the order diag, lower, upper (fixed per shape)."""
+        key = (n, m)
+        if key not in cls._layout_cache:
+            a, b = np.meshgrid(np.arange(m), np.arange(m), indexing="ij")
+            pairs = [(np.arange(n), np.arange(n)), (np.arange(1, n), np.arange(n - 1)), (np.arange(n - 1), np.arange(1, n))]
+            rows = np.concatenate([(r[:, None, None] * m + a).ravel() for r, _ in pairs])
+            cols = np.concatenate([(c[:, None, None] * m + b).ravel() for _, c in pairs])
+            cls._layout_cache[key] = (rows, cols)
+        return cls._layout_cache[key]
+
+    def _entries(self):
+        rows, cols = self._layout(self.n, self.m)
+        vals = np.concatenate([self.diag.ravel(), self.lower.ravel(), self.upper.ravel()])
+        return rows, cols, vals
+
+    def solve(self, rhs: np.ndarray) -> np.ndarray:
+        band = 2 * self.m - 1
+        rows, cols, vals = self._entries()
+        ab = np.zeros((2 * band + 1, self.n * self.m))
+        ab[band + rows - cols, cols] = vals  # every (row, col) occurs once
+        return solve_banded((band, band), ab, rhs)
+
+    def to_csc(self):
+        rows, cols, vals = self._entries()
+        size = self.n * self.m
+        return sp.csc_matrix((vals, (rows, cols)), shape=(size, size))
+
+
 class _Assembler:
-    """Builds the sparse backward-Euler matrix for given face diffusivities."""
+    """Builds the backward-Euler matrix for given face diffusivities."""
 
     def __init__(self, z_faces: np.ndarray, m: int):
         self.m = m
@@ -175,22 +230,14 @@ class _Assembler:
     def matrix(self, dt: float, c_inner: np.ndarray, c_left: np.ndarray | None, c_right: np.ndarray | None):
         """c_* are face conductances D/h, shape (faces, m, m)."""
         n, m = self.n_cells, self.m
-        left, right = np.arange(n - 1), np.arange(1, n)
-        parts = [
-            self._blocks(left, left, c_inner),
-            self._blocks(right, right, c_inner),
-            self._blocks(left, right, -c_inner),
-            self._blocks(right, left, -c_inner),
-        ]
+        diag = np.broadcast_to(np.eye(m), (n, m, m)) * (self.widths / dt)[:, None, None]
+        diag[:-1] += c_inner
+        diag[1:] += c_inner
         if c_left is not None:
-            parts.append(self._blocks(np.array([0]), np.array([0]), c_left[None]))
+            diag[0] += c_left
         if c_right is not None:
-            parts.append(self._blocks(np.array([n - 1]), np.array([n - 1]), c_right[None]))
-        rows, cols, vals = (np.concatenate(p) for p in zip(*parts))
-        mass = np.repeat(self.widths / dt, m)
-        idx = np.arange(n * m)
-        rows, cols, vals = np.concatenate([rows, idx]), np.concatenate([cols, idx]), np.concatenate([vals, mass])
-        return sp.csc_matrix((vals, (rows, cols)), shape=(n * m, n * m))
+            diag[-1] += c_right
+        return _BlockTridiagonal(diag, -c_inner.copy(), -c_inner.copy())
 
 
 def _output_schedule(t_end: float, dt: float, save_times) -> list[tuple[float, int]]:
@@ -298,14 +345,14 @@ def solve_planar(
             # A constant D gives the same matrix every step, so factorize once per step size.
             if step not in cache:
                 a, rhs_bc = step_matrix(x_old, step, t_new)
-                cache[step] = (a, spla.splu(a), rhs_bc.ravel())
+                cache[step] = (a, spla.splu(a.to_csc()), rhs_bc.ravel())
             a, lu, rhs_bc = cache[step]
             xv = x_old.ravel()
             return (xv + lu.solve(rhs + rhs_bc - a @ xv)).reshape(n_cells, m), 1
         xk = x_old.ravel()
         for k in range(1, max_picard + 1):
             a, rhs_bc = step_matrix(xk.reshape(n_cells, m), step, t_new)
-            delta = spla.spsolve(a, rhs + rhs_bc.ravel() - a @ xk)
+            delta = a.solve(rhs + rhs_bc.ravel() - a @ xk)
             xk = xk + delta
             change = np.max(np.abs(delta)) if k > 1 else np.inf
             if change < picard_tol:
