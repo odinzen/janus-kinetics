@@ -11,10 +11,10 @@ passes. Every reference is checked against Crossref by tools/check_references.py
   goes in once the papers are read, with a test against the Fe-rich data of
   Jonsson, ISIJ Int. 35 (1995) 1415, Figs. 5 to 8, where the magnetic factor matters.
 - Benchmark against measured ternary interdiffusion matrices: done for Campbell
-  et al. (2002) Table 7 (fcc Ni-Al-Cr, 1100 C), using pycalphad's Al-Co-Cr-Ni test
-  database for the thermodynamics because Kattner's is not public. The matrices
-  agree with Campbell's calculated ones within 6 %. A check with a published
-  assessment (Dupin, Ansara and Sundman, Calphad 25 (2001) 279) remains open.
+  et al. (2002) Table 7 (fcc Ni-Al-Cr, 1100 C), with the fcc of Dupin, Ansara and
+  Sundman, Calphad 25 (2001) 279 (pycalphad's alcrni.tdb, checked parameter by
+  parameter against their appendix) because Kattner's is not public. The matrices
+  agree with Campbell's calculated ones within 6 %.
 - Interstitial solutes (C, N, O) on a vacancy sublattice, with u-fractions in place
   of mole fractions: done (InterstitialPhase, Andersson and Agren eqs. 62-65).
 - Volume-fixed frame in the solver, with a composition-dependent molar volume: done
@@ -23,7 +23,8 @@ passes. Every reference is checked against Crossref by tools/check_references.py
 - Adaptive time stepping.
 - Ordered B2 phases: done for mobilities and diffusivities at a point (B2Phase,
   Helander and Agren 1999). Open: the Al-rich vacancy range (0.3 decades off their
-  Fig. 2, cause unresolved without Ansara's thermodynamics), Al-Fe (their eq. 8 for
+  Fig. 2 with the same Ansara thermodynamics, so the cause is their vacancy
+  treatment, which the paper does not spell out), Al-Fe (their eq. 8 for
   the magnetic term is garbled as printed), and use inside the solvers.
 
 ## Phase 2. Moving boundaries and microstructure-scale transport (done)

@@ -115,10 +115,11 @@ TABLE7 = {
 @pytest.mark.parametrize("tdb", ["alcocrni.tdb", "alcrni.tdb"])
 def test_ni_al_cr_matrices_against_table7(tdb):
     """Table 7 needs a Ni-Al-Cr Gibbs energy. Kattner's [29] is not public; this uses
-    the test databases that ship with pycalphad: alcocrni.tdb (CRALDAD v1 by Liu,
-    Gheno, Lindwall and Lindahl, marked for testing only) and alcrni.tdb (source not
-    stated in the file), which writes fcc without the vacancy sublattice of the
-    mobility database. Both give the same matrices. With the same
+    the test databases that ship with pycalphad. alcrni.tdb holds the fcc of Dupin,
+    Ansara and Sundman, Calphad 25 (2001) 279 (checked below against their
+    appendix), written without the vacancy sublattice of the mobility database;
+    alcocrni.tdb (CRALDAD v1 by Liu, Gheno, Lindwall and Lindahl, marked for testing
+    only) carries the same fcc terms to within 0.6 J/mol. With the same
     mobilities, only the thermodynamic factor differs from Campbell's calculation,
     and the matrices agree with it to within 6 %; the allowance is 8 %. Against the
     measured matrices Campbell's calculation is off by up to a factor of 1.52 and
@@ -140,3 +141,41 @@ def test_ni_al_cr_matrices_against_table7(tdb):
         np.testing.assert_allclose(ours, ref["calculated"], rtol=0.08)
         ratio = ours / np.array(ref["measured"])
         assert np.all((ratio > 1 / 1.7) & (ratio < 1.7)), ratio
+
+
+# Dupin, Ansara and Sundman (2001), Appendix (p. 297): fcc-A1 interactions, a + b T
+DUPIN2001_FCC = {
+    (("AL", "CR"), 0, "G"): (-45900, 6), (("AL", "NI"), 0, "G"): (-162408, 16.213),
+    (("AL", "NI"), 1, "G"): (73418, -34.914), (("AL", "NI"), 2, "G"): (33471, -9.837),
+    (("AL", "NI"), 3, "G"): (-30758, 10.253), (("AL", "NI"), 0, "TC"): (-1112, 0),
+    (("AL", "NI"), 1, "TC"): (1745, 0), (("CR", "NI"), 0, "G"): (8030, -12.880),
+    (("CR", "NI"), 1, "G"): (33080, -16.036), (("CR", "NI"), 0, "TC"): (-3605, 0),
+    (("CR", "NI"), 0, "BMAGN"): (-1.91, 0), (("AL", "CR", "NI"), 0, "G"): (30300, 0),
+}
+
+
+def test_alcrni_fcc_is_dupin_2001():
+    """Every Al-Cr-Ni interaction of FCC_A1 in pycalphad's alcrni.tdb, and no other,
+    equals the appendix of Dupin et al. (2001); the pure-element terms are SGTE.
+    This is the provenance the Table 7 check rests on."""
+    from importlib.resources import files
+
+    import symengine as se
+    from pycalphad import Database
+    from tinydb import where
+
+    path = files("pycalphad") / "tests" / "databases" / "alcrni.tdb"
+    if not path.is_file():
+        pytest.skip("pycalphad's alcrni.tdb test database is not installed")
+    db = Database(str(path))
+    found = {}
+    for p in db.search(where("phase_name") == "FCC_A1"):
+        first = tuple(sorted(str(s.name) for s in p["constituent_array"][0]))
+        if len(first) > 1:
+            found[(first, p["parameter_order"], p["parameter_type"])] = se.sympify(p["parameter"])
+    assert set(found) == set(DUPIN2001_FCC)
+    for key, (a, b) in DUPIN2001_FCC.items():
+        expr = found[key]
+        for T in (800.0, 1600.0):
+            value = float(expr.subs({s: T for s in expr.free_symbols if s.name == "T"}))
+            assert value == pytest.approx(a + b * T, abs=1e-6), key

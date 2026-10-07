@@ -213,8 +213,9 @@ with composition, and dmu/dx is taken by central differences. With their Appendi
 parameters and pycalphad's Dupin Al-Ni description, the Ni tracer diffusivity
 (their Fig. 7, 1000-1300 C) and the chemical diffusivity (Fig. 2) agree with their
 curves within 0.04 decades for x_Al <= 0.5. Above 0.5, with structural vacancies,
-the chemical diffusivity is about 0.3 decades higher than theirs, and the module
-warns there.
+the chemical diffusivity is about 0.3 decades higher than theirs although the B2
+thermodynamics is the same Ansara (1997) description they used; their treatment of
+vacancies in the mobility is not spelled out, and the module warns there.
 
 ## Homogenization
 

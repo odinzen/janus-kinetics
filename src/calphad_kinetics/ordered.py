@@ -19,10 +19,12 @@ so tabulate before using these in a solver loop.
 
 Validated against the paper's Al-Ni Figs. 2 and 7 for x_Al <= 0.5 to within 0.04
 decades. On the Al-rich side, where structural vacancies form, the chemical
-diffusivity comes out about 0.3 decades above their Fig. 2 at x_Al = 0.53-0.54;
-the paper used the thermodynamics of Ansara et al. (1997), and without it the
-cause (vacancy thermodynamics, or how vacancies enter x_i) cannot be settled, so
-a vacancy site fraction above 1 % raises a warning.
+diffusivity comes out about 0.3 decades above their Fig. 2 at x_Al = 0.53-0.54.
+The thermodynamics is not the cause: the Al-Ni B2 parameters used in the tests
+are those of Ansara et al. (1997), which the paper used, as printed by Dupin et
+al. (2001). Taking x_i in eq. 12 as atom fractions instead of site averages makes
+it three decades worse, so how the paper treats vacancies remains open, and a
+vacancy site fraction above 1 % raises a warning.
 """
 
 from __future__ import annotations

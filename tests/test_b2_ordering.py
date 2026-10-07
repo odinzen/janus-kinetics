@@ -2,9 +2,11 @@
 
 Their Figs. 2 and 7 are read from the published figures at 300 dpi; the readings
 carry about 0.03 decades of error. The paper used the Al-Ni thermodynamics of
-Ansara et al. (1997); these tests use the Dupin (2001) Al-Ni description that
-ships with pycalphad's tests, which shares its B2 model. Compositions stop at
-x_Al = 0.49, below the structural-vacancy range where the two could differ.
+Ansara et al. (1997). These tests use pycalphad's alni_dupin_2001.tdb, whose
+A2/B2 Al-Ni-vacancy parameters equal the Ansara values printed in the appendix of
+Dupin, Ansara and Sundman, Calphad 25 (2001) 279, p. 297-298 (within 0.6 J/mol),
+with SGTE pure-element terms. Compositions stop at x_Al = 0.49; the vacancy-rich
+side is discussed in calphad_kinetics.ordered.
 """
 
 import warnings
