@@ -158,6 +158,23 @@ moves, and the 3.4 um marker shift between D_Ni/D_Sn = 5 and infinity) and the
 wustite couples of p. 78 (d1 = 2 d2). Interface-reaction control and nucleation
 barriers are not included.
 
+## Conversion of plates, wires and particles
+
+A plate (thickness 2 r0), cylinder or sphere (radius r0) of A reacting with a
+matrix B through a diffusion-limited product layer converts the fraction alpha
+of A, with z the product volume per volume of A used up and k_p the planar
+constant of the same layer (van Loo 1990, eqs. 25-27):
+
+    plate      (z alpha)^2 = 2 k_p t / r0^2
+    cylinder   z/2 (1 + (z-1) alpha) ln(1 + (z-1) alpha)/(z-1) + z/2 (1 - alpha) ln(1 - alpha) = 2 k_p t / r0^2
+    sphere     z^2/(z-1) - z/(z-1) (1 + (z-1) alpha)^(2/3) - z (1 - alpha)^(2/3) = 2 k_p t / r0^2
+
+The left-hand sides follow from steady diffusion across the curved shell, which
+the tests re-derive independently, so under an anneal k_p t becomes the time
+integral of k_p. Inverting them gives the planar k_p from powder or wire
+conversion data. Core and matrix are rigid; stresses and Kirkendall voids are
+not modelled.
+
 ## Homogenization
 
 Each cell is in local equilibrium at its overall composition, so it has one set

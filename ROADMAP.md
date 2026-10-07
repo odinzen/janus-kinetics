@@ -47,7 +47,9 @@ and marker motion, finite films and anneal schedules. Validated against van Loo'
 Ni3Sn4/Ni3Sn couple (pp. 64-65) and wustite couples (p. 78). Wagner's general
 multilayer formula (Acta Metall. 17 (1969) 99) has not been opened, so the
 multilayer case is checked by conservation and against the single-layer limits
-only. Interface-reaction control (Dybkov, cited by van Loo) and first-phase
+only. Plates, cylinders and spheres converting through one such layer follow van
+Loo's eqs. 25-27, checked against an independent derivation and his Figs.
+2.20-2.21. Interface-reaction control (Dybkov, cited by van Loo) and first-phase
 selection by nucleation are not modelled.
 
 Left for later: graded grids next to a moving interface, layers that nucleate

@@ -17,6 +17,7 @@ from .moving_boundary import (
     solve_layers,
     solve_moving_boundary,
 )
+from .particle_reaction import conversion, conversion_integral, growth_constant_from_conversion, layer_thickness
 from .phase import ShortCircuit, SolutionPhase
 from .precipitation import (
     DiluteSolution,
@@ -65,13 +66,17 @@ __all__ = [
     "UnsupportedPhaseError",
     "average_kinetic_factor",
     "campbell2002_fcc_ni",
+    "conversion",
+    "conversion_integral",
     "boundary_product_from_slope",
     "dmu_dx",
+    "growth_constant_from_conversion",
     "growth_rate",
     "integrated_diffusivity",
     "intrinsic_matrix",
     "jonsson1995_bcc_crfeni",
     "lattice_velocity",
+    "layer_thickness",
     "nucleation_rate",
     "number_fixed_matrix",
     "parabolic_growth",

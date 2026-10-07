@@ -38,6 +38,9 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   a binary couple of line compounds grown from mobilities and Gibbs energies or
   from measured integrated diffusivities (Wagner's D_int, van Loo 1990), with
   Kirkendall markers, finite films that are used up in turn, and anneal schedules.
+  Plates, wires and powder particles reacting through such a layer follow van
+  Loo's conversion relations, which also turn measured conversion into the
+  planar growth constant.
 - **Non-isothermal anneals** along piecewise-linear temperature schedules
   (ramps, holds, spikes) for the diffusion, layered-stack and (binary)
   homogenization solvers.
@@ -67,7 +70,7 @@ pip install -e . --no-deps
 pytest
 ```
 
-The test suite (212 tests, plus 4 skipped for data that is not available) takes
+The test suite (232 tests, plus 4 skipped for data that is not available) takes
 about five minutes. On Windows run inside the activated environment, since
 numpy's MKL libraries are only found on the activated path.
 

@@ -301,6 +301,32 @@ uniform grids over [0, interface] and [interface, length]; a binary may pass
 of :func:`solve_planar`, for example ``lambda x: alpha.interdiffusion_matrix(x, T)``.
 ``left``/``right`` are the conditions at z = 0 and z = length.
 
+## `calphad_kinetics.particle_reaction`
+
+### `def conversion(t, growth_constant: 'float | Callable[[float], float]', radius: 'float', z: 'float', geometry: 'Geometry', temperature: 'Temperature | None' = None) -> 'np.ndarray'`
+
+Fraction of the plate, cylinder or sphere converted after time t (s).
+
+``growth_constant`` is the planar k_p (m^2/s), a number or a function of T
+evaluated along ``temperature`` (a constant or a schedule). ``radius`` is r0,
+the half-thickness of a plate. Eq. 26 is inverted for alpha, which is 1 once
+the core is used up.
+
+### `def conversion_integral(alpha, z: 'float', geometry: 'Geometry')`
+
+Left-hand side of van Loo's eq. 26, equal to 2 k_p t / r0^2 at conversion alpha.
+
+### `def growth_constant_from_conversion(alpha, t, radius: 'float', z: 'float', geometry: 'Geometry')`
+
+Planar k_p (m^2/s) from a measured conversion alpha at time t, by eq. 26.
+
+This is van Loo's use of the curves: powder or wire data give the parabolic
+constant of a planar couple.
+
+### `def layer_thickness(alpha, z: 'float', geometry: 'Geometry')`
+
+Van Loo's eq. 25: layer thickness d / r0 at conversion alpha.
+
 ## `calphad_kinetics.phase`
 
 ### `class ShortCircuit(fraction: 'float', mobility_db: 'Database') -> None`
