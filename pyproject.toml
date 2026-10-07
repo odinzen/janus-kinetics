@@ -9,7 +9,7 @@ description = "Multicomponent diffusion, moving boundaries and precipitation kin
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-authors = [{ name = "Michael E. Bustamante", email = "michaelbusta@odinzen.io" }]
+authors = [{ name = "Michael E. Bustamante" }]
 requires-python = ">=3.10"
 dependencies = [
     "pycalphad>=0.11",
