@@ -159,15 +159,26 @@ tie-line is unique, and the setting of Zener's analysis. With more elements a
 fixed pair of compositions cannot satisfy every flux balance at once.
 
 
-### `class LocalEquilibrium(left: 'SolutionPhase', right: 'SolutionPhase', T: 'float', x_left, x_right)`
+### `class Layer(x0: 'np.ndarray', diffusivity: 'Diffusivity', name: 'str' = '') -> None`
+
+One phase layer of a planar stack.
+
+``x0`` is the initial profile on a uniform grid across the layer, shape (N, n-1)
+or (N,) for a binary; ``diffusivity`` is a constant matrix or a callable of
+(x) or (x, t), as for :func:`solve_planar`.
+
+
+### `class LocalEquilibrium(left: 'SolutionPhase', right: 'SolutionPhase', temperature: 'Temperature', x_left, x_right)`
 
 Equal chemical potentials of every element across the interface.
 
 ``x_left`` and ``x_right`` are starting compositions for the tie-line (n-1
 independent fractions each, the dependent element last as in the phases), for
 example from :func:`pycalphad.equilibrium`. Both phases must list the same
-elements in the same order.
+elements in the same order. ``temperature`` is a constant or a
+:class:`TemperatureSchedule`; the tie-line follows it during an anneal.
 
+- `prepare(self, t: 'float') -> 'None'`: Set the temperature for the step ending at time t.
 - `tie_line(self, tol: 'float' = 1e-12, max_iter: 'int' = 50) -> 'tuple[np.ndarray, np.ndarray]'`: Solve the binary tie-line, where equal potentials alone fix both compositions.
 
 ### `class MovingBoundaryResult(times: 'np.ndarray', interface: 'np.ndarray', z_left: 'np.ndarray', x_left: 'np.ndarray', z_right: 'np.ndarray', x_right: 'np.ndarray', interface_left: 'np.ndarray', interface_right: 'np.ndarray') -> None`
@@ -181,9 +192,31 @@ MovingBoundaryResult(times: 'np.ndarray', interface: 'np.ndarray', z_left: 'np.n
 The interface reached an outer boundary, so one phase has vanished.
 
 
+### `class StackResult(times: 'np.ndarray', interfaces: 'np.ndarray', faces: 'list', x: 'list', interface_left: 'np.ndarray', interface_right: 'np.ndarray', names: 'tuple' = ()) -> None`
+
+Saved state of a layered run; index [t] is a saved time, [j] a layer, [i] an interface.
+
+- `inventory(self) -> 'np.ndarray'`: Integral of each independent mole fraction over the whole stack, shape (n_t, m).
+- `profile(self, index: 'int' = -1) -> 'tuple[np.ndarray, np.ndarray]'`: Cell centres (m) and compositions through the whole stack at one saved time.
+- `thickness(self) -> 'np.ndarray'`: Layer thicknesses [t, j] in m.
+
+### `def solve_layers(positions, layers: 'list[Layer]', conditions: 'list', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50) -> 'StackResult'`
+
+Integrate planar diffusion through a stack of phase layers with moving interfaces.
+
+``positions`` are the layer boundaries from 0 to the stack thickness (len(layers)
++ 1 values); the inner ones are the initial interfaces. ``conditions[i]`` holds
+interface i, between layers i and i+1, at fixed compositions or in local
+equilibrium. Every interface moves to conserve every element (Zener, J. Appl.
+Phys. 20 (1949) 950, eq. 8), and all interface velocities and operating
+tie-lines are solved together each step. A reaction layer must be present from
+the start, if only a few nanometres thick. If a layer is consumed,
+:class:`PhaseDissolvedError` is raised and carries the results up to the last
+saved time as ``.result``.
+
 ### `def solve_moving_boundary(length: 'float', interface: 'float', x0_left, x0_right, d_left: 'Diffusivity', d_right: 'Diffusivity', condition: 'FixedInterface | LocalEquilibrium', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50) -> 'MovingBoundaryResult'`
 
-Integrate two-phase planar diffusion with a moving interface.
+Integrate two-phase planar diffusion with a moving interface, as two layers of :func:`solve_layers`.
 
 ``x0_left`` (N_L, n-1) and ``x0_right`` (N_R, n-1) are the initial profiles on
 uniform grids over [0, interface] and [interface, length]; a binary may pass
@@ -218,9 +251,11 @@ n mole fractions, in the order of :attr:`elements` (dependent element last).
 
 - `chemical_potentials(self, x, T) -> 'np.ndarray'`: Chemical potentials of every element in J/mol, shape (..., n).
 - `dmu_dx(self, x, T) -> 'np.ndarray'`: dmu_i/dx_j (dependent eliminated), J/mol, shape (..., n, n-1).
+- `interdiffusion_function(self, temperature: 'Temperature', frame: 'Frame' = 'number', partial_volumes=None)`: D~ as a function of (x, t) for the solvers, at a constant T or along a schedule.
 - `interdiffusion_matrix(self, x, T, frame: 'Frame' = 'number', partial_volumes: 'np.ndarray | None' = None, magnetic_factor=1.0) -> 'np.ndarray'`: Reduced interdiffusion matrix D~ in m^2/s, shape (..., n-1, n-1).
 - `intrinsic_matrix(self, x, T, magnetic_factor=1.0) -> 'np.ndarray'`: Lattice-frame diffusivities D^I_kj in m^2/s, shape (..., n, n-1).
 - `lattice_velocity(self, x, dx_dz, T, magnetic_factor=1.0) -> 'np.ndarray'`: Kirkendall (marker) velocity relative to the number-fixed frame, m/s.
+- `lattice_velocity_function(self, temperature: 'Temperature')`: Marker velocity as a function of (x, dx_dz, t), for ``solve_planar(..., lattice_velocity=...)``.
 - `mobility(self, x, T, magnetic_factor=1.0) -> 'np.ndarray'`: Atomic mobilities in m^2 mol / (J s), including any short-circuit paths.
 - `reduced_hessian(self, x, T) -> 'np.ndarray'`: d2G/dx_k dx_j with the dependent element eliminated, J/mol, shape (..., n-1, n-1).
 - `thermodynamic_factor(self, x, T) -> 'np.ndarray'`: Dimensionless (x_i/RT) dmu_i/dx_j, shape (..., n, n-1).
@@ -304,6 +339,17 @@ class through its lower edge have dissolved; their solute returns to the
 matrix through the mass balance of eq. (22). The lower edge must lie above the
 radius where X^i(R) reaches alpha X^P, below which eq. (10) does not hold.
 
+## `calphad_kinetics.schedule`
+
+### `class TemperatureSchedule(times, temperatures)`
+
+Piecewise-linear temperature T(t) in K through (time, temperature) points.
+
+Held at the first temperature before the first point and at the last one after
+it, so a single point is an isothermal hold. Ramps, spikes and multi-step anneals
+are lists of points, e.g. ``TemperatureSchedule([0, 10, 70, 80], [300, 1300, 1300, 300])``.
+
+
 ## `calphad_kinetics.solver`
 
 ### `class Boundary(kind: "Literal['no_flux', 'fixed']", composition: 'np.ndarray | None' = None) -> None`
@@ -327,13 +373,15 @@ z_faces : cell face positions (m), strictly increasing, length N+1.
 x0 : initial independent mole fractions, shape (N, n-1) or (N,) for a binary.
 diffusivity : constant (n-1, n-1) matrix in m^2/s, or a callable mapping
     compositions (M, n-1) to matrices (M, n-1, n-1), such as
-    ``lambda x: phase.interdiffusion_matrix(x, T)``.
+    ``lambda x: phase.interdiffusion_matrix(x, T)``. A callable of (x, t) is
+    evaluated at the end of each step, which runs a non-isothermal anneal;
+    ``phase.interdiffusion_function(schedule)`` builds one.
 dt : maximum time step (s); steps are shortened to land on ``save_times``.
 picard_tol : convergence threshold on the max change in mole fraction
     between Picard iterates.
 markers : initial positions (m) of inert Kirkendall markers to follow.
-lattice_velocity : callable (x, dx_dz) -> v giving the lattice velocity at the
-    interior faces, such as ``lambda x, g: phase.lattice_velocity(x, g, T)``.
+lattice_velocity : callable (x, dx_dz) or (x, dx_dz, t) -> v giving the lattice
+    velocity at the interior faces, such as ``lambda x, g: phase.lattice_velocity(x, g, T)``.
     Required with ``markers``.
 
 Returns profiles at t=0 and at every save time (always including ``t_end``).

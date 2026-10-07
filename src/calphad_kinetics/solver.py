@@ -20,6 +20,7 @@ import scipy.sparse as sp
 import scipy.sparse.linalg as spla
 
 from .errors import ConvergenceError
+from .schedule import with_time
 
 Diffusivity = Callable[[np.ndarray], np.ndarray] | np.ndarray
 LatticeVelocity = Callable[[np.ndarray, np.ndarray], np.ndarray]
@@ -69,12 +70,13 @@ def uniform_faces(length: float, n_cells: int, origin: float = 0.0) -> np.ndarra
     return origin + np.linspace(0.0, length, n_cells + 1)
 
 
-def _as_callable(diffusivity: Diffusivity) -> tuple[Callable[[np.ndarray], np.ndarray], bool]:
+def _as_callable(diffusivity: Diffusivity) -> tuple[Callable[[np.ndarray, float], np.ndarray], bool]:
+    """Diffusivity as a function of (x, t), and whether it is a constant matrix."""
     if callable(diffusivity):
-        return diffusivity, False
+        return with_time(diffusivity, 1), False
     d = np.asarray(diffusivity, dtype=float)
     d = d.reshape(1, 1) if d.ndim == 0 else d
-    return (lambda x: np.broadcast_to(d, x.shape[:-1] + d.shape)), True
+    return (lambda x, t: np.broadcast_to(d, x.shape[:-1] + d.shape)), True
 
 
 class _Assembler:
@@ -152,13 +154,15 @@ def solve_planar(
     x0 : initial independent mole fractions, shape (N, n-1) or (N,) for a binary.
     diffusivity : constant (n-1, n-1) matrix in m^2/s, or a callable mapping
         compositions (M, n-1) to matrices (M, n-1, n-1), such as
-        ``lambda x: phase.interdiffusion_matrix(x, T)``.
+        ``lambda x: phase.interdiffusion_matrix(x, T)``. A callable of (x, t) is
+        evaluated at the end of each step, which runs a non-isothermal anneal;
+        ``phase.interdiffusion_function(schedule)`` builds one.
     dt : maximum time step (s); steps are shortened to land on ``save_times``.
     picard_tol : convergence threshold on the max change in mole fraction
         between Picard iterates.
     markers : initial positions (m) of inert Kirkendall markers to follow.
-    lattice_velocity : callable (x, dx_dz) -> v giving the lattice velocity at the
-        interior faces, such as ``lambda x, g: phase.lattice_velocity(x, g, T)``.
+    lattice_velocity : callable (x, dx_dz) or (x, dx_dz, t) -> v giving the lattice
+        velocity at the interior faces, such as ``lambda x, g: phase.lattice_velocity(x, g, T)``.
         Required with ``markers``.
 
     Returns profiles at t=0 and at every save time (always including ``t_end``).
@@ -174,17 +178,17 @@ def solve_planar(
     dfun, constant = _as_callable(diffusivity)
     asm = _Assembler(z_faces, m)
 
-    def boundary(b: Boundary, h: float):
+    def boundary(b: Boundary, h: float, t: float):
         if b.kind == "no_flux":
             return None, None
         xb = b.composition.reshape(m)
-        return dfun(xb[None])[0] / h, xb
+        return dfun(xb[None], t)[0] / h, xb
 
-    def step_matrix(xk: np.ndarray, step: float):
+    def step_matrix(xk: np.ndarray, step: float, t: float):
         faces = 0.5 * (xk[1:] + xk[:-1])
-        c_inner = dfun(faces) / asm.h_inner[:, None, None]
-        c_left, xl = boundary(left, asm.h_left)
-        c_right, xr = boundary(right, asm.h_right)
+        c_inner = dfun(faces, t) / asm.h_inner[:, None, None]
+        c_left, xl = boundary(left, asm.h_left, t)
+        c_right, xr = boundary(right, asm.h_right, t)
         rhs_bc = np.zeros_like(xk)
         if c_left is not None:
             rhs_bc[0] += c_left @ xl
@@ -202,14 +206,14 @@ def solve_planar(
         if constant:
             # A constant D gives the same matrix every step, so factorize once per step size.
             if step not in cache:
-                a, rhs_bc = step_matrix(x_old, step)
+                a, rhs_bc = step_matrix(x_old, step, t_new)
                 cache[step] = (a, spla.splu(a), rhs_bc.ravel())
             a, lu, rhs_bc = cache[step]
             xv = x_old.ravel()
             return (xv + lu.solve(rhs + rhs_bc - a @ xv)).reshape(n_cells, m), 1
         xk = x_old.ravel()
         for k in range(1, max_picard + 1):
-            a, rhs_bc = step_matrix(xk.reshape(n_cells, m), step)
+            a, rhs_bc = step_matrix(xk.reshape(n_cells, m), step, t_new)
             delta = spla.spsolve(a, rhs + rhs_bc.ravel() - a @ xk)
             xk = xk + delta
             change = np.max(np.abs(delta)) if k > 1 else np.inf
@@ -224,7 +228,7 @@ def solve_planar(
     if markers is not None:
         if lattice_velocity is None:
             raise ValueError("tracking markers needs lattice_velocity")
-        tracker = _MarkerTracker(np.atleast_1d(np.asarray(markers, dtype=float)), z_faces, lattice_velocity)
+        tracker = _MarkerTracker(np.atleast_1d(np.asarray(markers, dtype=float)), z_faces, with_time(lattice_velocity, 2))
 
     times, saved, iters = [0.0], [x.copy()], []
     marker_track = [tracker.z.copy()] if tracker else None
@@ -268,7 +272,7 @@ class _MarkerTracker:
     def _g(self, x: np.ndarray, z: np.ndarray, t: float) -> np.ndarray:
         faces = 0.5 * (x[1:] + x[:-1])
         grad = np.diff(x, axis=0) / self.h[:, None]
-        v = self.velocity(faces, grad)
+        v = self.velocity(faces, grad, t)
         return 2.0 * np.sqrt(t) * np.interp(z, self.face_z, v)
 
     def advance(self, x: np.ndarray, t_old: float, t_new: float) -> None:

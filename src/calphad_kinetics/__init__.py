@@ -7,9 +7,12 @@ from .errors import ConvergenceError, MissingParameterError, UnstableComposition
 from .mobility import MobilityModel
 from .moving_boundary import (
     FixedInterface,
+    Layer,
     LocalEquilibrium,
     MovingBoundaryResult,
     PhaseDissolvedError,
+    StackResult,
+    solve_layers,
     solve_moving_boundary,
 )
 from .phase import ShortCircuit, SolutionPhase
@@ -22,6 +25,7 @@ from .precipitation import (
     solubility_from_pycalphad,
     solve_kwn,
 )
+from .schedule import TemperatureSchedule
 from .solver import Boundary, DiffusionResult, solve_planar, uniform_faces
 from .thermo import GibbsEnergy, R, dmu_dx, reduced_hessian, thermodynamic_factor
 
@@ -35,6 +39,7 @@ __all__ = [
     "FixedInterface",
     "GibbsEnergy",
     "Kinetics",
+    "Layer",
     "LocalEquilibriumTable",
     "LocalEquilibrium",
     "MissingParameterError",
@@ -45,6 +50,8 @@ __all__ = [
     "R",
     "ShortCircuit",
     "SolutionPhase",
+    "StackResult",
+    "TemperatureSchedule",
     "UnstableCompositionError",
     "UnsupportedPhaseError",
     "average_kinetic_factor",
@@ -59,6 +66,7 @@ __all__ = [
     "solubility_from_pycalphad",
     "solve_homogenized",
     "solve_kwn",
+    "solve_layers",
     "solve_moving_boundary",
     "solve_planar",
     "thermodynamic_factor",

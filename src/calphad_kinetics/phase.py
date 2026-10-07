@@ -11,6 +11,7 @@ from pycalphad import Database
 from ._lattice import SubstitutionalLattice
 from .diffusivity import intrinsic_matrix, lattice_velocity, number_fixed_matrix, volume_fixed_matrix
 from .mobility import MobilityModel
+from .schedule import Temperature, temperature_at
 from .thermo import GibbsEnergy, check_stability, dmu_dx, reduced_hessian, thermodynamic_factor
 
 Frame = Literal["number", "volume"]
@@ -144,3 +145,11 @@ class SolutionPhase:
                 raise ValueError("the volume-fixed frame needs partial_volumes")
             return volume_fixed_matrix(x, mob, dmu, partial_volumes)
         raise ValueError(f"unknown frame {frame!r}")
+
+    def interdiffusion_function(self, temperature: Temperature, frame: Frame = "number", partial_volumes=None):
+        """D~ as a function of (x, t) for the solvers, at a constant T or along a schedule."""
+        return lambda x, t: self.interdiffusion_matrix(x, temperature_at(temperature, t), frame, partial_volumes)
+
+    def lattice_velocity_function(self, temperature: Temperature):
+        """Marker velocity as a function of (x, dx_dz, t), for ``solve_planar(..., lattice_velocity=...)``."""
+        return lambda x, g, t: self.lattice_velocity(x, g, temperature_at(temperature, t))
