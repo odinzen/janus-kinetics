@@ -76,7 +76,7 @@ pip install -e . --no-deps
 pytest
 ```
 
-The test suite (241 tests, plus 3 skipped for data that is not available) takes
+The test suite (243 tests, plus 3 skipped for data that is not available) takes
 about five minutes. On Windows run inside the activated environment, since
 numpy's MKL libraries are only found on the activated path.
 
@@ -128,6 +128,9 @@ Conventions worth knowing:
 - Interaction parameters follow pycalphad's ordering, with constituents sorted
   alphabetically, so order 1 of `MQ(FCC_A1&NI,ZN,CU;1)` multiplies (x_CU - x_ZN).
   Wildcard parameters such as `MQ(FCC_A1&NI,*:VA;0)` apply at every composition.
+- The thermodynamic and mobility databases may declare a phase with or without
+  vacancy-only sublattices, as `FCC_A1 :AL,CR,NI:` against `:AL,CR,NI:VA:`; each
+  is read in its own layout.
 - Outside a parameter's temperature ranges pycalphad extends the nearest range;
   nothing warns that T is outside the assessed range.
 - The planar solver runs in the number-fixed frame with one molar volume for

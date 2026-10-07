@@ -151,3 +151,17 @@ def test_ternary_weights_with_a_fourth_element_present():
 def test_quaternary_interaction_parameters_are_refused():
     with pytest.raises(UnsupportedPhaseError, match="4 elements"):
         ternary_term("PARAMETER MQ(SOL&A,A,B,C,D;0) 298.15 1000; 6000 N !\n", np.array([0.25] * 4))
+
+
+def test_mobility_layout_need_not_match_the_thermodynamic_one(ideal_db, regular_db):
+    """SOL is (A,B,C) in ideal_db and (A,B,C)(VA) in regular_db with the same mobility
+    numbers; either pairing of thermodynamic and mobility database gives one mobility."""
+    from calphad_kinetics import SolutionPhase
+
+    x = np.array([[0.2, 0.3], [0.6, 0.1], [0.05, 0.9]])
+    ref = SolutionPhase(regular_db, "SOL", ["A", "B", "C"]).mobility(x, T)
+    mixed = SolutionPhase(regular_db, "SOL", ["A", "B", "C"], mobility_db=ideal_db).mobility(x, T)
+    np.testing.assert_allclose(mixed, ref, rtol=1e-13)
+    reverse = SolutionPhase(ideal_db, "SOL", ["A", "B", "C"], mobility_db=regular_db).mobility(x, T)
+    np.testing.assert_allclose(reverse, SolutionPhase(ideal_db, "SOL", ["A", "B", "C"]).mobility(x, T), rtol=1e-13)
+    np.testing.assert_allclose(reverse, ref, rtol=1e-13)

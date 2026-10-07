@@ -112,10 +112,13 @@ TABLE7 = {
 }
 
 
-def test_ni_al_cr_matrices_against_table7():
+@pytest.mark.parametrize("tdb", ["alcocrni.tdb", "alcrni.tdb"])
+def test_ni_al_cr_matrices_against_table7(tdb):
     """Table 7 needs a Ni-Al-Cr Gibbs energy. Kattner's [29] is not public; this uses
-    the Al-Co-Cr-Ni test database that ships with pycalphad (alcocrni.tdb, CRALDAD
-    v1 by Liu, Gheno, Lindwall and Lindahl, marked for testing only). With the same
+    the test databases that ship with pycalphad: alcocrni.tdb (CRALDAD v1 by Liu,
+    Gheno, Lindwall and Lindahl, marked for testing only) and alcrni.tdb (source not
+    stated in the file), which writes fcc without the vacancy sublattice of the
+    mobility database. Both give the same matrices. With the same
     mobilities, only the thermodynamic factor differs from Campbell's calculation,
     and the matrices agree with it to within 6 %; the allowance is 8 %. Against the
     measured matrices Campbell's calculation is off by up to a factor of 1.52 and
@@ -126,9 +129,9 @@ def test_ni_al_cr_matrices_against_table7():
 
     from calphad_kinetics import SolutionPhase
 
-    path = files("pycalphad") / "tests" / "databases" / "alcocrni.tdb"
+    path = files("pycalphad") / "tests" / "databases" / tdb
     if not path.is_file():
-        pytest.skip("pycalphad's alcocrni.tdb test database is not installed")
+        pytest.skip(f"pycalphad's {tdb} test database is not installed")
     with pytest.warns(UserWarning, match="magnetic"):  # fcc Ni is paramagnetic at 1373 K
         phase = SolutionPhase(Database(str(path)), "FCC_A1", ["AL", "CR", "NI"], mobility_db=campbell2002_fcc_ni())
     for (x_al, x_cr), ref in TABLE7.items():

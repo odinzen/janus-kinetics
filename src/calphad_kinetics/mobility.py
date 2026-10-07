@@ -101,12 +101,12 @@ class MobilityModel:
         self.lattice = lattice
         if lattice.phase_name not in db.phases:
             raise MissingParameterError(f"the mobility database has no phase {lattice.phase_name}")
-        n_subl = len(db.phases[lattice.phase_name].constituents)
-        if n_subl != 1 + len(lattice.vacancy_sublattices):
-            raise MissingParameterError(
-                f"{lattice.phase_name} has {n_subl} sublattices in the mobility database but "
-                f"{1 + len(lattice.vacancy_sublattices)} in the thermodynamic one; they must be declared alike")
-        active = {v.Species(s) for s in lattice.pycalphad_components} | {v.Species("*")}
+        # Read parameters against the mobility database's own sublattice layout. A
+        # thermodynamic fcc written as (A,B) and a mobility fcc written as (A,B)(VA)
+        # are the same lattice; the vacancy sublattice only shifts the indices.
+        own = SubstitutionalLattice.from_database(db, lattice.phase_name, lattice.elements, lattice.elements[-1])
+        self._own = own
+        active = {v.Species(s) for s in own.pycalphad_components} | {v.Species("*")}
         functions = {se.Symbol(name): value for name, value in db.symbols.items()}
 
         def valid(array) -> bool:
@@ -131,13 +131,13 @@ class MobilityModel:
 
     def _expansion(self, params) -> se.Basic:
         """Phi for one diffusing element from its own parameters only (see :func:`sublattice_expansion`)."""
-        lat = self.lattice
+        lat = self._own
         y_of = {lat.mixing_sublattice: dict(zip(lat.elements, lat.x_symbols))}
         y_of.update({idx: {"VA": se.Integer(1)} for idx in lat.vacancy_sublattices})
         return sublattice_expansion(params, y_of)
 
     def _require_end_members(self, db: Database, element: str) -> None:
-        lat = self.lattice
+        lat = self._own
         for host in lat.elements:
             array = [None] * (1 + len(lat.vacancy_sublattices))
             array[lat.mixing_sublattice] = (v.Species(host),)

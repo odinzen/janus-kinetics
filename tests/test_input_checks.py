@@ -92,9 +92,12 @@ def test_mobility_database_without_the_phase_says_so(regular_db):
         SolutionPhase(regular_db, "SOL", ["A", "B"], mobility_db=other)
 
 
-def test_mobility_database_with_another_sublattice_layout_says_so(regular_db):
+def test_mobility_database_in_another_layout_is_read_in_its_own(regular_db):
+    """(A,B,C) mobilities against an (A,B,C)(VA) Gibbs energy are matched on the
+    mobility database's own layout, so missing parameters there still raise rather
+    than reading as zero (layouts that agree are tested in test_mobility.py)."""
     other = Database(HEADER + "PHASE SOL % 1 1 !\nCONSTITUENT SOL :A,B,C: !\n")
-    with pytest.raises(MissingParameterError, match="sublattices"):
+    with pytest.raises(MissingParameterError, match="end-member"):
         SolutionPhase(regular_db, "SOL", ["A", "B"], mobility_db=other)
 
 
