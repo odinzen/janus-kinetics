@@ -310,3 +310,59 @@ def test_on_demand_refuses_compositions_beyond_its_grid():
     assert not od.admissible(np.array([[0.02]]))
     with pytest.raises(ValueError, match="smaller spacing"):
         od.chemical_potentials(np.array([[0.02]]))
+
+
+# ------------------------------------------------------------- ideal flux contribution (section 2.4, eq. 13)
+
+def test_ideal_flux_speeds_an_ideal_solution_by_one_plus_epsilon():
+    """With mu = RT ln x, eq. 13 adds epsilon times the whole flux, so a run with
+    epsilon equals one without it run (1 + epsilon) times longer."""
+    from conftest import IDEAL_TERNARY
+
+    db = Database(IDEAL_TERNARY)
+    phase = SolutionPhase(db, "SOL", ["A", "B"])
+    table = LocalEquilibriumTable(db, {"SOL": phase}, T, spacing=0.0025)
+    faces = uniform_faces(4e-4, 100)
+    z = 0.5 * (faces[1:] + faces[:-1])
+    x0 = np.where(z < 2e-4, 0.8, 0.2)[:, None]
+    eps = 0.05
+    from calphad_kinetics import Boundary
+
+    for left in (Boundary.no_flux(), Boundary.fixed([0.9])):  # the surface term scales the same way
+        with_term = solve_homogenized(faces, x0, table, 100.0, 0.5, left=left, ideal_flux=eps)
+        stretched = solve_homogenized(faces, x0, table, 100.0 * (1 + eps), 0.5 * (1 + eps), left=left)
+        assert np.max(np.abs(with_term.x[-1] - stretched.x[-1])) < 1e-6
+
+
+def test_ideal_flux_is_a_small_conservative_perturbation(ternary_run):
+    """In a two-phase couple the change from the term grows in proportion to epsilon
+    and every element stays conserved."""
+    table, faces, base = ternary_run
+    z = 0.5 * (faces[1:] + faces[:-1])
+    x0 = np.where(z[:, None] < 4e-4, [0.75, 0.15], [0.10, 0.75])
+    shifts = []
+    for eps in (0.01, 0.02):
+        res = solve_homogenized(faces, x0, table, 400.0, 2.0, ideal_flux=eps)
+        inv = res.inventory()
+        assert np.max(np.abs(inv - inv[0])) < 1e-12 * np.abs(inv[0]).max()
+        shifts.append(np.max(np.abs(res.x[-1] - base.x[-1])))
+    assert 0 < shifts[0] < 0.02
+    assert shifts[1] / shifts[0] == pytest.approx(2.0, rel=0.15)
+    with pytest.raises(ValueError, match="non-negative"):
+        solve_homogenized(faces, x0, table, 1.0, 1.0, ideal_flux=-0.01)
+
+
+def test_ideal_flux_keeps_newton_convergence():
+    """The term's slope enters the Newton matrix; with it, even a large epsilon leaves
+    the iteration count unchanged, as a wrong slope would not."""
+    from conftest import IDEAL_TERNARY
+
+    db = Database(IDEAL_TERNARY)
+    phase = SolutionPhase(db, "SOL", ["A", "B"])
+    table = LocalEquilibriumTable(db, {"SOL": phase}, T, spacing=0.0025)
+    faces = uniform_faces(4e-4, 100)
+    z = 0.5 * (faces[1:] + faces[:-1])
+    x0 = np.where(z < 2e-4, 0.8, 0.2)[:, None]
+    plain = solve_homogenized(faces, x0, table, 100.0, 0.5)
+    strong = solve_homogenized(faces, x0, table, 100.0, 0.5, ideal_flux=0.5)
+    assert np.mean(strong.picard_iterations) <= 1.1 * np.mean(plain.picard_iterations)

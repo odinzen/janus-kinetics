@@ -240,7 +240,7 @@ Larsson and Hoglund (2009): Wiener upper and lower bounds, eqs. (6)-(7), and the
 Hashin-Shtrikman bounds of eqs. (8)-(11), where the reference phase alpha is the
 one with the lowest (lower bound) or highest (upper bound) Gamma_k present.
 
-### `def solve_homogenized(z_faces: 'np.ndarray', x0: 'np.ndarray', table: 'LocalEquilibriumTable | OnDemandEquilibriumTable | TemperatureTable', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, max_iter: 'int' = 60, temperature: 'Temperature | None' = None) -> 'DiffusionResult'`
+### `def solve_homogenized(z_faces: 'np.ndarray', x0: 'np.ndarray', table: 'LocalEquilibriumTable | OnDemandEquilibriumTable | TemperatureTable', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, max_iter: 'int' = 60, temperature: 'Temperature | None' = None, ideal_flux: 'float' = 0.0) -> 'DiffusionResult'`
 
 Integrate planar multiphase diffusion with the homogenization model.
 
@@ -251,6 +251,13 @@ between neighbouring cells, so transport across a phase boundary is driven by
 the true potential jump rather than by a diffusivity at a mean composition.
 With a :class:`TemperatureTable`, ``temperature`` (a constant or a schedule)
 sets the table used for each step.
+
+``ideal_flux`` is epsilon of Larsson and Hoglund's eq. 13, a flux
+-epsilon (Gamma*_k / u_k) RT du_k/dz added to every element. In a multiphase
+region a composition ripple need not change the potentials, so nothing damps
+it; this term does. They suggest 0.01-0.05, as small as removes oscillations,
+since it also adds numerical diffusion. It equals driving the flux with
+mu_k + epsilon RT ln u_k, which is how it enters here.
 
 ## `calphad_kinetics.interstitial`
 

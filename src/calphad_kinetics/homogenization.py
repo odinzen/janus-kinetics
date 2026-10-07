@@ -15,8 +15,8 @@ grid of compositions, either computed once and interpolated linearly
 (:class:`LocalEquilibriumTable`, binaries and ternaries) or filled on demand as
 in their section 2.5 (:class:`OnDemandEquilibriumTable`, any number of
 elements, since a complete table becomes impractical beyond three). Their small ideal flux
-term against oscillations in multiphase regions (section 2.4, eq. 13) is not
-included.
+term against oscillations in multiphase regions (section 2.4, eq. 13) is the
+``ideal_flux`` option of :func:`solve_homogenized`.
 
 Only substitutional phases are handled, so u-fractions equal mole fractions.
 """
@@ -34,6 +34,7 @@ from scipy.interpolate import LinearNDInterpolator
 from .errors import ConvergenceError
 from .phase import SolutionPhase
 from .schedule import Temperature, temperature_at
+from .thermo import R
 from .solver import Boundary, DiffusionResult, _output_schedule
 
 Averaging = Literal["wiener_upper", "wiener_lower", "hashin_shtrikman_upper", "hashin_shtrikman_lower"]
@@ -390,6 +391,7 @@ def solve_homogenized(
     tol: float = 1e-10,
     max_iter: int = 60,
     temperature: Temperature | None = None,
+    ideal_flux: float = 0.0,
 ) -> DiffusionResult:
     """Integrate planar multiphase diffusion with the homogenization model.
 
@@ -400,15 +402,26 @@ def solve_homogenized(
     the true potential jump rather than by a diffusivity at a mean composition.
     With a :class:`TemperatureTable`, ``temperature`` (a constant or a schedule)
     sets the table used for each step.
+
+    ``ideal_flux`` is epsilon of Larsson and Hoglund's eq. 13, a flux
+    -epsilon (Gamma*_k / u_k) RT du_k/dz added to every element. In a multiphase
+    region a composition ripple need not change the potentials, so nothing damps
+    it; this term does. They suggest 0.01-0.05, as small as removes oscillations,
+    since it also adds numerical diffusion. It equals driving the flux with
+    mu_k + epsilon RT ln u_k, which is how it enters here.
     """
+    if ideal_flux < 0:
+        raise ValueError("ideal_flux (epsilon) must be non-negative")
     if isinstance(table, TemperatureTable):
         if temperature is None:
             raise ValueError("a TemperatureTable needs a temperature or schedule")
         table_at = lambda t: table.at(temperature_at(temperature, t))
+        temperature_of = lambda t: temperature_at(temperature, t)
     else:
         if temperature is not None:
             raise ValueError("a single-temperature table cannot follow a schedule; build a TemperatureTable")
         table_at = lambda t: table
+        temperature_of = lambda t: table.T
     z_faces = np.asarray(z_faces, dtype=float)
     x = np.asarray(x0, dtype=float)
     x = x[:, None] if x.ndim == 1 else x.copy()
@@ -440,6 +453,14 @@ def solve_homogenized(
             mu = tab.chemical_potentials(xk)
             g = tab.dmu_dx(xk)
             gam = tab.kinetic_factor(xk)
+            if ideal_flux:
+                rt = ideal_flux * R * temperature_of(t_new)
+                full = np.column_stack([xk, 1.0 - xk.sum(axis=1)])
+                mu = mu + rt * np.log(full)
+                dln = np.zeros((n_cells, n, m))
+                dln[:, a_idx, a_idx] = 1.0 / xk
+                dln[:, -1, :] = -1.0 / full[:, -1:]
+                g = g + rt * dln
             rows, cols, vals = [], [], []
             rhs = -(widths / dt_step)[:, None] * (xk - x_old)
 
@@ -461,6 +482,8 @@ def solve_homogenized(
                 rhs[j] += f0
             for side, xb in ends.items():
                 mub, gb = tab.chemical_potentials(xb[None])[0], tab.kinetic_factor(xb[None])[0]
+                if ideal_flux:
+                    mub = mub + ideal_flux * R * temperature_of(t_new) * np.log(np.append(xb, 1.0 - xb.sum()))
                 c = 0 if side == "left" else n_cells - 1
                 a = operator(xb, 0.5 * (gb + gam[c]), np.array(h_end[side]))
                 ag = a @ g[c]

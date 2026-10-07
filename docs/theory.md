@@ -239,8 +239,12 @@ quaternary couple the result approaches the ordinary solver as the step is
 refined (2.1e-3 at 0.02, 4.8e-4 at 0.01, 1.4e-4 at 0.005). A step is accepted
 when its update or its residual, in mole-fraction units, falls below the
 tolerance; the residual test ends Newton cycling between two pieces of the
-piecewise-linear potential. The paper's ideal flux term against
-oscillations (section 2.4, eq. 13) is not included. For anneals in binaries a
+piecewise-linear potential. The paper's ideal flux term against oscillations
+(section 2.4, eq. 13), J_k^ideal = -epsilon (Gamma*_k/u_k) RT du_k/dz, is an
+option; it equals driving the flux with mu_k + epsilon RT ln u_k, which is how it
+enters the Newton step. In an ideal solution it speeds diffusion by exactly
+1 + epsilon, which the tests check. The two-phase couples tested here show no
+oscillations without it, so there it only adds a little numerical diffusion. For anneals in binaries a
 table is built at each of several temperatures; between them chemical potentials
 are interpolated linearly in T and ln Gamma* linearly in 1/T, which is exact for
 Arrhenius mobilities. Face fluxes use the difference of chemical potentials
