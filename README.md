@@ -6,7 +6,7 @@ database, the thermodynamic factor comes from pycalphad's Gibbs energy model,
 and the two combine into the reduced interdiffusion matrix used by a 1D
 implicit diffusion solver.
 
-This is version 0.1.0.dev0, covering development phases 1 and 2. It is not yet released.
+This is version 0.1.0.dev0, covering development phases 1 to 3. It is not yet released.
 
 ## What is in this version
 
@@ -40,8 +40,14 @@ Implemented and tested:
   Hoglund, Calphad 33, 2009), `solve_homogenized`, with local equilibrium from a
   table of `pycalphad.equilibrium` results and Wiener or Hashin-Shtrikman
   averaging. Limited to binaries and ternaries by the table.
+- **Precipitation** (Perez, Dumont and Acevedo-Reyes, Acta Mater. 56, 2008, with
+  its 2009 corrigendum), `solve_kwn`: classical nucleation with incubation,
+  Zener growth with the Gibbs-Thomson interface composition, and coarsening, on
+  a size-class distribution (the Kampmann-Wagner numerical method). Spherical
+  precipitates of fixed composition in a binary matrix; the solubility can come
+  from `pycalphad.equilibrium` through `solubility_from_pycalphad`.
 
-Validation (`pytest`, 77 tests pass, 3 skipped):
+Validation (`pytest`, 91 tests pass, 4 skipped):
 
 - error-function solutions for a binary step couple, a fixed-surface
   semi-infinite medium, a graded grid, a diagonal ternary, and a coupled
@@ -63,7 +69,11 @@ Validation (`pytest`, 77 tests pass, 3 skipped):
   operating tie-line;
 - homogenization against the phase 1 solver in a single-phase couple and against
   the sharp-interface solver in a binary two-phase couple, plus the ordering of
-  the four averaging bounds.
+  the four averaging bounds;
+- precipitation formulas against hand evaluation of the corrected equations,
+  Zener parabolic growth, the mean radius meeting the critical radius after
+  growth, and the coarsening rate approaching the LSW law. Fig. 7 of Perez et al.
+  is skipped because it does not follow from their Table 1 (see ROADMAP.md).
 
 Not yet in this version:
 
@@ -75,7 +85,8 @@ Not yet in this version:
 - phases with interstitial elements or vacancies on the substitutional sublattice;
 - the volume-fixed frame in the solvers (they run in the number-fixed frame with a
   constant molar volume);
-- precipitation and coarsening. See [ROADMAP.md](ROADMAP.md).
+- multicomponent precipitates and a full CALPHAD driving force for precipitation.
+  See [ROADMAP.md](ROADMAP.md).
 
 ## Install
 
