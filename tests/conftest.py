@@ -5,12 +5,10 @@ test compares the package against a closed-form expression evaluated on the
 same parameters.
 """
 
-from pathlib import Path
-
 import pytest
 from pycalphad import Database
 
-DATA = Path(__file__).parent / "data"
+from calphad_kinetics.datasets import jonsson1995_bcc_crfeni
 
 HEADER = """
 ELEMENT VA VACUUM 0 0 0 !
@@ -94,4 +92,4 @@ def gap_db():
 
 @pytest.fixture(scope="session")
 def jonsson_db():
-    return Database(str(DATA / "jonsson1995_bcc_crfeni_mob.tdb"))
+    return jonsson1995_bcc_crfeni()

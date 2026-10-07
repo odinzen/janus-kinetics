@@ -1,7 +1,7 @@
 """Benchmark against Jonsson, ISIJ International 35 (1995) 1415-1421.
 
 Parameters are transcribed from the Appendix on p. 1421 into
-tests/data/jonsson1995_bcc_crfeni_mob.tdb. Here eqs. (3)-(6) of the paper are
+src/calphad_kinetics/data/jonsson1995_bcc_crfeni_mob.tdb. Here eqs. (3)-(6) of the paper are
 evaluated independently with the same Appendix values held as plain numbers,
 so the test checks the TDB reading, the Redlich-Kister and ternary expansion,
 and the split M_B = exp(Theta_B) exp(-Q_B/RT) / RT.

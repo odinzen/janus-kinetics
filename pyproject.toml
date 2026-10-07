@@ -29,6 +29,9 @@ test = ["pytest"]
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+calphad_kinetics = ["data/*.tdb"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = [
