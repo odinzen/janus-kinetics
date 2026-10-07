@@ -1,2 +1,5 @@
 literature/
 examples/output/
+build/
+*.egg-info/
+__pycache__/
