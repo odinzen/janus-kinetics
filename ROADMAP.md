@@ -27,7 +27,8 @@ Each item is validated against the published source named in its docstring.
   simulated couple with van Loo's eq. 11.
 - Short-circuit diffusion by Hart's average (Hart 1957, eq. 5, derived for
   dislocations; its use for grain boundaries and multicomponent mobilities is an
-  extension). Diffusion along isolated boundaries (Fisher 1951) is not modelled.
+  extension). Diffusion along isolated boundaries from a surface source follows
+  Fisher (1951), solved exactly and checked against a Laplace-transform solution.
 - Planar two-phase moving interface with local equilibrium and the operating
   tie-line (Zener's eq. 8 generalized). Validated against Zener's eqs. 10-12, a
   two-sided similarity solution and binary pycalphad tie-lines; the ternary

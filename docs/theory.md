@@ -83,6 +83,37 @@ self-diffusion along dislocations). Applying the same average to grain
 boundaries, and through D* = RT M to every element's mobility, is this
 package's extension of Hart's argument.
 
+## Isolated grain boundaries
+
+Fisher (1951): a boundary slab of thickness delta and diffusivity D' normal to a
+surface held at C = 1, in grains of diffusivity D. In the scaled variables of his
+eq. 5 (t1 = D t / delta^2, x1 = x / delta, y1 = y / (delta (D'/D)^1/2)):
+
+    dC/dt1 = d2C/dy1^2 + 2 (dC/dx1)_0     (slab, eq. 3a)
+    dC/dt1 = d2C/dx1^2                    (grains, eq. 4a)
+
+His approximate solution is C = exp(-2^1/2 y1 / (pi^1/4 t1^1/4)) erfc(x1 / 2 t1^1/2)
+(eq. 8), whose layer average gives the penetration slope of eq. 14. The package
+also solves eqs. 3a-4a numerically; that solution agrees with the exact Laplace
+transform solution, C~ = exp(-y1 (s + 2 s^1/2)^1/2 - x1 s^1/2) / s, and shows eq. 8
+overestimating penetration at depth.
+
+## Interstitial elements
+
+Andersson and Agren 1992, sections II.B and VI.A. With u_k = x_k / sum_{j in S} x_j
+(eq. 9), equal to y on the substitutional sublattice and (a^I / a^S) y^I for an
+interstitial (eq. 10), the lattice fluxes are J'_k = -c_k Omega_k grad mu_k for
+substitutional elements and -c_k y_Va Omega_k grad mu_k for interstitials
+(eqs. 62-63), and the diffusivity matrix in the frame fixed to the substitutional
+elements is
+
+    D_kj = sum_{i in S} (delta_ik - u_k) u_i Omega_i dmu_i/du_j + [k interstitial] u_k y_Va Omega_k dmu_k/du_j
+
+reduced to the independent u-fractions by eq. 65. Chemical potentials come from
+pycalphad's Gibbs energy per mole of substitutional atoms G_u, as mu_k = dG_u/du_k
+for an interstitial and G_u + dG_u/du_k - sum_j u_j dG_u/du_j for a substitutional
+element.
+
 ## Moving interface
 
 Two phases share a planar interface at S(t). Each is solved on its own grid,

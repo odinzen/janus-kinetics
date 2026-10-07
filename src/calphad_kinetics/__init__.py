@@ -2,6 +2,7 @@
 
 from .diffusivity import intrinsic_matrix, lattice_velocity, number_fixed_matrix, volume_fixed_matrix
 from .interstitial import InterstitialPhase
+from .grain_boundary import FisherBoundary, boundary_product_from_slope, solve_fisher
 from .homogenization import LocalEquilibriumTable, average_kinetic_factor, solve_homogenized
 from .datasets import jonsson1995_bcc_crfeni
 from .errors import ConvergenceError, MissingParameterError, UnstableCompositionError, UnsupportedPhaseError
@@ -37,6 +38,7 @@ __all__ = [
     "ConvergenceError",
     "DiffusionResult",
     "DiluteSolution",
+    "FisherBoundary",
     "FixedInterface",
     "GibbsEnergy",
     "InterstitialPhase",
@@ -57,6 +59,7 @@ __all__ = [
     "UnstableCompositionError",
     "UnsupportedPhaseError",
     "average_kinetic_factor",
+    "boundary_product_from_slope",
     "dmu_dx",
     "growth_rate",
     "intrinsic_matrix",
@@ -66,6 +69,7 @@ __all__ = [
     "number_fixed_matrix",
     "reduced_hessian",
     "solubility_from_pycalphad",
+    "solve_fisher",
     "solve_homogenized",
     "solve_kwn",
     "solve_layers",

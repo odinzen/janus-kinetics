@@ -22,7 +22,14 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   fixed-composition boundaries and **Kirkendall marker** tracking (van Loo 1990).
 - **Short-circuit diffusion** by Hart's time-fraction average (Hart 1957, derived
   for dislocations; applied here also to grain boundaries and to multicomponent
-  mobilities).
+  mobilities), and **diffusion down isolated grain boundaries** from a surface
+  (Fisher 1951), with the penetration-curve slope used to read D'delta from
+  sectioning data. Fisher's closed form overestimates deep penetration; the
+  package also solves his equations exactly.
+- **Interstitial elements** (C, N, O, H on a vacancy-bearing sublattice) in
+  u-fractions (Andersson and Agren 1992, eqs. 62-65), and **surfaces held at a
+  chemical potential**, as a carburizing or oxidizing atmosphere imposes, with the
+  other elements passing no flux.
 - **Moving interfaces in layered stacks**: any number of phase layers, each
   interface in local equilibrium or at fixed compositions, with every interface
   velocity and operating tie-line solved together. Reaction layers grow or are

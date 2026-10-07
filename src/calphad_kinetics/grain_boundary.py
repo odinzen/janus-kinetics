@@ -1,0 +1,155 @@
+"""Diffusion along an isolated grain boundary from a surface source, after Fisher, J. Appl. Phys. 22 (1951) 74.
+
+The boundary is a slab of thickness delta and diffusivity D' normal to a free
+surface held at concentration 1, in a solid of diffusivity D << D'. Inside the
+slab C depends on depth y only and loses material to both sides (eq. 3); outside,
+diffusion runs mainly normal to the slab (eq. 4 with the y term dropped):
+
+    dC/dt = D' d2C/dy2 + (2/delta) D (dC/dx)_0          (slab)
+    dC/dt = D d2C/dx2                                  (grains)
+
+With t1 = D t / delta^2, x1 = x / delta and y1 = y / (delta (D'/D)^(1/2)) (eq. 5)
+these become parameter-free (eqs. 3a and 4a). Fisher's approximate solution is
+eq. (8), C = exp(-2^(1/2) y1 / (pi^(1/4) t1^(1/4))) erfc(x1 / (2 t1^(1/2))); the
+logarithm of the layer-averaged concentration then falls linearly with depth,
+with slope eq. (14). Eq. (8) assumes the grains beside the boundary have seen
+its present concentration for the whole time, so it overestimates penetration
+at depth: at t1 = 100 and y1 = 8 the exact solution of eqs. (3a)-(4a) gives
+C = 0.028 at the boundary where eq. (8) gives 0.068. :func:`solve_fisher` solves
+those equations numerically and is the one to use for numbers. This is the regime of isolated boundaries, where each
+boundary's diffusion field does not reach the next; it suits fine-grained films
+when the grain size exceeds sqrt(D t).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import numpy as np
+import scipy.sparse as sp
+import scipy.sparse.linalg as spla
+from scipy.special import erfc
+
+
+@dataclass(frozen=True)
+class FisherBoundary:
+    """A grain boundary of thickness ``delta`` (m) and diffusivity ``d_boundary`` in a
+    grain of diffusivity ``d_lattice`` (both m^2/s)."""
+
+    d_lattice: float
+    d_boundary: float
+    delta: float
+
+    def __post_init__(self):
+        if not 0 < self.d_lattice < self.d_boundary:
+            raise ValueError("Fisher's model needs 0 < D_lattice < D_boundary")
+        if self.delta <= 0:
+            raise ValueError("boundary thickness must be positive")
+
+    def scaled(self, x, y, t) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """(x1, y1, t1) of eq. (5)."""
+        ratio = np.sqrt(self.d_boundary / self.d_lattice)
+        return (np.asarray(x) / self.delta, np.asarray(y) / (self.delta * ratio),
+                self.d_lattice * np.asarray(t) / self.delta**2)
+
+    def concentration(self, x, y, t) -> np.ndarray:
+        """Eq. (8): C at distance x from the boundary and depth y after time t, surface at 1."""
+        x1, y1, t1 = self.scaled(x, y, t)
+        return np.exp(-np.sqrt(2) * y1 / (np.pi**0.25 * t1**0.25)) * erfc(x1 / (2 * np.sqrt(t1)))
+
+    def solve(self, t: float, **grid) -> FisherSolution:
+        """Numerical solution of eqs. (3)-(4) at time t (s); ``grid`` is passed to :func:`solve_fisher`.
+
+        The result is on the scaled grid; x = x1 delta and y = y1 delta (D'/D)^(1/2).
+        """
+        return solve_fisher(float(self.scaled(0.0, 0.0, t)[2]), **grid)
+
+    def penetration_slope(self, t) -> float:
+        """Eq. (14): d log10(a) / dy of the layer-averaged concentration, in 1/m."""
+        return -np.sqrt(2) * np.sqrt(self.d_lattice / (self.d_boundary * self.delta)) * np.log10(np.e) \
+            / (np.pi * self.d_lattice * t) ** 0.25
+
+
+def boundary_product_from_slope(slope: float, d_lattice: float, t: float) -> float:
+    """D' delta (m^3/s) from a measured penetration slope d log10(a)/dy (1/m), inverting eq. (14).
+
+    The classic reading of a radiotracer sectioning experiment; Fisher's eq. (15)
+    gives D / (D' delta) = 21.3 cm^-1 for silver at 478 C this way.
+    """
+    if slope >= 0:
+        raise ValueError("the penetration slope of log(activity) against depth must be negative")
+    root = -slope * (np.pi * d_lattice * t) ** 0.25 / (np.sqrt(2) * np.log10(np.e))
+    return d_lattice / root**2
+
+
+@dataclass
+class FisherSolution:
+    """Numerical solution on the scaled grid: C[i_y, i_x] at t1, with x1[0] = 0 the boundary."""
+
+    t1: float
+    x1: np.ndarray
+    y1: np.ndarray
+    c: np.ndarray
+
+    def layer_average(self) -> np.ndarray:
+        """Integral of C over x1 at each depth y1, the quantity a sectioning experiment measures (eq. 9)."""
+        return np.trapezoid(self.c, self.x1, axis=1)
+
+    def at(self, x1, y1) -> float:
+        """C at scaled coordinates, interpolated linearly."""
+        from scipy.interpolate import RegularGridInterpolator
+
+        return float(RegularGridInterpolator((self.y1, self.x1), self.c)([[y1, x1]])[0])
+
+
+def solve_fisher(t1: float, x_max: float | None = None, y_max: float | None = None,
+                 dx: float = 0.5, dy: float = 0.25, steps: int = 400) -> FisherSolution:
+    """Solve the scaled eqs. (3a)-(4a) of Fisher (1951) without his approximation.
+
+    Backward Euler in t1 on a uniform grid; the slab takes (dC/dx1)_0 from the
+    second-order one-sided difference his eq. (3b) uses, and each grain row only
+    diffuses in x1, as eq. (4a) states. The surface row of the slab is held at 1.
+    """
+    x_max = x_max or 12 * np.sqrt(t1) + 4
+    y_max = y_max or 8 * t1**0.25 + 4
+    nx, ny = int(round(x_max / dx)), int(round(y_max / dy))
+    x1, y1 = np.arange(nx + 1) * dx, np.arange(ny + 1) * dy
+    dt = t1 / steps
+    rows, cols, vals = [], [], []
+
+    def idx(k, i):  # unknowns are rows k = 1..ny of the slab (i = 0) and grains (i = 1..nx-1)
+        return (k - 1) * nx + i
+
+    def add(r, c, v):
+        rows.append(r), cols.append(c), vals.append(v)
+
+    rhs_const = np.zeros(ny * nx)
+    for k in range(1, ny + 1):
+        r = idx(k, 0)
+        # slab: C_t = C_yy + 2 C_x(0), with C_x(0) = (-3 C0 + 4 C1 - C2) / (2 dx)
+        add(r, r, 1 / dt + 2 / dy**2 + 2 * 1.5 / dx)
+        add(r, idx(k, 1), -2 * 2.0 / dx)
+        add(r, idx(k, 2), 2 * 0.5 / dx)
+        if k > 1:
+            add(r, idx(k - 1, 0), -1 / dy**2)
+        else:
+            rhs_const[r] += 1 / dy**2  # surface held at 1
+        if k < ny:
+            add(r, idx(k + 1, 0), -1 / dy**2)
+        else:
+            add(r, r, -1 / dy**2)  # no flux at the far end (mirror)
+        for i in range(1, nx):
+            r = idx(k, i)
+            add(r, r, 1 / dt + 2 / dx**2)
+            add(r, idx(k, i - 1), -1 / dx**2)
+            if i < nx - 1:
+                add(r, idx(k, i + 1), -1 / dx**2)  # C = 0 beyond x_max
+    lu = spla.splu(sp.csc_matrix((vals, (rows, cols)), shape=(ny * nx, ny * nx)))
+    c = np.zeros(ny * nx)
+    for _ in range(steps):
+        c = lu.solve(c / dt + rhs_const)
+    grid = np.zeros((ny + 1, nx + 1))
+    grid[0, 0] = 1.0
+    grid[0, 1:] = erfc(x1[1:] / (2 * np.sqrt(t1)))  # surface row of the grains, fed by the surface itself
+    grid[1:, :nx] = c.reshape(ny, nx)
+    return FisherSolution(t1, x1, y1, grid)

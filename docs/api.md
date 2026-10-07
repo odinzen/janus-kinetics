@@ -95,6 +95,33 @@ model instead.
 The phase constitution is outside what this version can model.
 
 
+## `calphad_kinetics.grain_boundary`
+
+### `class FisherBoundary(d_lattice: 'float', d_boundary: 'float', delta: 'float') -> None`
+
+A grain boundary of thickness ``delta`` (m) and diffusivity ``d_boundary`` in a
+grain of diffusivity ``d_lattice`` (both m^2/s).
+
+- `concentration(self, x, y, t) -> 'np.ndarray'`: Eq. (8): C at distance x from the boundary and depth y after time t, surface at 1.
+- `penetration_slope(self, t) -> 'float'`: Eq. (14): d log10(a) / dy of the layer-averaged concentration, in 1/m.
+- `scaled(self, x, y, t) -> 'tuple[np.ndarray, np.ndarray, np.ndarray]'`: (x1, y1, t1) of eq. (5).
+- `solve(self, t: 'float', **grid) -> 'FisherSolution'`: Numerical solution of eqs. (3)-(4) at time t (s); ``grid`` is passed to :func:`solve_fisher`.
+
+### `def boundary_product_from_slope(slope: 'float', d_lattice: 'float', t: 'float') -> 'float'`
+
+D' delta (m^3/s) from a measured penetration slope d log10(a)/dy (1/m), inverting eq. (14).
+
+The classic reading of a radiotracer sectioning experiment; Fisher's eq. (15)
+gives D / (D' delta) = 21.3 cm^-1 for silver at 478 C this way.
+
+### `def solve_fisher(t1: 'float', x_max: 'float | None' = None, y_max: 'float | None' = None, dx: 'float' = 0.5, dy: 'float' = 0.25, steps: 'int' = 400) -> 'FisherSolution'`
+
+Solve the scaled eqs. (3a)-(4a) of Fisher (1951) without his approximation.
+
+Backward Euler in t1 on a uniform grid; the slab takes (dC/dx1)_0 from the
+second-order one-sided difference his eq. (3b) uses, and each grain row only
+diffuses in x1, as eq. (4a) states. The surface row of the slab is held at 1.
+
 ## `calphad_kinetics.homogenization`
 
 ### `class LocalEquilibriumTable(db: 'Database', phases: 'dict[str, SolutionPhase]', T: 'float', averaging: 'Averaging' = 'hashin_shtrikman_lower', spacing: 'float | None' = None, pressure: 'float' = 101325.0)`
