@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parents[1] / "examples"))
 import fe_cr_couple  # noqa: E402
 import precipitation_table1  # noqa: E402
 import surface_depletion  # noqa: E402
+import thin_film_anneal  # noqa: E402
 import two_phase_couple  # noqa: E402
 
 
@@ -49,3 +50,25 @@ def test_two_phase_example_agrees_between_models():
     shift_sharp = out["sharp"].interface[-1] - out["half"]
     shift_homog = out["alpha_thickness"] - out["half"]
     assert shift_homog == pytest.approx(shift_sharp, rel=0.15)
+
+
+def test_thin_film_anneal_follows_the_temperature_schedule():
+    """The reaction layer grows while hot and stops when cooled, and both interfaces sit at the
+    pycalphad tie-lines of the current temperature (900 K mid-hold, 600 K at the end)."""
+    from calphad_kinetics.precipitation import solubility_from_pycalphad
+
+    out = thin_film_anneal.run(coarse=True)
+    res, db = out["result"], out["db"]
+    inv = res.inventory()
+    assert np.max(np.abs(inv - inv[0])) < 1e-10 * inv[0, 0]
+    beta = res.thickness()[:, 1]
+    t = res.times
+    hold_end = np.searchsorted(t, 66.0)
+    assert beta[hold_end] > 5 * beta[0]
+    assert beta[-1] == pytest.approx(beta[hold_end], rel=0.05)  # little growth once cooled
+    for i, temperature in ((np.searchsorted(t, 36.0), 900.0), (len(t) - 1, 600.0)):
+        a, b_lo = solubility_from_pycalphad(db, ["A", "B"], "ALPHA", "BETA", "B", temperature, 0.1)
+        b_hi, g = solubility_from_pycalphad(db, ["A", "B"], "BETA", "GAMMA", "B", temperature, 0.9)
+        np.testing.assert_allclose([res.interface_left[i, 0, 0], res.interface_right[i, 0, 0],
+                                    res.interface_left[i, 1, 0], res.interface_right[i, 1, 0]],
+                                   [a, b_lo, b_hi, g], atol=2e-4)

@@ -50,8 +50,8 @@ pip install -e . --no-deps
 pytest
 ```
 
-The test suite (137 tests, plus 3 skipped for data that is not available) takes
-about four minutes. On Windows run inside the activated environment, since
+The test suite (138 tests, plus 3 skipped for data that is not available) takes
+about five minutes. On Windows run inside the activated environment, since
 numpy's MKL libraries are only found on the activated path.
 
 ## Example
@@ -88,7 +88,9 @@ print(result.markers[-1])  # Kirkendall marker position after 10 h, m
 
 More complete scripts, each tested, are in [examples/](examples): the couple
 above with a figure, chromium loss to a surface in a ternary, a precipitation
-run, and an alpha/beta couple solved by both two-phase models.
+run, an alpha/beta couple solved by both two-phase models, and a reaction layer
+growing between two thin films during a rapid thermal anneal, with both
+interfaces following the tie-lines as the temperature ramps, holds and cools.
 
 Conventions worth knowing:
 
