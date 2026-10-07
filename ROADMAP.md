@@ -22,8 +22,9 @@ passes. Every reference is checked against Crossref by tools/check_references.py
   volumes that vary with composition, and the other solvers, still use one V_m.
 - Adaptive time stepping.
 - Oxides: cation tracer and chemical diffusion done (OxideCationDiffusion,
-  Hallstrom et al. 2011). Open: their Figs. 4 and 7-8, which need Sundman's (1991)
-  and Kjellqvist et al.'s (2008) descriptions; oxygen diffusion and scale growth
+  Hallstrom et al. 2011). Open: their Fig. 4, which needs Sundman's (1991)
+  magnetite; their Figs. 7-8, 0.4-0.7 decades above our hematite with the same
+  Kjellqvist et al. (2008) thermodynamics, cause not found; oxygen diffusion and scale growth
   (Hallstrom et al., Solid State Ionics 240 (2013) 41); the general sublattice
   formalism of Agren (1982).
 - Ordered B2 phases: done for mobilities and diffusivities at a point (B2Phase,

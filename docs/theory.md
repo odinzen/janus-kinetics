@@ -239,9 +239,13 @@ hematite has one. Site fractions and potentials come from pycalphad at the
 oxygen potential of O2 at the given partial pressure, and the derivative of eq. 9
 is taken along that potential, which converges far better than differences in
 composition over magnetite's narrow range. The shipped mobilities are those of
-the paper (eqs. 10-11 and 14); they belong with the thermodynamic descriptions
-they were fitted to, Sundman (1991) for magnetite and Kjellqvist et al. (2008)
-for hematite, and comparisons with the paper's figures wait for those.
+the paper (eqs. 10-11 and 14), fitted with Sundman's (1991) magnetite and
+Kjellqvist et al.'s (2008) hematite. pycalphad's alfeo.tdb carries Kjellqvist et
+al.'s Fe-O spinel and corundum term for term; with it, magnetite's minimum D*
+matches the paper's Fig. 4 within 0.05 decades at 1573-1673 K but not at 1273 K,
+where Kjellqvist's spinel departs from Sundman's near stoichiometry, and hematite
+comes out 0.4-0.7 decades below the paper's Figs. 7-8 although the thermodynamics
+is the one the paper used, a gap not yet explained.
 
 ## Homogenization
 
