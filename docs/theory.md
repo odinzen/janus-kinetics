@@ -384,3 +384,17 @@ Nucleation comes too early: classical theory at a 5 kT barrier gives 2.6e25 m^-3
 against the measured 5.9e21, a comparison the authors themselves warn against. The
 final volume fraction is bounded by Dupin's 11.8 % rather than the measured 15.6 %.
 
+With tracer diffusivities in the precipitate, class compositions evolve by part I
+eqs. 27-39: per class a linear system in (drho/dt, dc_i/dt), symmetric and positive
+definite as the dissipation is. The printed eq. 32 carries 5/(3 c_01 D_01) where
+eq. 25, eq. 33 and the dissipation itself give 5/(c_01 D_01); the latter is used, and
+a test checks the solved rates against eqs. 27-28 by differentiating the dissipation
+numerically. The precipitate's chemical potentials at each class composition come
+from a constrained Newton minimisation of its Gibbs energy over site fractions,
+which matches pycalphad within 0.01 J/mol where gamma' is one phase. In
+Ni-5.2Al-14.2Cr the gamma' then leaves its nucleus composition for Dupin's solvus: Al
+falls as measured, Cr rises where the measurement falls, Dupin putting the gamma' Cr
+at 9.5 % against the measured 6.8 %. A second alloy, Ni-7.5Al-8.5Cr (Booth-Morrison et
+al. 2008), matches <R> at 1 h and coarsens 6 times faster than measured, the same gap
+as the first, so it follows the mobilities rather than the alloy.
+

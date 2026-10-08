@@ -317,16 +317,16 @@ def test_merging_and_splitting_conserve_the_population():
     comp = rng.dirichlet([2, 1, 6], 6)
     gibbs = rng.uniform(-6e4, -5e4, 6)
 
-    def totals(n, r, c, g):
-        vol = n * r**3
-        return np.concatenate([[n.sum(), vol.sum()], vol @ c, [vol @ g]])
+    def totals(c):
+        vol = c["number"] * c["radius"] ** 3
+        return np.concatenate([[c["number"].sum(), vol.sum()], vol @ c["comp"], [vol @ c["gibbs"]]])
 
-    before = totals(number, radius, comp, gibbs)
+    classes = {"number": number, "radius": radius, "comp": comp, "gibbs": gibbs}
+    before = totals(classes)
     for step in (_merge_closest, _split_most_populated):
-        n, r, c, g = step(number, radius, comp, gibbs)
-        np.testing.assert_allclose(totals(n, r, c, g), before, rtol=1e-12)
-    assert len(_merge_closest(number, radius, comp, gibbs)[0]) == 5
-    assert len(_split_most_populated(number, radius, comp, gibbs)[0]) == 7
+        np.testing.assert_allclose(totals(step(classes)), before, rtol=1e-12)
+    assert len(_merge_closest(classes)["number"]) == 5
+    assert len(_split_most_populated(classes)["number"]) == 7
 
 
 def test_mass_balance_holds_at_every_saved_time():
@@ -395,3 +395,131 @@ def test_inputs_are_checked():
     with pytest.raises(ValueError, match="min_classes"):
         solve_multicomponent_precipitation(_matrix(), _precipitate(), ALLOY, T, 10.0, SETTINGS, [1.0],
                                            min_classes=300, max_classes=400)
+
+
+# --- precipitates whose composition evolves (part I eqs. 25-39) -------------------------------------------
+
+def test_minimizer_matches_pycalphad_inside_the_single_phase_field():
+    """Where pycalphad keeps gamma' as one phase the minimiser's Gibbs energy and chemical potentials agree
+    within 0.01 J/mol; where pycalphad splits it into two composition sets the homogeneous state of a single
+    particle lies above that, never below."""
+    pm = _precipitate().minimizer
+    xs = np.array([[0.1637, 0.0825], [0.1455, 0.0957], [0.15, 0.07], [0.19, 0.10], [0.20, 0.02]])
+    x3 = np.column_stack([xs, 1 - xs.sum(axis=1)])
+    y0 = np.tile([0.01, 0.01, 0.98, 0.9, 0.05, 0.05], (len(xs), 1))
+    y, g, mu = pm.solve(x3, y0, T)
+    for x, gk, mk in zip(xs, g, mu):
+        eq = equilibrium(_db(), ELEMENTS + ["VA"], ["L12_FCC"], {v.T: T, v.P: 101325, v.N: 1, v.X("AL"): x[0], v.X("CR"): x[1]})
+        sets = int(np.sum(np.ravel(eq.Phase.values) != ""))
+        ref_g = float(np.ravel(eq.GM.values)[0])
+        if sets == 1:
+            ref_mu = dict(zip([str(c) for c in eq.component.values], np.ravel(eq.MU.values)))
+            assert gk == pytest.approx(ref_g, abs=0.01)
+            np.testing.assert_allclose(mk, [ref_mu[e] for e in ELEMENTS], atol=0.01)
+        else:
+            assert gk > ref_g
+
+
+def _class_state():
+    rng = np.random.default_rng(7)
+    radius = np.array([0.9e-9, 2.5e-9, 6e-9])
+    comp = np.array([[0.17, 0.085, 0.745], [0.16, 0.09, 0.75], [0.15, 0.094, 0.756]])
+    mu_k = rng.uniform(-1, 1, (3, 3)) * 2000 + np.array([-178000.0, -40000.0, -40300.0])
+    x0 = np.array([0.045, 0.146, 0.809])
+    mu0 = np.array([-177500.0, -39400.0, -40400.0])
+    tracer = np.array([1.06e-20, 2.97e-21, 2.85e-21])
+    return radius, comp, mu_k, x0, mu0, tracer
+
+
+def test_evolution_rates_satisfy_the_extremum_principle():
+    """Part I eqs. (27)-(28), dG/dq = -(1/2) dQ/dq_dot, with dG/drho and dG/dc_ki from eqs. (8)-(9) and Q from
+    eqs. (15) and (23) (infinite interface mobility), differentiated numerically here; Q is quadratic in the
+    rates, so central differences are exact. This checks the linear system independently of its printed
+    coefficients, including the misprinted factor in eq. (32)."""
+    from calphad_kinetics.multicomponent_precipitation import evolution_rates
+
+    radius, comp, mu_k, x0, mu0, tracer = _class_state()
+    dk = np.array([3e-23, 1.5e-23, 2e-23])
+    omega, g = SETTINGS.molar_volume, SETTINGS.gamma
+    rate, dx = evolution_rates(radius, comp, mu_k, x0, mu0, tracer, dk, SETTINGS, T)
+    # the solver renormalises compositions each step, which would hide a wrong rate for the last element
+    np.testing.assert_allclose(dx.sum(axis=1), 0.0, atol=1e-12 * np.abs(dx).max())
+    c0, d0 = x0 / omega, tracer
+    for k in range(3):
+        rho, ck, mk = radius[k], comp[k] / omega, mu_k[k]
+        ref = -1  # the paper's element 1 is the last one here
+
+        def dissipation(q):
+            rdot, cdot = q[0], np.append(q[1:], -q[1:].sum())
+            q2 = 4 * np.pi * R * T * rho**5 / 45 * (cdot**2 / (ck * dk)).sum()
+            q3 = 4 * np.pi * R * T * rho**3 * ((rdot * (ck - c0) + rho * cdot / 3) ** 2 / (c0 * d0)).sum()
+            return q2 + q3
+
+        dgd_rho = 8 * np.pi * rho * g + 4 * np.pi * rho**2 * (
+            (mk[ref] - mu0[ref]) / omega + (ck[:-1] * (mk[:-1] - mu0[:-1] - mk[ref] + mu0[ref])).sum())
+        dgd_c = 4 * np.pi * rho**3 / 3 * (mk[:-1] - mu0[:-1] - mk[ref] + mu0[ref])
+        q = np.concatenate([[rate[k]], dx[k, :-1] / omega])
+        grad = np.empty_like(q)
+        for i in range(q.size):
+            h = np.zeros_like(q)
+            h[i] = 1e-6 * max(abs(q[i]), 1e-30)
+            grad[i] = (dissipation(q + h) - dissipation(q - h)) / (2 * h[i])
+        np.testing.assert_allclose(-0.5 * grad, np.concatenate([[dgd_rho], dgd_c]), rtol=1e-6)
+
+
+def test_frozen_composition_recovers_eq_45():
+    """As the diffusivities in the precipitate go to zero the composition stops changing and the growth
+    rate becomes eq. (45)."""
+    from calphad_kinetics.multicomponent_precipitation import evolution_rates
+
+    radius, comp, mu_k, x0, mu0, tracer = _class_state()
+    rate, dx = evolution_rates(radius, comp, mu_k, x0, mu0, tracer, np.full(3, 1e-40), SETTINGS, T)
+    f = (comp @ mu0 - (comp * mu_k).sum(axis=1)) / SETTINGS.molar_volume
+    np.testing.assert_allclose(rate, growth_rates(radius, comp, f, x0, tracer, SETTINGS, T), rtol=1e-9)
+    assert np.abs(dx).max() < 1e-15
+
+
+@functools.lru_cache(maxsize=None)
+def _sudbrack_evolving_run():
+    """Tracer diffusivities in gamma': Al 2.7e-23 and Cr 1.4e-23 m^2/s in Ni3Al at 873 K, as Sudbrack et al.
+    (2007) p. 126 quote them; Ni is not given and takes the Al value (1.4e-23 changes <R> at 1024 h by 4 %)."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return solve_multicomponent_precipitation(_matrix(), _precipitate(), ALLOY, T, HOURS[-1] * 3600, SETTINGS,
+                                                  HOURS * 3600, precipitate_tracer=[2.7e-23, 1.4e-23, 2.7e-23])
+
+
+def test_evolving_precipitates_relax_to_the_dupin_solvus():
+    """The gamma' leaves its nucleus composition (16.3 Al, 8.3 Cr at.%) for Dupin's gamma' solvus (14.56,
+    9.54): 14.70 and 9.45 at 1024 h. Al falls as the atom probe shows (19.1 to 16.7, Table 2); Cr rises where
+    the measured Cr falls (9.7 to 6.9), since Dupin's description puts the gamma' Cr at 9.5 rather than the
+    measured 6.8."""
+    res = _sudbrack_evolving_run()
+    xp = 100 * res.precipitate_composition
+    assert xp[0][0] > 16.0 and xp[-1][0] < xp[0][0] - 1.0
+    np.testing.assert_allclose(xp[-1][:2], [14.56, 9.54], atol=0.3)
+    phi = res.volume_fraction[:, None]
+    np.testing.assert_allclose((1 - phi) * res.matrix_composition + phi * res.precipitate_composition,
+                               np.tile(ALLOY, (len(res.times), 1)), atol=1e-12)
+
+
+def test_evolving_inputs_are_checked():
+    with pytest.raises(ValueError, match="one positive diffusivity"):
+        solve_multicomponent_precipitation(_matrix(), _precipitate(), ALLOY, T, 10.0, SETTINGS, [1.0],
+                                           precipitate_tracer=[1e-23, 1e-23])
+
+
+def test_second_alloy_shows_the_same_coarsening_gap():
+    """Booth-Morrison et al., Acta Mater. 56 (2008) 3422, Table 1 and p. 3432: Ni-7.5Al-8.5Cr at 873 K,
+    gamma = 24 mJ/m^2, measured K = 1.84e-31 m^3/s. The model matches <R> at 1 h (1.22 against 1.24 nm) and
+    coarsens 6 times faster than measured between 256 and 1024 h, as for Ni-5.2Al-14.2Cr (4.5 times): the gap
+    follows the mobilities, not the alloy."""
+    s = NucleationSettings(gamma=0.024, molar_volume=SETTINGS.molar_volume, lattice_parameter=SETTINGS.lattice_parameter)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        res = solve_multicomponent_precipitation(_matrix(), _precipitate(), [0.075, 0.085, 0.840], T, HOURS[-1] * 3600,
+                                                 s, HOURS * 3600, precipitate_tracer=[2.7e-23, 1.4e-23, 2.7e-23])
+    i1, i, j = list(HOURS).index(1), list(HOURS).index(256), list(HOURS).index(1024)
+    assert res.mean_radius[i1] == pytest.approx(1.24e-9, rel=0.10)
+    k = (res.mean_radius[j] ** 3 - res.mean_radius[i] ** 3) / ((HOURS[j] - HOURS[i]) * 3600)
+    assert 4 < k / 1.84e-31 < 8

@@ -25,6 +25,7 @@ from .mobility import MobilityModel
 from .multicomponent_precipitation import (
     MulticomponentResult,
     NucleationSettings,
+    PhaseMinimizer,
     PrecipitateThermo,
     solve_multicomponent_precipitation,
 )
@@ -86,6 +87,7 @@ __all__ = [
     "OxideCationDiffusion",
     "ParabolicGrowth",
     "PhaseDissolvedError",
+    "PhaseMinimizer",
     "PrecipitateThermo",
     "PrecipitationResult",
     "R",

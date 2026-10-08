@@ -407,6 +407,20 @@ both phases), lattice parameter (m) of the attachment rate eq. (46), and nucleat
 m^3 (default N_A / molar_volume, every lattice site, homogeneous nucleation).
 
 
+### `class PhaseMinimizer(db: 'Database', phase: 'str', components: 'Sequence[str]')`
+
+Internal equilibrium of one phase at fixed composition: site fractions that minimise its molar
+Gibbs energy, found by Newton's method on the constrained problem for many compositions at once.
+
+pycalphad's equilibrium does this too, but too slowly to call for every precipitate class at every
+step; here the Gibbs energy, gradient and Hessian are compiled once and each solve starts from the
+previous site fractions. The phase must hold no vacancies, so that composition is linear in the
+site fractions. Chemical potentials follow from the Lagrange multipliers of the composition
+constraints: with x_n dependent, dG/dx_i = -nu_i, mu_n = G + sum_i x_i nu_i and mu_i = mu_n - nu_i.
+
+- `disordered(self, x) -> 'np.ndarray'`: Site fractions with every sublattice at composition ``x``, a starting point.
+- `solve(self, x, y0, T: 'float', tol: 'float' = 1e-11, max_iter: 'int' = 60)`: (site fractions (k, ny), G (k,) in J/mol, mu (k, n)) at mole fractions ``x`` (k, n), from ``y0``.
+
 ### `class PrecipitateThermo(db: 'Database', phase: 'str', components: 'Sequence[str]', composition: 'Sequence[float] | None' = None)`
 
 Gibbs energy of the precipitate phase from pycalphad, with its internal degrees of freedom
@@ -418,27 +432,36 @@ chosen stoichiometry); without it nuclei take the composition of largest driving
 
 - `gm(self, x: 'Sequence[float]', T: 'float') -> 'float'`: Molar Gibbs energy (J per mole of atoms) at mole fractions ``x``.
 - `nucleus(self, mu_matrix: 'np.ndarray', T: 'float') -> 'tuple[np.ndarray, float]'`: (composition, molar driving force in J/mol) of the precipitate with the largest driving force
+- `site_fractions(self, x: 'Sequence[float]', T: 'float') -> 'np.ndarray'`: Equilibrium site fractions of the phase at mole fractions ``x``, in pycalphad's order, from the
 
-### `def solve_multicomponent_precipitation(matrix: 'SolutionPhase', precipitate: 'PrecipitateThermo', alloy: 'Sequence[float]', T: 'float', t_end: 'float', settings: 'NucleationSettings', save_times: 'Sequence[float]', t_start: 'float' = 0.001, max_radius_change: 'float' = 0.02, max_matrix_change: 'float' = 0.0002, max_classes: 'int' = 400, min_classes: 'int' = 100, smallest_radius: 'float' = 1e-10, nucleus_update: 'float' = 0.001, initial: 'dict | None' = None) -> 'MulticomponentResult'`
+### `def solve_multicomponent_precipitation(matrix: 'SolutionPhase', precipitate: 'PrecipitateThermo', alloy: 'Sequence[float]', T: 'float', t_end: 'float', settings: 'NucleationSettings', save_times: 'Sequence[float]', t_start: 'float' = 0.001, max_radius_change: 'float' = 0.02, max_matrix_change: 'float' = 0.0002, max_composition_change: 'float' = 0.001, max_classes: 'int' = 400, min_classes: 'int' = 100, smallest_radius: 'float' = 1e-10, nucleus_update: 'float' = 0.001, initial: 'dict | None' = None, precipitate_tracer: 'Sequence[float] | None' = None) -> 'MulticomponentResult'`
 
 Isothermal precipitation from a supersaturated matrix of mole fractions ``alloy``.
 
+Without ``precipitate_tracer`` each class keeps the composition it nucleated with and
+grows by eq. (45). With it (tracer diffusivities of each element in the precipitate,
+m^2/s) the class compositions evolve by eqs. (27)-(39), see :func:`evolution_rates`,
+and the precipitate's chemical potentials at each class composition come from a
+:class:`PhaseMinimizer` of the precipitate phase.
+
 Steps are explicit, limited so no class radius changes by more than
-``max_radius_change`` (relative) and no matrix fraction by more than
+``max_radius_change`` (relative), no class mole fraction by more than
+``max_composition_change`` and no matrix fraction by more than
 ``max_matrix_change``, and growing by at most 20 % from step to step. Classes
 that shrink below ``smallest_radius`` dissolve, their solute returning to the
 matrix through the mass balance. Above ``max_classes`` the two classes closest in
 radius are merged, conserving number, volume and solute; the merged class's Gibbs
 energy is the volume-weighted mean of the two, which keeps the total Gibbs energy
-and hence the mean driving force exact. Below ``min_classes`` the class holding
-the most precipitates splits into two of equal number, 1 % apart in radius with
-the volume kept, as part II (p. 162) splits classes to hold their count, since a
-handful of classes cannot carry a coarsening distribution. The nucleus composition is redone
-when the matrix has moved by ``nucleus_update`` in mole fraction since it was
-last found; between updates its driving force follows the matrix potentials,
-which is exact to first order because the nucleus maximises it. ``initial``
-holds precipitates present at ``t_start`` as arrays "number" (m^-3), "radius" (m)
-and "composition" (k, n).
+and hence the mean driving force exact (with evolving compositions it is
+recomputed at the merged composition, the particle being taken as uniform). Below
+``min_classes`` the class holding the most precipitates splits into two of equal
+number, 1 % apart in radius with the volume kept, as part II (p. 162) splits
+classes to hold their count, since a handful of classes cannot carry a coarsening
+distribution. The nucleus composition is redone when the matrix has moved by
+``nucleus_update`` in mole fraction since it was last found; between updates its
+driving force follows the matrix potentials, which is exact to first order because
+the nucleus maximises it. ``initial`` holds precipitates present at ``t_start`` as
+arrays "number" (m^-3), "radius" (m) and "composition" (k, n).
 
 ## `calphad_kinetics.ordered`
 
