@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 from pycalphad import Database
 
-from calphad_kinetics import (
+from janus_kinetics import (
     Boundary,
     ConvergenceError,
     LocalEquilibrium,
@@ -23,9 +23,9 @@ from calphad_kinetics import (
     solve_planar,
     uniform_faces,
 )
-from calphad_kinetics._lattice import SubstitutionalLattice
-from calphad_kinetics.homogenization import LocalEquilibriumTable, solve_homogenized
-from calphad_kinetics.precipitation import DiluteSolution, Kinetics, solve_kwn
+from janus_kinetics._lattice import SubstitutionalLattice
+from janus_kinetics.homogenization import LocalEquilibriumTable, solve_homogenized
+from janus_kinetics.precipitation import DiluteSolution, Kinetics, solve_kwn
 from conftest import HEADER, REGULAR_TERNARY
 from test_moving_boundary import TWO_PHASE
 

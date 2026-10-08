@@ -14,8 +14,8 @@ import warnings
 
 import numpy as np
 
-from calphad_kinetics import kjellqvist2008_cro, parabolic_scale_growth
-from calphad_kinetics.oxides import chromia
+from janus_kinetics import kjellqvist2008_cro, parabolic_scale_growth
+from janus_kinetics.oxides import chromia
 
 from _common import figure_path
 

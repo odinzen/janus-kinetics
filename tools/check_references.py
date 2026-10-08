@@ -57,7 +57,7 @@ def plain(s: str) -> str:
 
 
 def fetch(doi: str) -> dict:
-    req = urllib.request.Request(f"https://api.crossref.org/works/{doi}", headers={"User-Agent": "calphad-kinetics-refcheck"})
+    req = urllib.request.Request(f"https://api.crossref.org/works/{doi}", headers={"User-Agent": "janus-kinetics-refcheck"})
     for attempt in range(4):
         try:
             with urllib.request.urlopen(req, timeout=30) as r:
@@ -99,7 +99,7 @@ def main() -> int:
                             f"vol {m.get('volume')}, p {got_page})")
         lines.append(entry(m))
         time.sleep(1)
-    OUT.write_text("# References\n\nEvery work cited in calphad-kinetics, written from its Crossref record by "
+    OUT.write_text("# References\n\nEvery work cited in janus-kinetics, written from its Crossref record by "
                    "`tools/check_references.py`.\n\n" + "\n".join(f"- {l}" for l in sorted(lines)) + "\n", encoding="utf-8")
     for p in problems:
         print("MISMATCH", p)

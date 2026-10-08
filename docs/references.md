@@ -1,6 +1,6 @@
 # References
 
-Every work cited in calphad-kinetics, written from its Crossref record by `tools/check_references.py`.
+Every work cited in janus-kinetics, written from its Crossref record by `tools/check_references.py`.
 
 - Andersson J.O., Ågren J. (1992). Models for numerical treatment of multicomponent diffusion in simple phases. *Journal of Applied Physics* 72, 1350-1355. https://doi.org/10.1063/1.351745
 - Ansara I., Dupin N., Lukas H.L., Sundman B. (1997). Thermodynamic assessment of the Al-Ni system. *Journal of Alloys and Compounds* 247, 20-30. https://doi.org/10.1016/s0925-8388(96)02652-7

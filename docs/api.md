@@ -2,13 +2,13 @@
 
 Generated from the docstrings by `tools/gen_api.py`; do not edit by hand.
 
-## `calphad_kinetics`
+## `janus_kinetics`
 
 ### `R`
 
 Constant, value `8.3145`.
 
-## `calphad_kinetics.couple_analysis`
+## `janus_kinetics.couple_analysis`
 
 ### `def interdiffusion_from_profile(z, x, t: 'float', molar_volume=None) -> 'np.ndarray'`
 
@@ -29,7 +29,7 @@ Intrinsic diffusivity D_i (m^2/s) of the element whose mole fraction is ``x``, a
 with C_i = N_i / V_m. Call it with N_A and with 1 - N_A for the two elements of
 a binary. ``z_marker`` is the measured marker position in the same frame as z.
 
-## `calphad_kinetics.datasets`
+## `janus_kinetics.datasets`
 
 ### `def campbell2002_fcc_ni() -> 'Database'`
 
@@ -46,7 +46,7 @@ show the size of that effect).
 Mobilities of Al and Ni in B2-ordered bcc Al-Ni: the disordered database and the ordering terms.
 
 Appendix A of Helander and Agren, Acta Mater. 47 (1999) 1141, for
-:class:`calphad_kinetics.B2Phase`. The disordered parameters are for the
+:class:`janus_kinetics.B2Phase`. The disordered parameters are for the
 hypothetical bcc A2 phase (the same for pure Al and pure Ni by their
 assumption, p. 1147). The authors fitted them with the Al-Ni thermodynamics of
 Ansara et al. (1997); Al-Fe is not shipped because its magnetic term (their
@@ -70,14 +70,14 @@ Thermodynamics of Cr-O between Cr and Cr2O3: bcc Cr with interstitial O, corundu
 (Cr+2,Cr+3)2(Cr+3,Va)1(O-2)3 and O2 gas.
 
 The Cr-O part of Table 5 of Kjellqvist, Selleby and Sundman, Calphad 32 (2008)
-577, for :func:`calphad_kinetics.oxides.chromia`. Hallstrom et al. (2013) fitted
+577, for :func:`janus_kinetics.oxides.chromia`. Hallstrom et al. (2013) fitted
 their Cr2O3 mobilities with Taylor and Dinsdale's Cr-O description, which this
 one builds on; their oxygen tracer curves (Fig. 7) come out within 0.07 decades
 with it. The antiferromagnetic and structure factors are not printed and are
 the usual ones (see the file header); they change nothing above 600 K that
 matters here.
 
-## `calphad_kinetics.diffusivity`
+## `janus_kinetics.diffusivity`
 
 ### `def intrinsic_matrix(x: 'np.ndarray', mobility: 'np.ndarray', dmu: 'np.ndarray') -> 'np.ndarray'`
 
@@ -141,7 +141,7 @@ where dmu_i/dc_j follows from dx_k/dc_j = V_m [delta_kj - x_k (1 - V_j/V_n)].
 The fluxes then satisfy sum_k V_k J_k = 0 and J_k = -sum_j D^V_kj dc_j/dz.
 Equal partial volumes recover :func:`number_fixed_matrix`.
 
-## `calphad_kinetics.errors`
+## `janus_kinetics.errors`
 
 ### `class ConvergenceError`
 
@@ -169,7 +169,7 @@ model instead.
 The phase constitution is outside what this version can model.
 
 
-## `calphad_kinetics.grain_boundary`
+## `janus_kinetics.grain_boundary`
 
 ### `class FisherBoundary(d_lattice: 'float', d_boundary: 'float', delta: 'float') -> None`
 
@@ -196,7 +196,7 @@ Backward Euler in t1 on a uniform grid; the slab takes (dC/dx1)_0 from the
 second-order one-sided difference his eq. (3b) uses, and each grain row only
 diffuses in x1, as eq. (4a) states. The surface row of the slab is held at 1.
 
-## `calphad_kinetics.homogenization`
+## `janus_kinetics.homogenization`
 
 ### `class LocalEquilibriumTable(db: 'Database', phases: 'dict[str, SolutionPhase]', T: 'float', averaging: 'Averaging' = 'hashin_shtrikman_lower', spacing: 'float | None' = None, pressure: 'float' = 101325.0)`
 
@@ -272,7 +272,7 @@ it; this term does. They suggest 0.01-0.05, as small as removes oscillations,
 since it also adds numerical diffusion. It equals driving the flux with
 mu_k + epsilon RT ln u_k, which is how it enters here.
 
-## `calphad_kinetics.interstitial`
+## `janus_kinetics.interstitial`
 
 ### `class InterstitialPhase(db: 'Database', phase_name: 'str', substitutional, interstitial, dependent=None, mobility_db: 'Database | None' = None, pressure: 'float' = 101325.0)`
 
@@ -290,7 +290,7 @@ all of them in the order of :attr:`components`.
 - `mobility(self, u, T) -> 'np.ndarray'`: Omega_k = exp((MF + MQ)/RT)/RT for every component, shape (..., n), m^2 mol/(J s).
 - `u_from_x(self, x) -> 'np.ndarray'`: Independent u-fractions from mole fractions given in the order of :attr:`components`.
 
-## `calphad_kinetics.mobility`
+## `janus_kinetics.mobility`
 
 ### `class MobilityModel(db: 'Database', lattice: 'SubstitutionalLattice')`
 
@@ -313,7 +313,7 @@ that corner and the mobility would be meaningless.
 - `phi(self, x: 'np.ndarray', T) -> 'np.ndarray'`: Phi_B = MF_B + MQ_B = RT ln(M0_B) - Q_B in J/mol, shape (..., n).
 - `tracer_diffusivity(self, x: 'np.ndarray', T, magnetic_factor: 'np.ndarray | float' = 1.0) -> 'np.ndarray'`: D*_B = RT M_B in m^2/s, neglecting the correlation factor (Jonsson 1995, eq. 1).
 
-## `calphad_kinetics.moving_boundary`
+## `janus_kinetics.moving_boundary`
 
 ### `class FixedInterface(x_left, x_right)`
 
@@ -393,13 +393,13 @@ uniform grids over [0, interface] and [interface, length]; a binary may pass
 of :func:`solve_planar`, for example ``lambda x: alpha.interdiffusion_matrix(x, T)``.
 ``left``/``right`` are the conditions at z = 0 and z = length.
 
-## `calphad_kinetics.multicomponent_precipitation`
+## `janus_kinetics.multicomponent_precipitation`
 
 ### `class MulticomponentResult(times: 'np.ndarray', mean_radius: 'np.ndarray', number_density: 'np.ndarray', volume_fraction: 'np.ndarray', matrix_composition: 'np.ndarray', precipitate_composition: 'np.ndarray', classes: 'list', steps: 'int') -> None`
 
-Saved states: times (s), mean radius (m), number density (m^-3), precipitate volume
-fraction, matrix mole fractions (t, n), mean precipitate mole fractions (t, n, volume-weighted),
-and the class radii, densities and compositions at each saved time.
+Saved states of one precipitate population: times (s), mean radius (m), number density (m^-3),
+its volume fraction, the matrix mole fractions (t, n), its mean mole fractions (t, n,
+volume-weighted), and the class radii, densities and compositions at each saved time.
 
 
 ### `class NucleationSettings(gamma: 'float', molar_volume: 'float', lattice_parameter: 'float', sites: 'float | None' = None, misfit: 'float' = 0.0, site: "Literal['bulk', 'boundary', 'edge', 'corner']" = 'bulk', boundary_ratio: 'float' = 0.0) -> None`
@@ -430,6 +430,14 @@ constraints: with x_n dependent, dG/dx_i = -nu_i, mu_n = G + sum_i x_i nu_i and 
 - `disordered(self, x) -> 'np.ndarray'`: Site fractions with every sublattice at composition ``x``, a starting point.
 - `solve(self, x, y0, T: 'float', tol: 'float' = 1e-11, max_iter: 'int' = 60)`: (site fractions (k, ny), G (k,) in J/mol, mu (k, n)) at mole fractions ``x`` (k, n), from ``y0``.
 
+### `class Population(precipitate: 'PrecipitateThermo', settings: 'NucleationSettings', initial: 'dict | None' = None, precipitate_tracer: 'Sequence[float] | None' = None) -> None`
+
+One precipitate phase nucleating at one kind of site, for :func:`solve_competing_precipitation`.
+``initial`` and ``precipitate_tracer`` are as in :func:`solve_multicomponent_precipitation`. A phase
+may form several populations, in the bulk and on grain boundaries say, as part II (p. 158) creates
+one kinetic object per phase and nucleation site.
+
+
 ### `class PrecipitateThermo(db: 'Database', phase: 'str', components: 'Sequence[str]', composition: 'Sequence[float] | None' = None)`
 
 Gibbs energy of the precipitate phase from pycalphad, with its internal degrees of freedom
@@ -459,6 +467,18 @@ both phases. With a yield stress the matrix around the particle may yield (Fisch
 as the appendix gives it): S = sigma_f (1 - nu) / (E eps0), eq. (A.2), and lambda = lambda0 f(S) with
 f(S) = 2 S (1 - ln S) - S^2 for S < 1, eq. (A.3), which exceeds 1 between S = 0.199 and 1 (plastic
 work added to the stored elastic energy).
+
+### `def solve_competing_precipitation(matrix: 'SolutionPhase', populations: 'Sequence[Population]', alloy: 'Sequence[float]', T: 'Temperature', t_end: 'float', save_times: 'Sequence[float]', t_start: 'float' = 0.001, max_temperature_change: 'float' = 1.0, max_radius_change: 'float' = 0.02, max_matrix_change: 'float' = 0.0002, max_composition_change: 'float' = 0.001, max_classes: 'int' = 400, min_classes: 'int' = 100, smallest_radius: 'float' = 1e-10, nucleus_update: 'float' = 0.001, min_class_number: 'float' = 1e-06) -> 'list[MulticomponentResult]'`
+
+Several precipitate populations drawing on one matrix, one result per population in the order
+given. Part I's mass balance, eq. (4), sums over precipitates of every kind, and part II (section
+3.5) runs such competitions to follow precipitation sequences.
+
+Each population nucleates, grows and coarsens as in :func:`solve_multicomponent_precipitation`,
+whose arguments these are. The step is common to all of them: its matrix-change limits count the
+depletion by every population together, and shrinking classes of all populations share one
+dissolution budget. All populations need the same molar volume, part I's single Omega (p. 167),
+with which volume fractions carry the mass balance.
 
 ### `def solve_multicomponent_precipitation(matrix: 'SolutionPhase', precipitate: 'PrecipitateThermo', alloy: 'Sequence[float]', T: 'Temperature', t_end: 'float', settings: 'NucleationSettings', save_times: 'Sequence[float]', t_start: 'float' = 0.001, max_temperature_change: 'float' = 1.0, max_radius_change: 'float' = 0.02, max_matrix_change: 'float' = 0.0002, max_composition_change: 'float' = 0.001, max_classes: 'int' = 400, min_classes: 'int' = 100, smallest_radius: 'float' = 1e-10, nucleus_update: 'float' = 0.001, min_class_number: 'float' = 1e-06, initial: 'dict | None' = None, precipitate_tracer: 'Sequence[float] | None' = None) -> 'MulticomponentResult'`
 
@@ -496,7 +516,7 @@ the nucleus maximises it. Nuclei open a new class only once more than
 formed; until then they are held back. ``initial`` holds precipitates present at
 ``t_start`` as arrays "number" (m^-3), "radius" (m) and "composition" (k, n).
 
-## `calphad_kinetics.ordered`
+## `janus_kinetics.ordered`
 
 ### `class B2Phase(db: 'Database', phase_name: 'str', elements, mobility_db: 'Database', disordered_phase: 'str', ordering: 'Mapping[tuple[str, str, str], float]', dependent: 'str | None' = None)`
 
@@ -522,7 +542,7 @@ Eq. 12: dQ^ord (J/mol) of ``element`` for site fractions y_a, y_b over ``constit
 ``terms`` maps (k, i, j) to dQ^order_kij, with i and j in either order. The two
 sublattices must have equal site numbers, as in B2, so x_i = (y_i^a + y_i^b) / 2.
 
-## `calphad_kinetics.oxide_scale`
+## `janus_kinetics.oxide_scale`
 
 ### `class ScaleGrowth(k: 'float', cation: 'float', anion: 'float', mu_inner: 'float', mu_outer: 'float', n_metal_range: 'tuple[float, float]') -> None`
 
@@ -553,7 +573,7 @@ oxide that would not exist and k comes out too large without any error. The
 model assumes a compact, adherent scale with no voids or porosity, a planar
 front, and transport only through the oxide.
 
-## `calphad_kinetics.oxides`
+## `janus_kinetics.oxides`
 
 ### `class AnionPath(sublattice: 'int', mobility: 'Callable[[float], float]') -> None`
 
@@ -596,7 +616,7 @@ standard state (1 bar for the usual R*T*LN(1E-05*P) term), using its GAS phase.
 - `state_at_potential(self, T: 'float', mu_o: 'float') -> 'dict'`: As :meth:`state`, at the oxygen chemical potential ``mu_o`` (J/mol) instead of a pressure.
 - `tracer_diffusivity(self, T: 'float', p_o2: 'float') -> 'float'`: D*_M in m^2/s, eq. (7) (eq. (13) for a single path).
 
-## `calphad_kinetics.particle_reaction`
+## `janus_kinetics.particle_reaction`
 
 ### `def conversion(t, growth_constant: 'float | Callable[[float], float]', radius: 'float', z: 'float', geometry: 'Geometry', temperature: 'Temperature | None' = None) -> 'np.ndarray'`
 
@@ -622,7 +642,7 @@ constant of a planar couple.
 
 Van Loo's eq. 25: layer thickness d / r0 at conversion alpha.
 
-## `calphad_kinetics.phase`
+## `janus_kinetics.phase`
 
 ### `class ShortCircuit(fraction: 'float', mobility_db: 'Database') -> None`
 
@@ -660,7 +680,7 @@ n mole fractions, in the order of :attr:`elements` (dependent element last).
 - `reduced_hessian(self, x, T) -> 'np.ndarray'`: d2G/dx_k dx_j with the dependent element eliminated, J/mol, shape (..., n-1, n-1).
 - `thermodynamic_factor(self, x, T) -> 'np.ndarray'`: Dimensionless (x_i/RT) dmu_i/dx_j, shape (..., n, n-1).
 
-## `calphad_kinetics.precipitation`
+## `janus_kinetics.precipitation`
 
 ### `class DiluteSolution(x_eq: 'float', x_p: 'float', v_at_p: 'float', v_at_m: 'float', gamma: 'float', T: 'float') -> None`
 
@@ -741,7 +761,7 @@ class through its lower edge have dissolved; their solute returns to the
 matrix through the mass balance of eq. (22). The lower edge must lie above the
 radius where X^i(R) reaches alpha X^P, below which eq. (10) does not hold.
 
-## `calphad_kinetics.reaction_layers`
+## `janus_kinetics.reaction_layers`
 
 ### `class LineCompound(name: 'str', x: 'float', molar_volume: 'float', gibbs: 'Value | None' = None, mobility: 'tuple[float, float] | Callable[[float], tuple[float, float]] | None' = None, integrated_diffusivity: 'Value | None' = None, tracer_ratio: 'float | None' = None) -> None`
 
@@ -808,7 +828,7 @@ measured from the original interface (the first interface for a pre-grown
 stack). The frame is the lattice of the semi-infinite end member, or of
 ``anchor`` ('left' or 'right') when given.
 
-## `calphad_kinetics.schedule`
+## `janus_kinetics.schedule`
 
 ### `class TemperatureSchedule(times, temperatures)`
 
@@ -819,7 +839,7 @@ it, so a single point is an isothermal hold. Ramps, spikes and multi-step anneal
 are lists of points, e.g. ``TemperatureSchedule([0, 10, 70, 80], [300, 1300, 1300, 300])``.
 
 
-## `calphad_kinetics.solidification`
+## `janus_kinetics.solidification`
 
 ### `class BackDiffusionResult(fs: 'np.ndarray', liquid: 'np.ndarray', interface_solid: 'np.ndarray', z_faces: 'np.ndarray', solid: 'np.ndarray', geometry: 'Geometry') -> None`
 
@@ -880,7 +900,7 @@ composition from the element's solute balance. The solid's response is linear in
 value, so two solves give the exact C_L of the step. The run starts at ``fs_start`` with the solid at
 k C0 (the Scheil and exact solutions agree there to order f_s). Compositions are over C0.
 
-## `calphad_kinetics.solver`
+## `janus_kinetics.solver`
 
 ### `class Boundary(kind: "Literal['no_flux', 'fixed']", composition: 'np.ndarray | Callable | None' = None, held: 'tuple[int, ...] | None' = None) -> None`
 
@@ -903,7 +923,7 @@ Saved profiles: ``x[t_index, cell, component]`` for the independent components.
 - `inventory(self) -> 'np.ndarray'`: Integral of each mole fraction over the domain (r^p dr) at every saved time, shape (n_t, n-1).
 - `widths` (property): Cell measures: widths for a plate, volumes per unit angle for a cylinder or sphere.
 
-### `def solve_planar(z_faces: 'np.ndarray', x0: 'np.ndarray', diffusivity: 'Diffusivity', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, picard_tol: 'float' = 1e-10, max_picard: 'int' = 50, markers=None, lattice_velocity: 'LatticeVelocity | None' = None, geometry: 'Geometry' = 'planar') -> 'DiffusionResult'`
+### `def solve_planar(z_faces: 'np.ndarray', x0: 'np.ndarray', diffusivity: 'Diffusivity', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, picard_tol: 'float' = 1e-10, max_picard: 'int' = 50, markers=None, lattice_velocity: 'LatticeVelocity | None' = None, geometry: 'Geometry' = 'planar', tolerance: 'float | None' = None) -> 'DiffusionResult'`
 
 Integrate interdiffusion from ``x0`` to ``t_end`` in a plate (default), a long cylinder or a sphere.
 
@@ -927,6 +947,13 @@ lattice_velocity : callable (x, dx_dz) or (x, dx_dz, t) -> v giving the lattice
 geometry : "planar", "cylindrical" or "spherical"; for the curved ones ``z_faces`` are
     radii, and a first face at r = 0 is the axis or centre, where no flux passes.
     Markers are followed in the planar geometry only.
+tolerance : with it the step adapts, ``dt`` becoming the largest step. Backward Euler
+    errs by about (step^2 / 2) d^2x/dt^2 per step; the second derivative is taken from
+    the change in dx/dt between consecutive steps, and a step whose estimate exceeds
+    ``tolerance`` (in the units of ``picard_tol``) is halved and redone, as is one whose
+    Picard iteration fails. A step whose estimate is under an eighth of ``tolerance``
+    is followed by one twice as long. Steps are dt / 2^k, so a constant D needs few
+    factorizations; the first is dt / 1024.
 
 Returns profiles at t=0 and at every save time (always including ``t_end``).
 
@@ -934,7 +961,7 @@ Returns profiles at t=0 and at every save time (always including ``t_end``).
 
 Face positions (m) of ``n_cells`` equal cells spanning [origin, origin + length].
 
-## `calphad_kinetics.thermo`
+## `janus_kinetics.thermo`
 
 ### `class GibbsEnergy(db: 'Database', lattice: 'SubstitutionalLattice', pressure: 'float' = 101325.0)`
 

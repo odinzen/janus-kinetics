@@ -2,7 +2,7 @@
 
 All composition arrays carry the dependent element last. ``dmu`` is
 dmu_i/dx_j with x_n dependent, shape (..., n, n-1), as returned by
-:func:`calphad_kinetics.thermo.dmu_dx`.
+:func:`janus_kinetics.thermo.dmu_dx`.
 """
 
 from __future__ import annotations

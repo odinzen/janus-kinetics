@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-import calphad_kinetics
+import janus_kinetics
 
 ROOT = Path(__file__).parents[1]
 
@@ -13,7 +13,7 @@ def test_versions_agree():
     pyproject = re.search(r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.M).group(1)
     cff = re.search(r"^version: (\S+)", (ROOT / "CITATION.cff").read_text(), re.M).group(1)
     zenodo = json.loads((ROOT / ".zenodo.json").read_text(encoding="utf-8"))["version"]
-    assert pyproject == cff == zenodo == calphad_kinetics.__version__
+    assert pyproject == cff == zenodo == janus_kinetics.__version__
 
 
 def test_author_and_license_agree():

@@ -12,7 +12,7 @@ Run ``python examples/ni_sn_kirkendall.py`` to write examples/output/ni_sn_kirke
 
 import numpy as np
 
-from calphad_kinetics import LineCompound, parabolic_growth
+from janus_kinetics import LineCompound, parabolic_growth
 
 from _common import figure_path
 

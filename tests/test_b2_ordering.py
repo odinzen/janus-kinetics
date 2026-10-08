@@ -8,7 +8,7 @@ descriptions are used here: that model, built below from Ansara's Appendix A
 values into Dupin's (Al,Ni,Va)(Al,Ni,Va) reformulation (Dupin, Ansara and
 Sundman, Calphad 25 (2001) 279, pp. 297-298, matched within 0.6 J/mol). Both give
 the same Ni-rich results. Compositions stop at x_Al = 0.49; the vacancy-rich side
-is discussed in calphad_kinetics.ordered.
+is discussed in janus_kinetics.ordered.
 """
 import re
 
@@ -19,9 +19,9 @@ import numpy as np
 import pytest
 from pycalphad import Database
 
-from calphad_kinetics import R
-from calphad_kinetics.datasets import HELANDER1999_ALNI_ORDERING, helander1999_bcc_alni
-from calphad_kinetics.ordered import B2Phase, ordering_energy
+from janus_kinetics import R
+from janus_kinetics.datasets import HELANDER1999_ALNI_ORDERING, helander1999_bcc_alni
+from janus_kinetics.ordered import B2Phase, ordering_energy
 
 # Their calculated log10 D*_Ni (Fig. 7, offsets M removed) and log10 D~ (Fig. 2).
 FIG7 = {1573.15: {0.40: -12.24, 0.44: -12.86, 0.48: -13.54, 0.49: -13.70},
@@ -105,8 +105,8 @@ def test_disorder_adds_nothing():
 def test_shipped_disordered_parameters_match_appendix_a():
     """Phi = R T Theta - Q: Theta = ln(6.5e-5), Q = 215 kJ for Al and ln(1.8e-5), 204 kJ for Ni,
     with 0Q^{Al,Ni} = -327.4 kJ for both."""
-    from calphad_kinetics import MobilityModel
-    from calphad_kinetics._lattice import SubstitutionalLattice
+    from janus_kinetics import MobilityModel
+    from janus_kinetics._lattice import SubstitutionalLattice
 
     mob, _ = helander1999_bcc_alni()
     model = MobilityModel(mob, SubstitutionalLattice.from_database(mob, "BCC_A2", ["AL", "NI"]))

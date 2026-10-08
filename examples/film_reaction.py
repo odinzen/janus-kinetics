@@ -15,7 +15,7 @@ Run ``python examples/film_reaction.py`` to write examples/output/film_reaction.
 
 import numpy as np
 
-from calphad_kinetics import LineCompound, TemperatureSchedule, solve_reaction_layers
+from janus_kinetics import LineCompound, TemperatureSchedule, solve_reaction_layers
 
 from _common import figure_path
 

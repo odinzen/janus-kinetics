@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from pycalphad import Database, calculate
 
-from calphad_kinetics import MissingParameterError, MobilityModel, R, UnsupportedPhaseError
-from calphad_kinetics._lattice import SubstitutionalLattice
+from janus_kinetics import MissingParameterError, MobilityModel, R, UnsupportedPhaseError
+from janus_kinetics._lattice import SubstitutionalLattice
 from conftest import HEADER
 
 T = 1200.0
@@ -156,7 +156,7 @@ def test_quaternary_interaction_parameters_are_refused():
 def test_mobility_layout_need_not_match_the_thermodynamic_one(ideal_db, regular_db):
     """SOL is (A,B,C) in ideal_db and (A,B,C)(VA) in regular_db with the same mobility
     numbers; either pairing of thermodynamic and mobility database gives one mobility."""
-    from calphad_kinetics import SolutionPhase
+    from janus_kinetics import SolutionPhase
 
     x = np.array([[0.2, 0.3], [0.6, 0.1], [0.05, 0.9]])
     ref = SolutionPhase(regular_db, "SOL", ["A", "B", "C"]).mobility(x, T)

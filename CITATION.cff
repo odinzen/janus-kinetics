@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "calphad-kinetics"
+title: "janus-kinetics"
 abstract: >-
   Multicomponent diffusion, moving-boundary, homogenization and precipitation
   kinetics on top of pycalphad, built from the published models with each

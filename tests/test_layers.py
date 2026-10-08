@@ -18,8 +18,8 @@ import pytest
 from scipy.optimize import fsolve
 from scipy.special import erf, erfc, erfcx
 
-from calphad_kinetics import FixedInterface, PhaseDissolvedError
-from calphad_kinetics.moving_boundary import Layer, solve_layers
+from janus_kinetics import FixedInterface, PhaseDissolvedError
+from janus_kinetics.moving_boundary import Layer, solve_layers
 
 DA, DB, DG = 1e-15, 5e-15, 2e-15
 XA_INF, A1, B1, B2, G2, XG_INF = 0.95, 0.80, 0.62, 0.45, 0.25, 0.05

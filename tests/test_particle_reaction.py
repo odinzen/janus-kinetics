@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 from scipy.integrate import solve_ivp
 
-from calphad_kinetics import LineCompound, TemperatureSchedule, parabolic_growth
-from calphad_kinetics.particle_reaction import (
+from janus_kinetics import LineCompound, TemperatureSchedule, parabolic_growth
+from janus_kinetics.particle_reaction import (
     conversion,
     conversion_integral,
     growth_constant_from_conversion,

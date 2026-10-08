@@ -11,8 +11,8 @@ import pytest
 from scipy.integrate import quad
 from scipy.special import erf, erfc
 
-from calphad_kinetics import FixedInterface, SolutionPhase, TemperatureSchedule, solve_moving_boundary, solve_planar, uniform_faces
-from calphad_kinetics.schedule import with_time
+from janus_kinetics import FixedInterface, SolutionPhase, TemperatureSchedule, solve_moving_boundary, solve_planar, uniform_faces
+from janus_kinetics.schedule import with_time
 
 R = 8.314462618
 SCHEDULE = TemperatureSchedule([0.0, 600.0, 3000.0, 3600.0], [700.0, 1200.0, 1200.0, 800.0])

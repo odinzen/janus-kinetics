@@ -18,7 +18,7 @@ def jonsson1995_bcc_crfeni() -> Database:
     Fig. 5 the Fe tracer diffusivity in pure bcc Fe comes out 0.12 decades too high
     at 1250 C and 0.38 at 960 C, while Cr-rich alloys agree within 0.07.
     """
-    return Database(str(files("calphad_kinetics") / "data" / "jonsson1995_bcc_crfeni_mob.tdb"))
+    return Database(str(files("janus_kinetics") / "data" / "jonsson1995_bcc_crfeni_mob.tdb"))
 
 
 def campbell2002_fcc_ni() -> Database:
@@ -30,7 +30,7 @@ def campbell2002_fcc_ni() -> Database:
     descriptions shift the chemical diffusivities somewhat (their Tables 5 and 7
     show the size of that effect).
     """
-    return Database(str(files("calphad_kinetics") / "data" / "campbell2002_fcc_ni_mob.tdb"))
+    return Database(str(files("janus_kinetics") / "data" / "campbell2002_fcc_ni_mob.tdb"))
 
 
 def kjellqvist2008_cro() -> Database:
@@ -38,14 +38,14 @@ def kjellqvist2008_cro() -> Database:
     (Cr+2,Cr+3)2(Cr+3,Va)1(O-2)3 and O2 gas.
 
     The Cr-O part of Table 5 of Kjellqvist, Selleby and Sundman, Calphad 32 (2008)
-    577, for :func:`calphad_kinetics.oxides.chromia`. Hallstrom et al. (2013) fitted
+    577, for :func:`janus_kinetics.oxides.chromia`. Hallstrom et al. (2013) fitted
     their Cr2O3 mobilities with Taylor and Dinsdale's Cr-O description, which this
     one builds on; their oxygen tracer curves (Fig. 7) come out within 0.07 decades
     with it. The antiferromagnetic and structure factors are not printed and are
     the usual ones (see the file header); they change nothing above 600 K that
     matters here.
     """
-    return Database(str(files("calphad_kinetics") / "data" / "kjellqvist2008_cro.tdb"))
+    return Database(str(files("janus_kinetics") / "data" / "kjellqvist2008_cro.tdb"))
 
 
 # Appendix A (p. 1151) of Helander and Agren, Acta Mater. 47 (1999) 1141: ordering
@@ -65,11 +65,11 @@ def helander1999_bcc_alni() -> tuple[Database, dict]:
     """Mobilities of Al and Ni in B2-ordered bcc Al-Ni: the disordered database and the ordering terms.
 
     Appendix A of Helander and Agren, Acta Mater. 47 (1999) 1141, for
-    :class:`calphad_kinetics.B2Phase`. The disordered parameters are for the
+    :class:`janus_kinetics.B2Phase`. The disordered parameters are for the
     hypothetical bcc A2 phase (the same for pure Al and pure Ni by their
     assumption, p. 1147). The authors fitted them with the Al-Ni thermodynamics of
     Ansara et al. (1997); Al-Fe is not shipped because its magnetic term (their
     eq. 8) is not usable as printed.
     """
-    return (Database(str(files("calphad_kinetics") / "data" / "helander1999_bcc_alni_mob.tdb")),
+    return (Database(str(files("janus_kinetics") / "data" / "helander1999_bcc_alni_mob.tdb")),
             dict(HELANDER1999_ALNI_ORDERING))

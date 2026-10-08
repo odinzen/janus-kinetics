@@ -19,8 +19,8 @@ import numpy as np
 import pytest
 from scipy.special import j0, j1, jn_zeros
 
-from calphad_kinetics import Boundary, solve_planar, uniform_faces
-from calphad_kinetics.solver import cell_measures
+from janus_kinetics import Boundary, solve_planar, uniform_faces
+from janus_kinetics.solver import cell_measures
 
 A, D, C0, CS = 1e-4, 1e-12, 0.10, 0.02
 TIMES = np.array([200.0, 1000.0, 3000.0])
@@ -116,7 +116,7 @@ from scipy.integrate import quad  # noqa: E402
 from scipy.special import erfc, exp1  # noqa: E402
 from scipy.optimize import brentq  # noqa: E402
 
-from calphad_kinetics.moving_boundary import FixedInterface, solve_moving_boundary  # noqa: E402
+from janus_kinetics.moving_boundary import FixedInterface, solve_moving_boundary  # noqa: E402
 
 N0, N1, NINF, DM = 0.95, 0.05, 0.20, 1e-14
 

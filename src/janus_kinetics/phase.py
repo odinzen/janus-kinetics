@@ -189,7 +189,7 @@ class SolutionPhase:
         In the volume-fixed frame (``partial_volumes`` given) they are the
         independent concentrations c (mol/m^3), so ``solve_planar`` conserves moles
         while the molar volume varies with composition; convert with
-        :func:`calphad_kinetics.diffusivity.to_concentrations` and ``to_mole_fractions``.
+        :func:`janus_kinetics.diffusivity.to_concentrations` and ``to_mole_fractions``.
         """
         if frame == "volume":
             if partial_volumes is None:

@@ -18,8 +18,8 @@ import numpy as np
 import pytest
 from pycalphad import Database, equilibrium, variables as v
 
-from calphad_kinetics import R
-from calphad_kinetics.oxides import HALLSTROM2011_MAGNETITE, JumpPath, OxideCationDiffusion, hematite, magnetite
+from janus_kinetics import R
+from janus_kinetics.oxides import HALLSTROM2011_MAGNETITE, JumpPath, OxideCationDiffusion, hematite, magnetite
 
 ALFEO = files("pycalphad") / "tests" / "databases" / "alfeo.tdb"
 

@@ -285,6 +285,7 @@ def solve_planar(
     markers=None,
     lattice_velocity: LatticeVelocity | None = None,
     geometry: Geometry = "planar",
+    tolerance: float | None = None,
 ) -> DiffusionResult:
     """Integrate interdiffusion from ``x0`` to ``t_end`` in a plate (default), a long cylinder or a sphere.
 
@@ -308,6 +309,13 @@ def solve_planar(
     geometry : "planar", "cylindrical" or "spherical"; for the curved ones ``z_faces`` are
         radii, and a first face at r = 0 is the axis or centre, where no flux passes.
         Markers are followed in the planar geometry only.
+    tolerance : with it the step adapts, ``dt`` becoming the largest step. Backward Euler
+        errs by about (step^2 / 2) d^2x/dt^2 per step; the second derivative is taken from
+        the change in dx/dt between consecutive steps, and a step whose estimate exceeds
+        ``tolerance`` (in the units of ``picard_tol``) is halved and redone, as is one whose
+        Picard iteration fails. A step whose estimate is under an eighth of ``tolerance``
+        is followed by one twice as long. Steps are dt / 2^k, so a constant D needs few
+        factorizations; the first is dt / 1024.
 
     Returns profiles at t=0 and at every save time (always including ``t_end``).
     """
@@ -401,17 +409,48 @@ def solve_planar(
             raise ValueError("tracking markers needs lattice_velocity")
         tracker = _MarkerTracker(np.atleast_1d(np.asarray(markers, dtype=float)), z_faces, with_time(lattice_velocity, 2))
 
+    if tolerance is not None and tolerance <= 0:
+        raise ValueError("tolerance must be positive")
     times, saved, iters = [0.0], [x.copy()], []
     marker_track = [tracker.z.copy()] if tracker else None
     t = 0.0
+    h = dt / 1024  # the adaptive step, always dt / 2^k
+    previous = None  # (dx/dt, step) of the last accepted adaptive step
     for target, steps in _output_schedule(t_end, dt, save_times):
-        step = (target - t) / steps
-        for i in range(steps):
-            t_new = t + (i + 1) * step
-            x, k = advance(x, step, t_new)
+        if tolerance is None:
+            step = (target - t) / steps
+            for i in range(steps):
+                t_new = t + (i + 1) * step
+                x, k = advance(x, step, t_new)
+                iters.append(k)
+                if tracker:
+                    tracker.advance(x, t_new - step, t_new)
+        while tolerance is not None and t < target:
+            step = min(h, target - t)
+            t_new = target if step == target - t else t + step
+            try:
+                x_new, k = advance(x, step, t_new)
+            except ConvergenceError:
+                x_new = None
+            error = 0.0
+            if x_new is not None and previous is not None:
+                error = (np.max(np.abs((x_new - x) / step - previous[0])) * step**2
+                         / (step + previous[1]) / scale)
+            if x_new is None or error > tolerance:
+                while h >= step:
+                    h /= 2
+                if h < dt * 2.0**-60:
+                    raise ConvergenceError(f"no step meets tolerance {tolerance:g} at t={t:g} s")
+                continue
+            previous = ((x_new - x) / step, step)
+            x, t = x_new, t_new
             iters.append(k)
             if tracker:
-                tracker.advance(x, t_new - step, t_new)
+                tracker.advance(x, t - step, t)
+            if error < tolerance / 8:
+                h = min(2 * h, dt)
+            if len(cache) > 64:  # shortened steps that land on save times each add a factorization
+                cache.clear()
         t = target
         times.append(t)
         saved.append(x.copy())

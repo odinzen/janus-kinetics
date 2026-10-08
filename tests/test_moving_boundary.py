@@ -16,8 +16,8 @@ from pycalphad import Database, equilibrium, variables as v
 from scipy.optimize import brentq
 from scipy.special import erfc, erfcx
 
-from calphad_kinetics import SolutionPhase
-from calphad_kinetics.moving_boundary import (
+from janus_kinetics import SolutionPhase
+from janus_kinetics.moving_boundary import (
     FixedInterface,
     LocalEquilibrium,
     PhaseDissolvedError,

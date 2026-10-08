@@ -1,4 +1,4 @@
-"""Write docs/api.md from the docstrings of the public API (``calphad_kinetics.__all__``).
+"""Write docs/api.md from the docstrings of the public API (``janus_kinetics.__all__``).
 
     python tools/gen_api.py
 
@@ -11,7 +11,7 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-import calphad_kinetics
+import janus_kinetics
 
 OUT = Path(__file__).parents[1] / "docs" / "api.md"
 
@@ -19,14 +19,14 @@ OUT = Path(__file__).parents[1] / "docs" / "api.md"
 def render() -> str:
     parts = ["# API reference", "", "Generated from the docstrings by `tools/gen_api.py`; do not edit by hand.", ""]
     by_module: dict[str, list[str]] = {}
-    for name in calphad_kinetics.__all__:
-        obj = getattr(calphad_kinetics, name)
-        module = getattr(obj, "__module__", "calphad_kinetics") or "calphad_kinetics"
+    for name in janus_kinetics.__all__:
+        obj = getattr(janus_kinetics, name)
+        module = getattr(obj, "__module__", "janus_kinetics") or "janus_kinetics"
         by_module.setdefault(module, []).append(name)
     for module in sorted(by_module):
         parts += [f"## `{module}`", ""]
         for name in sorted(by_module[module]):
-            obj = getattr(calphad_kinetics, name)
+            obj = getattr(janus_kinetics, name)
             if inspect.isclass(obj) or inspect.isfunction(obj):
                 try:
                     sig = str(inspect.signature(obj))

@@ -9,7 +9,7 @@ import pytest
 from pycalphad import Database
 from scipy.integrate import quad
 
-from calphad_kinetics.solidification import (
+from janus_kinetics.solidification import (
     brody_flemings,
     clyne_kurz,
     clyne_kurz_beta,
@@ -185,9 +185,9 @@ def test_scheil_gulliver_keeps_the_solute():
 # --- homogenization of a segregation profile ----------------------------------------------------------------
 from scipy.special import j0, jn_zeros  # noqa: E402
 
-from calphad_kinetics import Boundary, solve_planar  # noqa: E402
-from calphad_kinetics.solidification import segregation_index, segregation_profile  # noqa: E402
-from calphad_kinetics.solver import cell_measures  # noqa: E402
+from janus_kinetics import Boundary, solve_planar  # noqa: E402
+from janus_kinetics.solidification import segregation_index, segregation_profile  # noqa: E402
+from janus_kinetics.solver import cell_measures  # noqa: E402
 
 
 def _slowest_mode(geometry):

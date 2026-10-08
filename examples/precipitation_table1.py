@@ -11,7 +11,7 @@ Run ``python examples/precipitation_table1.py`` to write examples/output/precipi
 
 import numpy as np
 
-from calphad_kinetics import DiluteSolution, Kinetics, solve_kwn
+from janus_kinetics import DiluteSolution, Kinetics, solve_kwn
 
 from _common import figure_path
 

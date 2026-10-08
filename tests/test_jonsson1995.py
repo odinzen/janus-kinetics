@@ -1,7 +1,7 @@
 """Benchmark against Jonsson, ISIJ International 35 (1995) 1415-1421.
 
 Parameters are transcribed from the Appendix on p. 1421 into
-src/calphad_kinetics/data/jonsson1995_bcc_crfeni_mob.tdb. Here eqs. (3)-(6) of the paper are
+src/janus_kinetics/data/jonsson1995_bcc_crfeni_mob.tdb. Here eqs. (3)-(6) of the paper are
 evaluated independently with the same Appendix values held as plain numbers,
 so the test checks the TDB reading, the Redlich-Kister and ternary expansion,
 and the split M_B = exp(Theta_B) exp(-Q_B/RT) / RT.
@@ -10,8 +10,8 @@ and the split M_B = exp(Theta_B) exp(-Q_B/RT) / RT.
 import numpy as np
 import pytest
 
-from calphad_kinetics import MobilityModel, R
-from calphad_kinetics._lattice import SubstitutionalLattice
+from janus_kinetics import MobilityModel, R
+from janus_kinetics._lattice import SubstitutionalLattice
 
 R_PAPER = 8.31451  # J/(mol K), stated at the head of the Appendix
 

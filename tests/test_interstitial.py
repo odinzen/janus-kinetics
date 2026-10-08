@@ -7,8 +7,8 @@ import pycalphad
 import pytest
 from pycalphad import Database, equilibrium, variables as v
 
-from calphad_kinetics import R
-from calphad_kinetics.interstitial import InterstitialPhase
+from janus_kinetics import R
+from janus_kinetics.interstitial import InterstitialPhase
 from conftest import HEADER
 
 T = 1200.0

@@ -17,8 +17,8 @@ from importlib.resources import files
 import numpy as np
 from pycalphad import Database
 
-from calphad_kinetics import SolutionPhase, campbell2002_fcc_ni, solve_planar
-from calphad_kinetics.solidification import scheil_gulliver, segregation_index, segregation_profile
+from janus_kinetics import SolutionPhase, campbell2002_fcc_ni, solve_planar
+from janus_kinetics.solidification import scheil_gulliver, segregation_index, segregation_profile
 
 from _common import figure_path
 

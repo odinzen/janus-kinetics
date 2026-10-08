@@ -6,9 +6,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from calphad_kinetics import MobilityModel, R
-from calphad_kinetics._lattice import SubstitutionalLattice
-from calphad_kinetics.datasets import campbell2002_fcc_ni
+from janus_kinetics import MobilityModel, R
+from janus_kinetics._lattice import SubstitutionalLattice
+from janus_kinetics.datasets import campbell2002_fcc_ni
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "tools"))
 import make_campbell2002  # noqa: E402
@@ -128,7 +128,7 @@ def test_ni_al_cr_matrices_against_table7(tdb):
 
     from pycalphad import Database
 
-    from calphad_kinetics import SolutionPhase
+    from janus_kinetics import SolutionPhase
 
     path = files("pycalphad") / "tests" / "databases" / tdb
     if not path.is_file():

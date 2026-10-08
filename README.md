@@ -1,4 +1,4 @@
-# calphad-kinetics
+# janus-kinetics
 
 Diffusion, moving-boundary and precipitation kinetics on top of
 [pycalphad](https://pycalphad.org), built from the published models with every
@@ -79,8 +79,8 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   the full CALPHAD Gibbs energies (Svoboda, Fischer, Fratzl and Kozeschnik 2004):
   classes that keep their nucleation composition, ordered precipitates such as
   gamma', compositions that evolve after nucleation, misfit energy, nucleation on
-  grain boundaries, edges and corners (Clemm and Fisher 1955) and temperature
-  schedules; checked against the LSW limit and against atom-probe kinetics of gamma'
+  grain boundaries, edges and corners (Clemm and Fisher 1955), temperature
+  schedules, and several phases or nucleation sites competing for one matrix; checked against the LSW limit and against atom-probe kinetics of gamma'
   in two Ni-Al-Cr alloys (Sudbrack et al. 2006; Booth-Morrison et al. 2008).
 
 Three published mobility databases ship with the package:
@@ -95,13 +95,14 @@ The equations are collected in [docs/theory.md](docs/theory.md), the API in
 [docs/api.md](docs/api.md), and the references, checked against Crossref, in
 [docs/references.md](docs/references.md). What is not done yet is listed in
 [ROADMAP.md](ROADMAP.md); the main gaps are the ferromagnetic mobility factor,
-scales of several oxides or on alloys, and multicomponent precipitates.
+scales of several oxides or on alloys, and nucleation site densities from the
+microstructure.
 
 ## Install
 
 ```
-conda create -n calphad-kinetics -c conda-forge python=3.12 pycalphad numpy scipy pytest matplotlib
-conda activate calphad-kinetics
+conda create -n janus-kinetics -c conda-forge python=3.12 pycalphad numpy scipy pytest matplotlib
+conda activate janus-kinetics
 pip install -e . --no-deps
 pytest
 ```
@@ -118,7 +119,7 @@ Jonsson (1995), which ship with the package, and an ideal-solution Gibbs energy:
 ```python
 import numpy as np
 from pycalphad import Database
-from calphad_kinetics import SolutionPhase, jonsson1995_bcc_crfeni, solve_planar, uniform_faces
+from janus_kinetics import SolutionPhase, jonsson1995_bcc_crfeni, solve_planar, uniform_faces
 
 ideal_bcc = Database("""
 ELEMENT VA VACUUM 0 0 0 !

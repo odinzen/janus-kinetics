@@ -1,4 +1,4 @@
-"""Exceptions raised by calphad-kinetics."""
+"""Exceptions raised by janus-kinetics."""
 
 from __future__ import annotations
 

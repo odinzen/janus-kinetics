@@ -16,8 +16,8 @@ import pytest
 from scipy.integrate import simpson
 from pycalphad import equilibrium, variables as v
 
-from calphad_kinetics import R, kjellqvist2008_cro, metal_oxide_potential, parabolic_scale_growth
-from calphad_kinetics.oxides import (HALLSTROM2013_CHROMIUM, HALLSTROM2013_OXYGEN, Arrhenius, GrainBoundaryMobility,
+from janus_kinetics import R, kjellqvist2008_cro, metal_oxide_potential, parabolic_scale_growth
+from janus_kinetics.oxides import (HALLSTROM2013_CHROMIUM, HALLSTROM2013_OXYGEN, Arrhenius, GrainBoundaryMobility,
                                      chromia)
 
 ATM = 1.01325  # bar; the paper's pressures are in atm
@@ -314,8 +314,8 @@ def test_fixed_inner_pressure_matches_the_metal_side(db):
 
 
 def test_without_an_anion_path_only_the_cation_part_remains(db):
-    from calphad_kinetics import OxideCationDiffusion
-    from calphad_kinetics.oxides import JumpPath
+    from janus_kinetics import OxideCationDiffusion
+    from janus_kinetics.oxides import JumpPath
 
     T, grain = 898.15, 100e-9
     g = _growth(T, grain)

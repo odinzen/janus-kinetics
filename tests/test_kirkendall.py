@@ -11,8 +11,8 @@ import numpy as np
 import pytest
 from pycalphad import Database
 
-from calphad_kinetics import R, SolutionPhase, solve_planar, uniform_faces
-from calphad_kinetics.diffusivity import lattice_velocity
+from janus_kinetics import R, SolutionPhase, solve_planar, uniform_faces
+from janus_kinetics.diffusivity import lattice_velocity
 from conftest import HEADER
 
 T = 1200.0
@@ -136,7 +136,7 @@ def test_tracking_requires_a_velocity():
 
 
 def test_eq_12_reduces_to_eq_11_at_constant_molar_volume(couple):
-    from calphad_kinetics.couple_analysis import intrinsic_from_profile
+    from janus_kinetics.couple_analysis import intrinsic_from_profile
 
     res, z, t_end = couple
     zk = res.markers[-1, 0]

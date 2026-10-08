@@ -26,9 +26,11 @@ from .multicomponent_precipitation import (
     MulticomponentResult,
     NucleationSettings,
     PhaseMinimizer,
+    Population,
     PrecipitateThermo,
     junction_barrier_factor,
     misfit_energy,
+    solve_competing_precipitation,
     solve_multicomponent_precipitation,
 )
 from .ordered import B2Phase, ordering_energy
@@ -100,6 +102,7 @@ __all__ = [
     "ParabolicGrowth",
     "PhaseDissolvedError",
     "PhaseMinimizer",
+    "Population",
     "PrecipitateThermo",
     "PrecipitationResult",
     "R",
@@ -145,6 +148,7 @@ __all__ = [
     "segregation_profile",
     "solubility_from_pycalphad",
     "solve_back_diffusion",
+    "solve_competing_precipitation",
     "solve_fisher",
     "solve_homogenized",
     "solve_kwn",

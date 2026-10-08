@@ -5,8 +5,8 @@ import pytest
 from pycalphad import Database
 from scipy.special import erfc
 
-from calphad_kinetics import Boundary, R, TemperatureSchedule, solve_planar, uniform_faces
-from calphad_kinetics.interstitial import InterstitialPhase
+from janus_kinetics import Boundary, R, TemperatureSchedule, solve_planar, uniform_faces
+from janus_kinetics.interstitial import InterstitialPhase
 from conftest import HEADER
 from test_interstitial import TERNARY
 

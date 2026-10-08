@@ -16,7 +16,7 @@ Run ``python examples/oxygen_uptake.py`` to write examples/output/oxygen_uptake.
 import numpy as np
 from pycalphad import Database
 
-from calphad_kinetics import Boundary, InterstitialPhase, TemperatureSchedule, solve_planar, uniform_faces
+from janus_kinetics import Boundary, InterstitialPhase, TemperatureSchedule, solve_planar, uniform_faces
 
 from _common import figure_path
 

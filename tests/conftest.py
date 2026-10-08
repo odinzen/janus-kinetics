@@ -8,7 +8,7 @@ same parameters.
 import pytest
 from pycalphad import Database
 
-from calphad_kinetics.datasets import jonsson1995_bcc_crfeni
+from janus_kinetics.datasets import jonsson1995_bcc_crfeni
 
 _pytest_approx = pytest.approx
 

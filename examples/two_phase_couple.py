@@ -11,7 +11,7 @@ Run ``python examples/two_phase_couple.py`` to write examples/output/two_phase_c
 import numpy as np
 from pycalphad import Database
 
-from calphad_kinetics import (
+from janus_kinetics import (
     LocalEquilibrium,
     LocalEquilibriumTable,
     SolutionPhase,

@@ -11,14 +11,14 @@ import numpy as np
 import pytest
 from pycalphad import Database
 
-from calphad_kinetics import SolutionPhase, solve_moving_boundary, solve_planar, uniform_faces
-from calphad_kinetics.homogenization import (
+from janus_kinetics import SolutionPhase, solve_moving_boundary, solve_planar, uniform_faces
+from janus_kinetics.homogenization import (
     LocalEquilibriumTable,
     OnDemandEquilibriumTable,
     average_kinetic_factor,
     solve_homogenized,
 )
-from calphad_kinetics.moving_boundary import LocalEquilibrium
+from janus_kinetics.moving_boundary import LocalEquilibrium
 from test_moving_boundary import TWO_PHASE
 
 T = 1000.0
@@ -151,8 +151,8 @@ def test_quaternary_tables_are_refused():
 
 # ------------------------------------------------------------- anneals with a temperature table
 
-from calphad_kinetics import LocalEquilibrium, TemperatureSchedule  # noqa: E402
-from calphad_kinetics.homogenization import TemperatureTable  # noqa: E402
+from janus_kinetics import LocalEquilibrium, TemperatureSchedule  # noqa: E402
+from janus_kinetics.homogenization import TemperatureTable  # noqa: E402
 
 ANNEAL = TemperatureSchedule([0.0, 50.0, 150.0, 200.0], [950.0, 1050.0, 1050.0, 950.0])
 
@@ -326,7 +326,7 @@ def test_ideal_flux_speeds_an_ideal_solution_by_one_plus_epsilon():
     z = 0.5 * (faces[1:] + faces[:-1])
     x0 = np.where(z < 2e-4, 0.8, 0.2)[:, None]
     eps = 0.05
-    from calphad_kinetics import Boundary
+    from janus_kinetics import Boundary
 
     for left in (Boundary.no_flux(), Boundary.fixed([0.9])):  # the surface term scales the same way
         with_term = solve_homogenized(faces, x0, table, 100.0, 0.5, left=left, ideal_flux=eps)

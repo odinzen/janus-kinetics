@@ -28,9 +28,10 @@ sqrt(gamma / kT), since part I takes Z from a source it does not reproduce. Each
 step's nuclei enter as a new class slightly above rho* (part II, p. 158). The matrix
 composition follows from mass balance (part I, eq. 4).
 
-Scope: one precipitate phase, isothermal, spherical precipitates whose composition
-stays as nucleated, no misfit energy, dilute enough that diffusion fields do not
-overlap (the assumption behind part I's eq. 22).
+Scope: spherical precipitates, one molar volume for every phase, dilute enough that
+diffusion fields do not overlap (the assumption behind part I's eq. 22). Several phases,
+or one phase at several kinds of site, compete for the matrix through
+:func:`solve_competing_precipitation`.
 """
 
 from __future__ import annotations
@@ -401,9 +402,9 @@ def nucleation(composition, driving_force, x_matrix, tracer, settings: Nucleatio
 
 @dataclass
 class MulticomponentResult:
-    """Saved states: times (s), mean radius (m), number density (m^-3), precipitate volume
-    fraction, matrix mole fractions (t, n), mean precipitate mole fractions (t, n, volume-weighted),
-    and the class radii, densities and compositions at each saved time."""
+    """Saved states of one precipitate population: times (s), mean radius (m), number density (m^-3),
+    its volume fraction, the matrix mole fractions (t, n), its mean mole fractions (t, n,
+    volume-weighted), and the class radii, densities and compositions at each saved time."""
 
     times: np.ndarray
     mean_radius: np.ndarray
@@ -413,6 +414,19 @@ class MulticomponentResult:
     precipitate_composition: np.ndarray
     classes: list
     steps: int
+
+
+@dataclass(frozen=True)
+class Population:
+    """One precipitate phase nucleating at one kind of site, for :func:`solve_competing_precipitation`.
+    ``initial`` and ``precipitate_tracer`` are as in :func:`solve_multicomponent_precipitation`. A phase
+    may form several populations, in the bulk and on grain boundaries say, as part II (p. 158) creates
+    one kinetic object per phase and nucleation site."""
+
+    precipitate: PrecipitateThermo
+    settings: NucleationSettings
+    initial: dict | None = None
+    precipitate_tracer: Sequence[float] | None = None
 
 
 def solve_multicomponent_precipitation(
@@ -470,117 +484,222 @@ def solve_multicomponent_precipitation(
     formed; until then they are held back. ``initial`` holds precipitates present at
     ``t_start`` as arrays "number" (m^-3), "radius" (m) and "composition" (k, n).
     """
+    return solve_competing_precipitation(
+        matrix, [Population(precipitate, settings, initial, precipitate_tracer)], alloy, T, t_end, save_times,
+        t_start=t_start, max_temperature_change=max_temperature_change, max_radius_change=max_radius_change,
+        max_matrix_change=max_matrix_change, max_composition_change=max_composition_change,
+        max_classes=max_classes, min_classes=min_classes, smallest_radius=smallest_radius,
+        nucleus_update=nucleus_update, min_class_number=min_class_number)[0]
+
+
+class _PopulationState:
+    """Classes, nucleus and rates of one population during a run."""
+
+    def __init__(self, pop: Population, n_el: int, varying: bool, T0: float):
+        self.precipitate, self.settings = pop.precipitate, pop.settings
+        self.evolving = pop.precipitate_tracer is not None
+        self.varying = varying
+        if varying or self.evolving:
+            self.minimizer = self.precipitate.minimizer if self.precipitate.fixed is None else None
+        if self.evolving:
+            self.precipitate_tracer = np.asarray(pop.precipitate_tracer, dtype=float)
+            if self.precipitate_tracer.shape != (n_el,) or np.any(self.precipitate_tracer <= 0):
+                raise ValueError("precipitate_tracer needs one positive diffusivity per element")
+            if self.precipitate.fixed is not None:
+                raise ValueError("a precipitate of fixed composition cannot evolve; leave out precipitate_tracer")
+        cls = {"number": np.zeros(0), "radius": np.zeros(0), "comp": np.zeros((0, n_el)), "gibbs": np.zeros(0)}
+        if pop.initial is not None:
+            cls["number"] = np.asarray(pop.initial["number"], dtype=float)
+            cls["radius"] = np.asarray(pop.initial["radius"], dtype=float)
+            cls["comp"] = np.atleast_2d(np.asarray(pop.initial["composition"], dtype=float))
+            if not cls["number"].shape == cls["radius"].shape == cls["comp"].shape[:1] or cls["comp"].shape[1] != n_el:
+                raise ValueError("initial needs one number, radius and composition row per class")
+            cls["gibbs"] = np.array([self.precipitate.gm(x, T0) for x in cls["comp"]])
+        self.track_sites = (self.evolving or varying) and self.precipitate.fixed is None
+        if self.track_sites:
+            cls["sites"] = np.array([self.precipitate.site_fractions(x, T0) for x in cls["comp"]]).reshape(
+                len(cls["number"]), len(self.minimizer.y_symbols))
+        self.cls = cls
+        self.nucleus_x = self.nucleus_g = self.nucleus_at = self.nucleus_y = self.nucleus_t = None
+        self.pending = 0.0  # nuclei formed but not yet numerous enough for a class of their own
+        self.gibbs_t = T0
+
+    def volumes(self) -> np.ndarray:
+        return self.cls["number"] * 4 * np.pi / 3 * self.cls["radius"] ** 3
+
+    def rates(self, x0, mu0, tracer, T: float, t: float, nucleus_update: float):
+        """Growth (and composition) rates of the classes and the nucleation rate in the current matrix."""
+        cls, omega = self.cls, self.settings.molar_volume
+        if self.nucleus_at is None or np.abs(x0 - self.nucleus_at).max() > nucleus_update or abs(T - self.nucleus_t) > 0.5:
+            self.nucleus_x, _ = self.precipitate.nucleus(mu0, T)
+            self.nucleus_g = self.precipitate.gm(self.nucleus_x, T)
+            self.nucleus_at, self.nucleus_t = x0.copy(), T
+            if self.track_sites:
+                self.nucleus_y = self.precipitate.site_fractions(self.nucleus_x, T)
+        if self.varying and not self.evolving and cls["radius"].size and T != self.gibbs_t:
+            # a class keeps its composition, but its Gibbs energy follows the temperature
+            if self.precipitate.fixed is not None:
+                cls["gibbs"] = np.full(cls["radius"].size, self.precipitate.gm(self.precipitate.fixed, T))
+            else:
+                cls["sites"], cls["gibbs"], _ = self.minimizer.solve(cls["comp"], cls["sites"], T)
+        self.gibbs_t = T
+        f_nuc = (self.nucleus_x @ mu0 - self.nucleus_g) / omega - self.settings.misfit
+
+        radius, comp = cls["radius"], cls["comp"]
+        self.dcomp = np.zeros_like(comp)
+        if radius.size and self.evolving:
+            cls["sites"], cls["gibbs"], mu_k = self.minimizer.solve(comp, cls["sites"], T)
+            self.rate, self.dcomp = evolution_rates(radius, comp, mu_k, x0, mu0, tracer, self.precipitate_tracer,
+                                                    self.settings, T)
+        elif radius.size:
+            self.rate = growth_rates(radius, comp, (comp @ mu0 - cls["gibbs"]) / omega - self.settings.misfit, x0,
+                                     tracer, self.settings, T)
+        else:
+            self.rate = np.zeros(0)
+        self.j, self.rho_star = nucleation(self.nucleus_x, f_nuc, x0, tracer, self.settings, T, t)
+
+    def advance(self, dt: float, smallest_radius: float, min_class_number: float, max_classes: int,
+                min_classes: int):
+        cls = self.cls
+        radius, comp = cls["radius"], cls["comp"]
+        cls["radius"] = radius + self.rate * dt
+        if self.evolving and radius.size:
+            cls["comp"] = np.clip(comp + self.dcomp * dt, 1e-12, None)
+            cls["comp"] /= cls["comp"].sum(axis=1, keepdims=True)
+        cls = {key: val[cls["radius"] > smallest_radius] for key, val in cls.items()}
+        self.pending += self.j * dt if np.isfinite(self.rho_star) else 0.0
+        # Late in a run the nucleation rate is astronomically small but not zero; a class for every
+        # step's 1e-100 nuclei would fill the array with empty classes, whose merging then collapses
+        # the real size distribution into one class that can no longer coarsen.
+        if np.isfinite(self.rho_star) and self.pending > max(min_class_number * cls["number"].sum(), 1.0):
+            new = {"number": self.pending, "radius": 1.05 * self.rho_star, "comp": self.nucleus_x,
+                   "gibbs": self.nucleus_g}
+            self.pending = 0.0
+            if self.track_sites:
+                new["sites"] = self.nucleus_y
+            cls = {key: np.concatenate([val, np.atleast_1d(new[key])[None] if val.ndim == 2 else [new[key]]])
+                   for key, val in cls.items()}
+        if cls["radius"].size > max_classes:
+            cls = _merge_closest(cls)
+        while 0 < cls["radius"].size < min_classes:
+            cls = _split_most_populated(cls)
+        self.cls = cls
+
+
+def solve_competing_precipitation(
+    matrix: SolutionPhase,
+    populations: Sequence[Population],
+    alloy: Sequence[float],
+    T: Temperature,
+    t_end: float,
+    save_times: Sequence[float],
+    t_start: float = 1e-3,
+    max_temperature_change: float = 1.0,
+    max_radius_change: float = 0.02,
+    max_matrix_change: float = 2e-4,
+    max_composition_change: float = 1e-3,
+    max_classes: int = 400,
+    min_classes: int = 100,
+    smallest_radius: float = 1e-10,
+    nucleus_update: float = 1e-3,
+    min_class_number: float = 1e-6,
+) -> list[MulticomponentResult]:
+    """Several precipitate populations drawing on one matrix, one result per population in the order
+    given. Part I's mass balance, eq. (4), sums over precipitates of every kind, and part II (section
+    3.5) runs such competitions to follow precipitation sequences.
+
+    Each population nucleates, grows and coarsens as in :func:`solve_multicomponent_precipitation`,
+    whose arguments these are. The step is common to all of them: its matrix-change limits count the
+    depletion by every population together, and shrinking classes of all populations share one
+    dissolution budget. All populations need the same molar volume, part I's single Omega (p. 167),
+    with which volume fractions carry the mass balance.
+    """
     alloy = np.asarray(alloy, dtype=float)
     n_el = alloy.size
     if alloy.shape != (len(matrix.elements),) or abs(alloy.sum() - 1) > 1e-9:
         raise ValueError(f"alloy needs one mole fraction per element of {matrix.elements}, summing to 1")
-    if [e.upper() for e in matrix.elements] != precipitate.components:
+    populations = list(populations)
+    if not populations:
+        raise ValueError("need at least one precipitate population")
+    if any([e.upper() for e in matrix.elements] != p.precipitate.components for p in populations):
         raise ValueError("matrix and precipitate must list the same elements in the same order")
-    omega = settings.molar_volume
+    omega = populations[0].settings.molar_volume
+    if any(p.settings.molar_volume != omega for p in populations):
+        raise ValueError("all populations need the same molar volume; part I takes one for every phase")
     save = np.sort(np.asarray(save_times, dtype=float))
     if save.size == 0 or save[0] < t_start or save[-1] > t_end:
         raise ValueError("save times must lie between t_start and t_end")
     if not 0 < min_classes <= max_classes // 2:
         raise ValueError("need 0 < min_classes <= max_classes / 2, or splitting and merging would fight")
-    evolving = precipitate_tracer is not None
     varying = callable(T)
     schedule = T  # T is reassigned to the current temperature each step
     temp = (lambda t: temperature_at(schedule, t))
-    if varying or evolving:
-        minimizer = precipitate.minimizer if precipitate.fixed is None else None
-    if evolving:
-        precipitate_tracer = np.asarray(precipitate_tracer, dtype=float)
-        if precipitate_tracer.shape != (n_el,) or np.any(precipitate_tracer <= 0):
-            raise ValueError("precipitate_tracer needs one positive diffusivity per element")
-        if precipitate.fixed is not None:
-            raise ValueError("a precipitate of fixed composition cannot evolve; leave out precipitate_tracer")
-
-    cls = {"number": np.zeros(0), "radius": np.zeros(0), "comp": np.zeros((0, n_el)), "gibbs": np.zeros(0)}
-    if initial is not None:
-        cls["number"] = np.asarray(initial["number"], dtype=float)
-        cls["radius"] = np.asarray(initial["radius"], dtype=float)
-        cls["comp"] = np.atleast_2d(np.asarray(initial["composition"], dtype=float))
-        if not cls["number"].shape == cls["radius"].shape == cls["comp"].shape[:1] or cls["comp"].shape[1] != n_el:
-            raise ValueError("initial needs one number, radius and composition row per class")
-        cls["gibbs"] = np.array([precipitate.gm(x, temp(t_start)) for x in cls["comp"]])
-    track_sites = (evolving or varying) and precipitate.fixed is None
-    if track_sites:
-        cls["sites"] = np.array([precipitate.site_fractions(x, temp(t_start)) for x in cls["comp"]]).reshape(
-            len(cls["number"]), len(minimizer.y_symbols))
-    nucleus_x = nucleus_g = nucleus_at = nucleus_y = nucleus_t = None
-    pending = 0.0  # nuclei formed but not yet numerous enough for a class of their own
-    gibbs_t = temp(t_start)
+    states = [_PopulationState(p, n_el, varying, temp(t_start)) for p in populations]
     t, dt = t_start, t_start
-    out = {k: [] for k in ("t", "r", "n", "phi", "x0", "xp", "classes")}
+    out = [{k: [] for k in ("t", "r", "n", "phi", "xp", "classes")} for _ in states]
+    out_x0 = []
     steps = 0
     next_save = 0
+    previous_dx0 = None
 
-    def matrix_state(c):
-        vol = c["number"] * 4 * np.pi / 3 * c["radius"] ** 3
-        phi = vol.sum()
-        return phi, (alloy - vol @ c["comp"]) / (1 - phi), vol
+    def matrix_state():
+        vols = [s.volumes() for s in states]
+        phi = sum(vol.sum() for vol in vols)
+        return phi, (alloy - sum(vol @ s.cls["comp"] for vol, s in zip(vols, states))) / (1 - phi), vols
 
     while next_save < save.size:
         T = temp(t)
-        phi, x0, vol = matrix_state(cls)
+        phi, x0, _ = matrix_state()
         if np.any(x0 <= 0):
             raise ValueError("the precipitates have used up an element of the matrix; reduce the step limits")
         mu0 = np.asarray(matrix.chemical_potentials(x0, T), dtype=float)
         tracer = R * T * np.asarray(matrix.mobility(x0, T), dtype=float)
-
-        if nucleus_at is None or np.abs(x0 - nucleus_at).max() > nucleus_update or abs(T - nucleus_t) > 0.5:
-            nucleus_x, _ = precipitate.nucleus(mu0, T)
-            nucleus_g = precipitate.gm(nucleus_x, T)
-            nucleus_at, nucleus_t = x0.copy(), T
-            if track_sites:
-                nucleus_y = precipitate.site_fractions(nucleus_x, T)
-        if varying and not evolving and cls["radius"].size and T != gibbs_t:
-            # a class keeps its composition, but its Gibbs energy follows the temperature
-            if precipitate.fixed is not None:
-                cls["gibbs"] = np.full(cls["radius"].size, precipitate.gm(precipitate.fixed, T))
-            else:
-                cls["sites"], cls["gibbs"], _ = minimizer.solve(cls["comp"], cls["sites"], T)
-        gibbs_t = T
-        f_nuc = (nucleus_x @ mu0 - nucleus_g) / omega - settings.misfit
-
-        radius, comp = cls["radius"], cls["comp"]
-        dcomp = np.zeros_like(comp)
-        if radius.size and evolving:
-            cls["sites"], cls["gibbs"], mu_k = minimizer.solve(comp, cls["sites"], T)
-            rate, dcomp = evolution_rates(radius, comp, mu_k, x0, mu0, tracer, precipitate_tracer, settings, T)
-        elif radius.size:
-            rate = growth_rates(radius, comp, (comp @ mu0 - cls["gibbs"]) / omega - settings.misfit, x0, tracer,
-                                settings, T)
-        else:
-            rate = np.zeros(0)
-        j, rho_star = nucleation(nucleus_x, f_nuc, x0, tracer, settings, T, t)
+        for s in states:
+            s.rates(x0, mu0, tracer, T, t, nucleus_update)
 
         # step size from the growing classes and the matrix depletion they cause
         dt_new = 1.2 * dt
-        number = cls["number"]
         # shrinking classes whose solute content together stays within the matrix step limit
         # may dissolve inside a step; following each to the end would cost steps without
-        # accuracy, since its rate diverges as it vanishes. The budget is shared, or a whole
-        # population shrinking at once (on heating) would vanish in one step.
-        content = number * 4 * np.pi / 3 * radius**3 * np.abs(comp - x0).max(axis=-1) if radius.size else radius
-        free = np.zeros(radius.size, dtype=bool)
+        # accuracy, since its rate diverges as it vanishes. The budget is shared, between
+        # populations too, or a whole population shrinking at once (on heating) would vanish
+        # in one step.
+        content = np.concatenate([s.volumes() * np.abs(s.cls["comp"] - x0).max(axis=-1) for s in states])
+        rate = np.concatenate([s.rate for s in states])
+        free = np.zeros(rate.size, dtype=bool)
         shrinking = np.flatnonzero(rate < 0)
         order = shrinking[np.argsort(content[shrinking])]
         free[order[np.cumsum(content[order]) < max_matrix_change]] = True
-        limiting = (radius > 2 * smallest_radius) & ~free
-        if np.any(limiting):
-            dt_new = min(dt_new, max_radius_change
-                         * np.min(radius[limiting] / np.maximum(np.abs(rate[limiting]), 1e-300)))
-            if evolving:
-                dt_new = min(dt_new, max_composition_change / max(np.abs(dcomp[limiting]).max(), 1e-300))
-        dvol = number * 4 * np.pi * radius**2 * np.where(limiting | (rate > 0), rate, 0.0)
-        dx0 = -(dvol @ (comp - x0)) / (1 - phi) if radius.size else np.zeros_like(x0)
-        if evolving and radius.size:
-            dx0 -= (number * 4 * np.pi / 3 * radius**3) @ np.where(limiting[:, None], dcomp, 0.0) / (1 - phi)
+        dx0 = np.zeros_like(x0)
+        start = 0
+        for s in states:
+            number, radius, comp = s.cls["number"], s.cls["radius"], s.cls["comp"]
+            limiting = (radius > 2 * smallest_radius) & ~free[start:start + radius.size]
+            start += radius.size
+            if np.any(limiting):
+                dt_new = min(dt_new, max_radius_change
+                             * np.min(radius[limiting] / np.maximum(np.abs(s.rate[limiting]), 1e-300)))
+                if s.evolving:
+                    dt_new = min(dt_new, max_composition_change / max(np.abs(s.dcomp[limiting]).max(), 1e-300))
+            if radius.size:
+                dvol = number * 4 * np.pi * radius**2 * np.where(limiting | (s.rate > 0), s.rate, 0.0)
+                dx0 += -(dvol @ (comp - x0)) / (1 - phi)
+                if s.evolving:
+                    dx0 -= (number * 4 * np.pi / 3 * radius**3) @ np.where(limiting[:, None], s.dcomp, 0.0) / (1 - phi)
         if np.abs(dx0).max() > 0:
             dt_new = min(dt_new, max_matrix_change / np.abs(dx0).max())
-        if j > 0:
-            new_vol = j * 4 * np.pi / 3 * rho_star**3 * np.abs(nucleus_x - x0).max()
+        # Near a stationary state a step longer than the matrix's relaxation time overshoots, and
+        # the matrix then swings about the fixed point by up to max_matrix_change, which for large
+        # particles exceeds the capillary supersaturation that drives them. The matrix rate
+        # reversing between steps marks the overshoot. Reversals far below the step limit are
+        # left alone, or rounding noise at the fixed point would hold the step near zero.
+        if (previous_dx0 is not None and dx0 @ previous_dx0 < 0
+                and np.abs(dx0).max() * dt > 1e-3 * max_matrix_change):
+            dt_new = min(dt_new, 0.5 * dt)
+        previous_dx0 = dx0
+        nucleating = [s for s in states if s.j > 0]
+        if nucleating:
+            new_vol = sum(s.j * 4 * np.pi / 3 * s.rho_star**3 * np.abs(s.nucleus_x - x0).max() for s in nucleating)
             dt_new = min(dt_new, max_matrix_change / max(new_vol, 1e-300))
         dt = min(dt_new, save[next_save] - t) if save[next_save] > t else dt_new
         dt = max(dt, 1e-12)
@@ -590,44 +709,28 @@ def solve_multicomponent_precipitation(
                     break
                 dt *= 0.5
 
-        cls["radius"] = radius + rate * dt
-        if evolving and radius.size:
-            cls["comp"] = np.clip(comp + dcomp * dt, 1e-12, None)
-            cls["comp"] /= cls["comp"].sum(axis=1, keepdims=True)
-        cls = {key: val[cls["radius"] > smallest_radius] for key, val in cls.items()}
-        pending += j * dt if np.isfinite(rho_star) else 0.0
-        # Late in a run the nucleation rate is astronomically small but not zero; a class for every
-        # step's 1e-100 nuclei would fill the array with empty classes, whose merging then collapses
-        # the real size distribution into one class that can no longer coarsen.
-        if np.isfinite(rho_star) and pending > max(min_class_number * cls["number"].sum(), 1.0):
-            new = {"number": pending, "radius": 1.05 * rho_star, "comp": nucleus_x, "gibbs": nucleus_g}
-            pending = 0.0
-            if track_sites:
-                new["sites"] = nucleus_y
-            cls = {key: np.concatenate([val, np.atleast_1d(new[key])[None] if val.ndim == 2 else [new[key]]])
-                   for key, val in cls.items()}
-        if cls["radius"].size > max_classes:
-            cls = _merge_closest(cls)
-        while 0 < cls["radius"].size < min_classes:
-            cls = _split_most_populated(cls)
+        for s in states:
+            s.advance(dt, smallest_radius, min_class_number, max_classes, min_classes)
         t += dt
         steps += 1
 
         while next_save < save.size and t >= save[next_save] * (1 - 1e-9):
-            phi, x0, vol = matrix_state(cls)
-            total = cls["number"].sum()
-            out["t"].append(t)
-            out["n"].append(total)
-            out["r"].append((cls["number"] @ cls["radius"]) / total if total > 0 else 0.0)
-            out["phi"].append(phi)
-            out["x0"].append(x0)
-            out["xp"].append((vol @ cls["comp"]) / phi if phi > 0 else np.full(n_el, np.nan))
-            out["classes"].append({"number": cls["number"].copy(), "radius": cls["radius"].copy(),
-                                   "composition": cls["comp"].copy()})
+            _, x0, vols = matrix_state()
+            out_x0.append(x0)
+            for s, vol, o in zip(states, vols, out):
+                phi_k = vol.sum()
+                total = s.cls["number"].sum()
+                o["t"].append(t)
+                o["n"].append(total)
+                o["r"].append((s.cls["number"] @ s.cls["radius"]) / total if total > 0 else 0.0)
+                o["phi"].append(phi_k)
+                o["xp"].append((vol @ s.cls["comp"]) / phi_k if phi_k > 0 else np.full(n_el, np.nan))
+                o["classes"].append({"number": s.cls["number"].copy(), "radius": s.cls["radius"].copy(),
+                                     "composition": s.cls["comp"].copy()})
             next_save += 1
 
-    return MulticomponentResult(np.array(out["t"]), np.array(out["r"]), np.array(out["n"]), np.array(out["phi"]),
-                                np.array(out["x0"]), np.array(out["xp"]), out["classes"], steps)
+    return [MulticomponentResult(np.array(o["t"]), np.array(o["r"]), np.array(o["n"]), np.array(o["phi"]),
+                                 np.array(out_x0), np.array(o["xp"]), o["classes"], steps) for o in out]
 
 
 def _split_most_populated(cls: dict, spread: float = 0.01) -> dict:

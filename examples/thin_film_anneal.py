@@ -15,8 +15,8 @@ Run ``python examples/thin_film_anneal.py`` to write examples/output/thin_film_a
 import numpy as np
 from pycalphad import Database
 
-from calphad_kinetics import Layer, LocalEquilibrium, SolutionPhase, TemperatureSchedule, solve_layers
-from calphad_kinetics.precipitation import solubility_from_pycalphad
+from janus_kinetics import Layer, LocalEquilibrium, SolutionPhase, TemperatureSchedule, solve_layers
+from janus_kinetics.precipitation import solubility_from_pycalphad
 
 from _common import figure_path
 

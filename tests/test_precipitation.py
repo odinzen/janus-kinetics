@@ -10,7 +10,7 @@ sites; here every lattice site counts, N0 = 1/v_at.
 import numpy as np
 import pytest
 
-from calphad_kinetics.precipitation import (
+from janus_kinetics.precipitation import (
     K_B,
     DiluteSolution,
     Kinetics,

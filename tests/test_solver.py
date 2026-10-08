@@ -5,11 +5,13 @@ equation with constant D: a step couple in an infinite medium, and a
 semi-infinite medium whose surface is held at fixed composition.
 """
 
+import functools
+
 import numpy as np
 import pytest
 from scipy.special import erf
 
-from calphad_kinetics import (
+from janus_kinetics import (
     Boundary,
     ConvergenceError,
     SolutionPhase,
@@ -177,3 +179,98 @@ def test_graded_grid_matches_erf():
     res = solve_planar(faces, np.full((300, 1), xi), D, T_END, T_END / 400, left=Boundary.fixed([xs]))
     exact = xs + (xi - xs) * erf(z / (2 * np.sqrt(D * T_END)))
     assert np.max(np.abs(res.x[-1, :, 0] - exact)) < 5e-4
+
+
+# --- adaptive steps -----------------------------------------------------------------------------------
+
+WIDE_SAVES = [1e1, 1e2, 1e3, 1e4]
+
+
+@functools.lru_cache(maxsize=None)
+def _wide_reference():
+    """The 400-cell couple to 1e5 s in 1 s steps, converged in time on its own grid."""
+    faces, z, x0 = step_couple(400, np.array([0.8]), np.array([0.2]))
+    return solve_planar(faces, x0, D, T_END, 1.0, save_times=WIDE_SAVES)
+
+
+def test_adaptive_steps_resolve_save_times_spanning_decades():
+    """Profiles wanted at 10 s to 1e5 s. Against the 1 s-step solution on the same grid, adaptive steps at
+    tolerance 1e-3 reach a worst error of 1.5e-3 in about 107 steps; 400 equal steps (the largest the
+    adaptive run may take) leave 8.9e-3, as the early profiles get one long step each."""
+    faces, z, x0 = step_couple(400, np.array([0.8]), np.array([0.2]))
+    ref = _wide_reference()
+    adaptive = solve_planar(faces, x0, D, T_END, T_END / 4, save_times=WIDE_SAVES, tolerance=1e-3)
+    fixed = solve_planar(faces, x0, D, T_END, T_END / 400, save_times=WIDE_SAVES)
+    np.testing.assert_array_equal(adaptive.times, ref.times)
+    assert np.abs(adaptive.x - ref.x).max() < 2e-3
+    assert len(adaptive.picard_iterations) < 150
+    assert np.abs(fixed.x - ref.x).max() > 4 * np.abs(adaptive.x - ref.x).max()
+
+
+def test_adaptive_error_falls_with_tolerance():
+    faces, z, x0 = step_couple(400, np.array([0.8]), np.array([0.2]))
+    ref = _wide_reference()
+    errors = [np.abs(solve_planar(faces, x0, D, T_END, T_END / 4, save_times=WIDE_SAVES, tolerance=tol).x - ref.x).max()
+              for tol in (1e-3, 1e-4, 1e-5)]
+    assert errors[1] < 0.6 * errors[0] and errors[2] < 0.6 * errors[1], errors
+
+
+def test_adaptive_steps_conserve_and_match_erf():
+    faces, z, x0 = step_couple(400, np.array([0.8]), np.array([0.2]))
+    res = solve_planar(faces, x0, D, T_END, T_END / 4, tolerance=1e-4)
+    assert np.abs(res.x[-1, :, 0] - erf_couple(z, T_END, D, 0.8, 0.2)).max() < 1e-3
+    inventory = res.inventory()
+    assert np.abs(inventory - inventory[0]).max() < 1e-12 * np.abs(inventory[0]).max()
+
+
+def test_adaptive_steps_never_exceed_dt():
+    faces, z, x0 = step_couple(100, np.array([0.8]), np.array([0.2]))
+    res = solve_planar(faces, x0, D, T_END, T_END / 50, tolerance=1.0)
+    assert len(res.picard_iterations) >= 50
+
+
+def test_adaptive_steps_follow_a_temperature_ramp():
+    """D(t) rising 1e4-fold, Arrhenius with Q = 250 kJ/mol along 800 -> 1300 K over the anneal. With D
+    independent of x the profile is the erf at tau = int D dt. Tolerance 1e-4 gives 7.7e-4 in about 168
+    steps, where equal steps need 400 for 4.9e-4 and 200 for 1.0e-3."""
+    from scipy.integrate import quad
+
+    def d_of_t(t):
+        return 1e-14 * np.exp(-250e3 / 8.314 * (1 / (800 + 500 * t / T_END) - 1 / 1300))
+
+    faces, z, x0 = step_couple(400, np.array([0.8]), np.array([0.2]))
+    res = solve_planar(faces, x0, lambda x, t: np.full(x.shape[:1] + (1, 1), d_of_t(t)), T_END, T_END / 4,
+                       tolerance=1e-4)
+    tau = quad(d_of_t, 0, T_END, limit=200)[0]
+    exact = 0.5 - 0.3 * erf(z / (2 * np.sqrt(tau)))
+    assert np.abs(res.x[-1, :, 0] - exact).max() < 1e-3
+    assert len(res.picard_iterations) < 250
+
+
+def test_adaptive_steps_recover_from_picard_failure():
+    """The couple of test_picard_failure_is_reported: one 1e5 s step fails to converge in five Picard
+    iterations; adaptive steps halve until it does (about 1100 steps) and agree with a 50 s-step run within
+    2.4e-4. A tighter cap is no test of recovery: two iterations reach 1e-10 only in tiny steps."""
+    dfun = lambda x: (1e-15 * np.exp(8.0 * x))[..., None]
+    faces, z, x0 = step_couple(50, np.array([0.9]), np.array([0.1]))
+    with pytest.raises(ConvergenceError):
+        solve_planar(faces, x0, dfun, 1e5, 1e5, max_picard=5)
+    res = solve_planar(faces, x0, dfun, 1e5, 1e5, max_picard=5, tolerance=1e-4)
+    ref = solve_planar(faces, x0, dfun, 1e5, 50.0)
+    assert np.abs(res.x[-1] - ref.x[-1]).max() < 1e-3
+
+
+def test_adaptive_steps_carry_markers():
+    """A lattice velocity c / sqrt(t) moves a marker by 2 c sqrt(t), which the marker integration holds
+    exactly over any steps; adaptive steps must hand it the right step ends."""
+    faces, z, x0 = step_couple(100, np.array([0.8]), np.array([0.2]))
+    c = 1e-9
+    res = solve_planar(faces, x0, D, T_END, T_END / 4, tolerance=1e-4, save_times=[3e3], markers=[0.0],
+                       lattice_velocity=lambda x, g, t: np.full(len(x), c / np.sqrt(t)))
+    np.testing.assert_allclose(res.markers[1:, 0], 2 * c * np.sqrt([3e3, T_END]), rtol=1e-12)
+
+
+def test_tolerance_must_be_positive():
+    faces, z, x0 = step_couple(20, np.array([0.8]), np.array([0.2]))
+    with pytest.raises(ValueError, match="tolerance"):
+        solve_planar(faces, x0, D, 10.0, 1.0, tolerance=0.0)

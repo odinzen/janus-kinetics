@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from pycalphad import Database
 
-from calphad_kinetics import R, ShortCircuit, SolutionPhase
+from janus_kinetics import R, ShortCircuit, SolutionPhase
 from conftest import HEADER
 
 T = 900.0

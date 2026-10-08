@@ -17,14 +17,16 @@ import numpy as np
 import pytest
 from pycalphad import Database, equilibrium, variables as v
 
-from calphad_kinetics import R, SolutionPhase, campbell2002_fcc_ni
-from calphad_kinetics.multicomponent_precipitation import (
+from janus_kinetics import R, SolutionPhase, campbell2002_fcc_ni
+from janus_kinetics.multicomponent_precipitation import (
     K_B,
     N_A,
     NucleationSettings,
+    Population,
     PrecipitateThermo,
     growth_rates,
     nucleation,
+    solve_competing_precipitation,
     solve_multicomponent_precipitation,
 )
 
@@ -309,7 +311,7 @@ def test_coarsening_distribution_has_the_lsw_shape():
 def test_merging_and_splitting_conserve_the_population():
     """Number, volume, solute and Gibbs energy of the classes survive a merge and a split; the results-level
     mass balance cannot see a violation, since it is computed from the same classes."""
-    from calphad_kinetics.multicomponent_precipitation import _merge_closest, _split_most_populated
+    from janus_kinetics.multicomponent_precipitation import _merge_closest, _split_most_populated
 
     rng = np.random.default_rng(3)
     number = rng.uniform(1e20, 1e22, 6)
@@ -438,7 +440,7 @@ def test_evolution_rates_satisfy_the_extremum_principle():
     eqs. (15) and (23) (infinite interface mobility), differentiated numerically here; Q is quadratic in the
     rates, so central differences are exact. This checks the linear system independently of its printed
     coefficients, including the misprinted factor in eq. (32)."""
-    from calphad_kinetics.multicomponent_precipitation import evolution_rates
+    from janus_kinetics.multicomponent_precipitation import evolution_rates
 
     radius, comp, mu_k, x0, mu0, tracer = _class_state()
     dk = np.array([3e-23, 1.5e-23, 2e-23])
@@ -472,7 +474,7 @@ def test_evolution_rates_satisfy_the_extremum_principle():
 def test_frozen_composition_recovers_eq_45():
     """As the diffusivities in the precipitate go to zero the composition stops changing and the growth
     rate becomes eq. (45)."""
-    from calphad_kinetics.multicomponent_precipitation import evolution_rates
+    from janus_kinetics.multicomponent_precipitation import evolution_rates
 
     radius, comp, mu_k, x0, mu0, tracer = _class_state()
     rate, dx = evolution_rates(radius, comp, mu_k, x0, mu0, tracer, np.full(3, 1e-40), SETTINGS, T)
@@ -533,7 +535,7 @@ def test_second_alloy_shows_the_same_coarsening_gap():
 def test_misfit_energy_follows_appendix_a():
     """Eq. (A.1) lambda0 = eps0^2 E / (1 - nu); with yielding f(S) = 2 S (1 - ln S) - S^2, which the appendix
     says reaches 1.0 at S = 0.199 and its maximum 1.456 at S = 0.567 (p. 173)."""
-    from calphad_kinetics.multicomponent_precipitation import misfit_energy
+    from janus_kinetics.multicomponent_precipitation import misfit_energy
 
     e, nu, eps = 200e9, 0.3, 0.01
     lam0 = eps**2 * e / (1 - nu)
@@ -554,7 +556,7 @@ def test_misfit_lowers_the_driving_force_everywhere():
     """Eq. (37) F = -lambda - sum c (mu_k - mu_0): the frozen-composition rate with misfit equals eq. (45)
     with F - lambda, and a misfit above the chemical driving force (5.5e7 J/m^3 for the Ni-Al-Cr alloy)
     suppresses nucleation."""
-    from calphad_kinetics.multicomponent_precipitation import evolution_rates
+    from janus_kinetics.multicomponent_precipitation import evolution_rates
 
     radius, comp, mu_k, x0, mu0, tracer = _class_state()
     lam = 2e7
@@ -579,7 +581,7 @@ def test_misfit_must_not_be_negative():
 
 
 # --- nucleation on grain boundaries, edges and corners (Clemm and Fisher 1955) ------------------------------
-from calphad_kinetics.multicomponent_precipitation import junction_barrier_factor, junction_factors  # noqa: E402
+from janus_kinetics.multicomponent_precipitation import junction_barrier_factor, junction_factors  # noqa: E402
 
 # Fig. 6 (p. 72): ferrite in austenite, gamma_AA = 850, gamma_AB = 600 erg/cm^2, Delta f_v = -4.35e8 erg/cm^3
 CF_GAA, CF_GAB, CF_DF = 850.0, 600.0, 4.35e8
@@ -635,7 +637,7 @@ def test_boundary_nucleation_lowers_the_barrier_in_a_run():
 
 
 # --- temperature schedules ---------------------------------------------------------------------------------
-from calphad_kinetics import TemperatureSchedule  # noqa: E402
+from janus_kinetics import TemperatureSchedule  # noqa: E402
 
 
 def _frozen_run(T, t_end, save, **kwargs):
@@ -682,3 +684,148 @@ def test_late_stage_keeps_a_size_distribution():
     r3 = res.mean_radius**3
     late = HOURS >= 16
     assert np.all(np.diff(r3[late]) > 0)
+
+
+# --- populations competing for one matrix (part I eq. 4, part II section 3.5) ------------------------------
+
+def _ideal_binary(sites=None):
+    """The dilute binary of _lsw_run as (matrix, precipitate, settings)."""
+    db = Database("""
+    ELEMENT VA VACUUM 0 0 0 !
+    ELEMENT A BLANK 1 0 0 !
+    ELEMENT B BLANK 1 0 0 !
+    TYPE_DEFINITION % SEQ * !
+    PHASE FCC % 1 1 !
+    CONSTITUENT FCC :A,B: !
+    PARAMETER G(FCC,A;0) 298.15 0; 6000 N !
+    PARAMETER G(FCC,B;0) 298.15 R*T*LN(100); 6000 N !
+    PARAMETER MQ(FCC&A,*;0) 298.15 R*T*LN(5E-20); 6000 N !
+    PARAMETER MQ(FCC&B,*;0) 298.15 R*T*LN(5E-20); 6000 N !
+    PHASE PPT % 1 1 !
+    CONSTITUENT PPT :B: !
+    PARAMETER G(PPT,B;0) 298.15 0; 6000 N !
+    """)
+    matrix = SolutionPhase(db, "FCC", ["B", "A"], mobility_db=db)
+    prec = PrecipitateThermo(db, "PPT", ["B", "A"], composition=[1.0, 0.0])
+    s = NucleationSettings(gamma=0.13, molar_volume=1.6e-29 * N_A, lattice_parameter=4.04e-10, sites=sites)
+    return matrix, prec, s
+
+
+def _binary_seeds(take=slice(None)):
+    radii = np.linspace(4.5e-9, 5.5e-9, 40)
+    num = np.exp(-((radii - 5e-9) / 0.3e-9) ** 2)
+    num *= 0.02 / (num @ (4 * np.pi / 3 * radii**3))
+    return {"number": num[take], "radius": radii[take], "composition": np.tile([1.0, 0.0], (radii[take].size, 1))}
+
+
+BINARY_ALLOY = [0.02 + 0.98 * 0.0115, 1 - 0.02 - 0.98 * 0.0115]
+BINARY_TIMES = np.array([1e6, 1e7, 1e8])
+
+
+def test_a_population_split_in_two_runs_as_one():
+    """The same particles held as one population or dealt alternately into two give the same run: the two
+    halves see one matrix, depleted by both. No nucleation, and no merging or splitting of classes, so the
+    classes match one for one."""
+    matrix, prec, s = _ideal_binary(sites=0.0)
+    kw = dict(t_start=1.0, min_classes=1, max_classes=400)
+    one = solve_competing_precipitation(matrix, [Population(prec, s, _binary_seeds())], BINARY_ALLOY, 433.15,
+                                        BINARY_TIMES[-1], BINARY_TIMES, **kw)[0]
+    two = solve_competing_precipitation(matrix, [Population(prec, s, _binary_seeds(slice(0, None, 2))),
+                                                 Population(prec, s, _binary_seeds(slice(1, None, 2)))],
+                                        BINARY_ALLOY, 433.15, BINARY_TIMES[-1], BINARY_TIMES, **kw)
+    np.testing.assert_allclose(two[0].matrix_composition, one.matrix_composition, rtol=1e-9)
+    np.testing.assert_allclose(two[0].volume_fraction + two[1].volume_fraction, one.volume_fraction, rtol=1e-9)
+    np.testing.assert_allclose(two[0].number_density + two[1].number_density, one.number_density, rtol=1e-9)
+    for i in range(BINARY_TIMES.size):
+        merged = np.sort(np.concatenate([two[0].classes[i]["radius"], two[1].classes[i]["radius"]]))
+        np.testing.assert_allclose(merged, np.sort(one.classes[i]["radius"]), rtol=1e-9)
+    assert one.volume_fraction[-1] > 0.02  # the run did something: the seeds grew
+
+
+def test_a_population_that_never_forms_changes_nothing():
+    """A second population with no seeds and no nucleation sites leaves the first run unchanged to the bit."""
+    matrix, prec, s = _ideal_binary(sites=0.0)
+    kw = dict(t_start=1.0, min_classes=20, max_classes=60)
+    alone = solve_competing_precipitation(matrix, [Population(prec, s, _binary_seeds())], BINARY_ALLOY, 433.15,
+                                          BINARY_TIMES[-1], BINARY_TIMES, **kw)
+    both = solve_competing_precipitation(matrix, [Population(prec, s, _binary_seeds()), Population(prec, s)],
+                                         BINARY_ALLOY, 433.15, BINARY_TIMES[-1], BINARY_TIMES, **kw)
+    for field in ("mean_radius", "number_density", "volume_fraction", "matrix_composition"):
+        assert np.array_equal(getattr(both[0], field), getattr(alone[0], field))
+    assert both[0].steps == alone[0].steps
+    assert np.all(both[1].number_density == 0) and np.all(both[1].volume_fraction == 0)
+
+
+THREE_PHASE_ALLOY = np.array([0.08, 0.30, 0.62])
+
+
+@functools.lru_cache(maxsize=None)
+def _three_phase_equilibrium():
+    """Dupin's gamma + gamma' + alpha(bcc) equilibrium of Ni-8Al-30Cr at.% at 1073 K, from pycalphad:
+    {phase: (mole fraction of phase, composition)} with keys "gamma", "gamma_prime", "bcc"."""
+    eq = equilibrium(_db(), ELEMENTS + ["VA"], ["FCC_A1", "L12_FCC", "BCC_A2"],
+                     {v.T: 1073.0, v.P: 101325, v.N: 1, v.X("AL"): 0.08, v.X("CR"): 0.30})
+    names = [str(p) for p in np.ravel(eq.Phase.values)]
+    fractions = np.ravel(eq.NP.values)
+    comps = eq.X.values.reshape(len(names), -1)
+    sets = [(n, f, x / x.sum()) for n, f, x in zip(names, fractions, comps) if n]
+    assert sorted(n for n, _, _ in sets) == ["BCC_A2", "L12_FCC", "L12_FCC"]
+    fcc = sorted([s for s in sets if s[0] == "L12_FCC"], key=lambda s: s[2][0])
+    bcc = next(s for s in sets if s[0] == "BCC_A2")
+    return {"gamma": fcc[0][1:], "gamma_prime": fcc[1][1:], "bcc": bcc[1:]}
+
+
+def _three_phase_populations(gamma_bcc=0.1):
+    eq = _three_phase_equilibrium()
+    pops = []
+    for key, phase, gamma, a in (("gamma_prime", "L12_FCC", 0.02, 0.3552e-9), ("bcc", "BCC_A2", gamma_bcc, 0.288e-9)):
+        x = eq[key][1]
+        pops.append(Population(PrecipitateThermo(_db(), phase, ELEMENTS, composition=x),
+                               NucleationSettings(gamma=gamma, molar_volume=SETTINGS.molar_volume, lattice_parameter=a,
+                                                  sites=0.0),
+                               initial={"number": [1e20], "radius": [5e-9], "composition": [x]}))
+    return pops
+
+
+def test_two_phases_settle_on_the_three_phase_equilibrium():
+    """gamma' and bcc seeds (1e20 m^-3 of each, 5 nm, at their equilibrium compositions, gamma = 0.02 and
+    0.1 J/m^2) in Ni-8Al-30Cr at 1073 K. They grow from one matrix until each satisfies its own
+    Gibbs-Thomson condition, F_k = 2 gamma_k / rho_k (from 1e5 s on within 1e-3; reversals under the step
+    guard's threshold leave a scatter of up to 5e-4 between runs), and then hold the lever-rule
+    fractions of the three-phase equilibrium, short by the capillary shift (gamma' 22.13 % for 22.26 %, bcc
+    6.71 % for 6.77 %). Halving all step limits moves the matrix by 4e-8. Before steps were cut on a
+    reversal of the matrix rate, the matrix swung about the fixed point by up to the step limit and F_k
+    rho_k / (2 gamma_k) wandered between 0.72 and 1.09."""
+    eq = _three_phase_equilibrium()
+    pops = _three_phase_populations()
+    times = np.array([1e3, 1e4, 1e5, 1e6])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        res = solve_competing_precipitation(_matrix(), pops, THREE_PHASE_ALLOY, 1073.0, times[-1], times,
+                                            min_classes=1)
+    phi = sum(r.volume_fraction for r in res)[:, None]
+    held = (1 - phi) * res[0].matrix_composition + sum(r.volume_fraction[:, None] * r.precipitate_composition
+                                                       for r in res)
+    np.testing.assert_allclose(held, np.tile(THREE_PHASE_ALLOY, (times.size, 1)), rtol=0, atol=1e-12)
+    for i in (2, 3):
+        x0 = res[0].matrix_composition[i]
+        mu0 = np.asarray(_matrix().chemical_potentials(x0, 1073.0), dtype=float)
+        for pop, r in zip(pops, res):
+            p = pop.precipitate
+            f = (p.fixed @ mu0 - p.gm(p.fixed, 1073.0)) / pop.settings.molar_volume
+            assert f * r.mean_radius[i] / (2 * pop.settings.gamma) == pytest.approx(1.0, rel=1e-3)
+    assert res[0].volume_fraction[-1] == pytest.approx(eq["gamma_prime"][0], abs=0.002)
+    assert res[1].volume_fraction[-1] == pytest.approx(eq["bcc"][0], abs=0.001)
+    np.testing.assert_allclose(res[0].matrix_composition[-1], eq["gamma"][1], rtol=0, atol=5e-4)
+
+
+def test_competing_inputs_are_checked():
+    matrix, prec, s = _ideal_binary()
+    other = NucleationSettings(gamma=0.13, molar_volume=1.1 * s.molar_volume, lattice_parameter=4.04e-10)
+    with pytest.raises(ValueError, match="same molar volume"):
+        solve_competing_precipitation(matrix, [Population(prec, s), Population(prec, other)], BINARY_ALLOY,
+                                      433.15, 10.0, [1.0])
+    with pytest.raises(ValueError, match="at least one"):
+        solve_competing_precipitation(matrix, [], BINARY_ALLOY, 433.15, 10.0, [1.0])
+    with pytest.raises(ValueError, match="same elements"):
+        solve_competing_precipitation(_matrix(), [Population(prec, s)], ALLOY, T, 10.0, [1.0])

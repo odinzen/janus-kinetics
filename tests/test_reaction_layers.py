@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 from pycalphad import Database
 
-from calphad_kinetics.reaction_layers import (
+from janus_kinetics.reaction_layers import (
     LineCompound,
     integrated_diffusivity,
     parabolic_growth,
@@ -150,7 +150,7 @@ def test_single_layer_integrates_d_int_over_the_schedule():
     """d dd/dt = K D_int(T(t)) for one layer, so d^2 = 2 K * integral of D_int dt exactly."""
     from scipy.integrate import quad
 
-    from calphad_kinetics import TemperatureSchedule
+    from janus_kinetics import TemperatureSchedule
 
     schedule = TemperatureSchedule([0.0, 100.0, 400.0, 500.0], [700.0, 1000.0, 1000.0, 800.0])
     d_int = lambda T: 1e-12 * np.exp(-120e3 / (8.314 * T))

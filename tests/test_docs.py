@@ -14,10 +14,10 @@ def test_api_reference_is_current():
 
 
 def test_every_public_name_is_documented():
-    import calphad_kinetics
+    import janus_kinetics
 
-    missing = [n for n in calphad_kinetics.__all__
-               if callable(getattr(calphad_kinetics, n)) and not getattr(calphad_kinetics, n).__doc__]
+    missing = [n for n in janus_kinetics.__all__
+               if callable(getattr(janus_kinetics, n)) and not getattr(janus_kinetics, n).__doc__]
     assert not missing, missing
 
 

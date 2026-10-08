@@ -3,7 +3,7 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "calphad-kinetics"
+name = "janus-kinetics"
 version = "0.1.0"
 description = "Multicomponent diffusion, moving boundaries and precipitation kinetics on top of pycalphad"
 readme = "README.md"
@@ -33,7 +33,7 @@ test = ["pytest"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-calphad_kinetics = ["data/*.tdb"]
+janus_kinetics = ["data/*.tdb"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

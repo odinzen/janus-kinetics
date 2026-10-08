@@ -15,7 +15,7 @@ from __future__ import annotations
 from pathlib import Path
 
 ELEMENTS = ("AL", "CO", "CR", "HF", "MO", "NI", "RE", "TA", "TI", "W")
-OUT = Path(__file__).parents[1] / "src" / "calphad_kinetics" / "data" / "campbell2002_fcc_ni_mob.tdb"
+OUT = Path(__file__).parents[1] / "src" / "janus_kinetics" / "data" / "campbell2002_fcc_ni_mob.tdb"
 
 # diffusing element -> ({host: (a, b)}, {(p, j): (a, b)}) with each parameter a + b*T in J/mol
 TABLE2 = {

@@ -9,9 +9,9 @@ couple as an experimentalist would apply them to a measured one.
 import numpy as np
 import pytest
 
-from calphad_kinetics import SolutionPhase, solve_planar, uniform_faces
-from calphad_kinetics.couple_analysis import interdiffusion_from_profile, intrinsic_from_profile
-from calphad_kinetics.diffusivity import to_concentrations, to_mole_fractions
+from janus_kinetics import SolutionPhase, solve_planar, uniform_faces
+from janus_kinetics.couple_analysis import interdiffusion_from_profile, intrinsic_from_profile
+from janus_kinetics.diffusivity import to_concentrations, to_mole_fractions
 from test_kirkendall import ideal_binary
 
 T = 1200.0

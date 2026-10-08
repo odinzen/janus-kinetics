@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from calphad_kinetics import R, SolutionPhase, UnstableCompositionError
+from janus_kinetics import R, SolutionPhase, UnstableCompositionError
 from conftest import REGULAR_L, REGULAR_LABC
 
 T = 1100.0

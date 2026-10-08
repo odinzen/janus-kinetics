@@ -60,7 +60,7 @@ def test_two_phase_example_agrees_between_models():
 def test_thin_film_anneal_follows_the_temperature_schedule():
     """The reaction layer grows while hot and stops when cooled, and both interfaces sit at the
     pycalphad tie-lines of the current temperature (900 K mid-hold, 600 K at the end)."""
-    from calphad_kinetics.precipitation import solubility_from_pycalphad
+    from janus_kinetics.precipitation import solubility_from_pycalphad
 
     out = thin_film_anneal.run(coarse=True)
     res, db = out["result"], out["db"]
@@ -83,7 +83,7 @@ def test_oxygen_uptake_follows_the_held_potential():
     """Ideal interstitial: y_O / (1 - y_O) = exp((mu_O - G_M:O + G_M:Va) / RT) at the surface, so the
     surface holds 0.0645 O per M at 900 K and 0.0360 after cooling to 600 K; cooling then drives some
     oxygen back out."""
-    from calphad_kinetics import R
+    from janus_kinetics import R
 
     out = oxygen_uptake.run(coarse=True)
     res, surface = out["result"], out["surface"]
@@ -122,7 +122,7 @@ def test_chromia_scale_gives_the_papers_thicknesses():
 def test_solidify_and_homogenize():
     """The cast profile rises from the first solid at the axis to the last at the arm edge, the anneal keeps
     every element (cylinder inventory), and the Cr segregation index falls throughout."""
-    from calphad_kinetics.solidification import segregation_index
+    from janus_kinetics.solidification import segregation_index
 
     out = solidify_and_homogenize.run(coarse=True)
     res, scheil = out["anneal"], out["scheil"]

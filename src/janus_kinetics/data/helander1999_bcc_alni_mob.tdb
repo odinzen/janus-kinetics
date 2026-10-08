@@ -2,7 +2,7 @@ $ Disordered bcc atomic mobilities of Al and Ni, the base of the B2 model of
 $ Helander and Agren, Acta Mater. 47 (1999) 1141, Appendix A (p. 1151),
 $ https://doi.org/10.1016/S1359-6454(99)00010-5. MQ = -Q + R*T*LN(M0) with
 $ Theta = LN(M0). The ordering terms of the same appendix are in
-$ calphad_kinetics.datasets.HELANDER1999_ALNI_ORDERING.
+$ janus_kinetics.datasets.HELANDER1999_ALNI_ORDERING.
 ELEMENT VA VACUUM 0 0 0 !
 ELEMENT AL BLANK 0 0 0 !
 ELEMENT NI BLANK 0 0 0 !

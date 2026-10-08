@@ -9,8 +9,8 @@ Run ``python examples/surface_depletion.py`` to write examples/output/surface_de
 
 import numpy as np
 
-from calphad_kinetics import Boundary, SolutionPhase, solve_planar, uniform_faces
-from calphad_kinetics.datasets import jonsson1995_bcc_crfeni
+from janus_kinetics import Boundary, SolutionPhase, solve_planar, uniform_faces
+from janus_kinetics.datasets import jonsson1995_bcc_crfeni
 
 from _common import figure_path, ideal_bcc
 

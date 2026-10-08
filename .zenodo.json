@@ -1,5 +1,5 @@
 {
-  "title": "calphad-kinetics",
+  "title": "janus-kinetics",
   "upload_type": "software",
   "version": "0.1.0",
   "description": "Multicomponent diffusion, moving-boundary, homogenization and precipitation kinetics on top of pycalphad, built from the published models with each equation cited to its source.",

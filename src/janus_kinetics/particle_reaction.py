@@ -20,7 +20,7 @@ Core and matrix are taken as rigid: stresses and Kirkendall voiding, which van
 Loo warns can dominate in curved geometries (p. 76), are not modelled.
 
 For a layer between line compounds, k_p comes from
-:func:`calphad_kinetics.parabolic_growth` and z = (V_layer / x_A,layer) / (V_core / x_A,core).
+:func:`janus_kinetics.parabolic_growth` and z = (V_layer / x_A,layer) / (V_core / x_A,core).
 """
 
 from __future__ import annotations

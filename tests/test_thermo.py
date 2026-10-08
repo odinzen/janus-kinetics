@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from pycalphad import calculate
 
-from calphad_kinetics import R, SolutionPhase, UnstableCompositionError
-from calphad_kinetics.thermo import dmu_dx, reduced_hessian
+from janus_kinetics import R, SolutionPhase, UnstableCompositionError
+from janus_kinetics.thermo import dmu_dx, reduced_hessian
 from conftest import REGULAR_L, REGULAR_LABC
 
 T = 1000.0

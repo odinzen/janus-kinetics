@@ -1,6 +1,6 @@
 # Theory
 
-The equations calphad-kinetics implements, with the paper and equation number
+The equations janus-kinetics implements, with the paper and equation number
 each one comes from. Full references are in [references.md](references.md).
 Compositions are mole fractions x_k of n elements with the dependent element
 last; all phases are substitutional with one molar volume V_m unless stated.
@@ -86,6 +86,18 @@ dx_k/dt = d/dz (sum_j D_kj dx_j/dz) is solved by backward Euler on a finite-volu
 grid, with D at each face from the mean of the neighbouring cells and Picard
 iteration for its composition dependence. The face-flux form conserves the
 inventory of every element under no-flux boundaries, to floating-point round-off.
+
+With a tolerance the step adapts. Backward Euler errs by about (h^2 / 2) d^2x/dt^2 per
+step; the second derivative is estimated from the change in dx/dt between consecutive
+steps, its largest value over the cells sets the error, and a step over the tolerance
+is halved and redone, as is one whose Picard iteration fails. Steps are dt / 2^k, so a
+constant D needs few factorizations. This pays when profiles are wanted over decades of
+time: for a couple saved at 10 s to 1e5 s, 107 adaptive steps reach a worst error of
+1.5e-3 against a time-converged run, where 400 equal steps leave 8.9e-3. Along a
+1e4-fold rise of D the gain is about 1.5 times fewer steps. For a single anneal judged
+at its end equal steps do as well or better, since early errors decay; the largest
+cell's error is used rather than a mean, which is as efficient and does not change
+meaning with the length of untouched material in the domain.
 
 ## Cylinders and spheres
 
@@ -460,6 +472,28 @@ recomputed at each temperature. A run along an 873 K to 848 K or 893 K step agre
 with two chained isothermal runs within 2 % in volume fraction, number and radius; at
 893 K most of the gamma' dissolves, the small particles falling below the new
 critical radius.
+
+Competing populations. Part I's mass balance (eq. 4) sums over precipitates of every
+kind, and part II (p. 158, section 3.5) gives each phase, and each nucleation site of a
+phase, its own array of classes to follow precipitation sequences. Here each such
+population nucleates, grows and coarsens as above while the matrix holds what all of
+them leave; they share one time step, the matrix step limit counts their depletion
+together and shrinking classes of all of them draw on one dissolution budget. Part I's
+single molar volume (p. 167) is required of every population, so that volume fractions
+carry the mass balance. Checks: particles held as one population or dealt into two give
+the same run within 1e-9, and an idle second population changes nothing to the bit.
+Seeds of gamma' and bcc in Ni-8Al-30Cr at 1073 K, in Dupin's three-phase field, grow
+until each meets its own Gibbs-Thomson condition, F = 2 gamma / rho, within 1e-3, and
+hold the lever-rule fractions less the capillary shift (22.13 against 22.26 % gamma',
+6.71 against 6.77 % bcc).
+
+That check exposed a step-control fault shared with single-phase runs. Near a
+stationary state a step longer than the matrix's relaxation time overshoots, and the
+matrix swung about the fixed point by up to its step limit, 2e-4 in mole fraction,
+more than the capillary supersaturation of 80 nm particles: F rho / (2 gamma) wandered
+between 0.72 and 1.09. A step is now halved whenever the matrix rate reverses between
+steps by more than a thousandth of the step limit (smaller reversals are rounding noise
+at the fixed point).
 
 ## Microsegregation and homogenization
 

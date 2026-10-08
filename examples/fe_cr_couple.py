@@ -8,8 +8,8 @@ Run ``python examples/fe_cr_couple.py`` to write examples/output/fe_cr_couple.pn
 
 import numpy as np
 
-from calphad_kinetics import SolutionPhase, solve_planar, uniform_faces
-from calphad_kinetics.datasets import jonsson1995_bcc_crfeni
+from janus_kinetics import SolutionPhase, solve_planar, uniform_faces
+from janus_kinetics.datasets import jonsson1995_bcc_crfeni
 
 from _common import figure_path, ideal_bcc
 

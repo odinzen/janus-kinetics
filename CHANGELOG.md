@@ -28,7 +28,9 @@ First version.
   (Svoboda et al. 2004), checked against the LSW limit and against gamma' precipitation
   in Ni-5.2Al-14.2Cr at 873 K (Sudbrack et al. 2006, 2007) and Ni-7.5Al-8.5Cr
   (Booth-Morrison et al. 2008), with precipitate compositions that evolve after nucleation,
-  misfit energy, grain-junction nucleation (Clemm and Fisher 1955) and temperature schedules.
+  misfit energy, grain-junction nucleation (Clemm and Fisher 1955), temperature schedules,
+  and several phases or nucleation sites competing for one matrix.
+- Adaptive time steps in the planar solver, with recovery from failed Picard iterations.
 - Parabolic growth of a compact oxide scale from cation and anion transport with
   grain-boundary averaging, checked against the Cr2O3 thicknesses and figures of
   Hallstrom et al. (2013), with the Cr-O description of Kjellqvist et al. (2008)

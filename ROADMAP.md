@@ -20,7 +20,8 @@ passes. Every reference is checked against Crossref by tools/check_references.py
 - Volume-fixed frame in the solver, with a composition-dependent molar volume: done
   for constant partial molar volumes (planar solver, in concentrations). Partial
   volumes that vary with composition, and the other solvers, still use one V_m.
-- Adaptive time stepping.
+- Adaptive time stepping: done for the planar solver (solve_planar, tolerance=);
+  the moving-interface, homogenization and reaction-layer solvers still take fixed steps.
 - Oxides: cation tracer and chemical diffusion done (OxideCationDiffusion,
   Hallstrom et al. 2011). Magnetite checked against their Figs. 3-4 (the Fig. 4
   level is 0.2 decades off their own eq. 7, a gap inside the paper). Open: their
@@ -116,8 +117,9 @@ Left for later, each needing a source to be opened first:
   LSW, Sudbrack et al. 2006 and Booth-Morrison et al. 2008), with precipitate
   compositions that evolve after nucleation (part I eqs. 27-39), misfit energy
   (Appendix A), nucleation on grain boundaries, edges and corners (Clemm and Fisher
-  1955) and temperature schedules. Open there: several precipitate phases at once,
-  site densities computed from grain size, and the Thermo-Calc curvatures of Sudbrack
+  1955), temperature schedules and several phases or sites competing for one matrix
+  (part II section 3.5). Open there: site densities computed from grain size (needs
+  Cahn 1956, doi 10.1016/0001-6160(56)90041-4), and the Thermo-Calc curvatures of Sudbrack
   et al. (2007) Table 4 (ours 10-30 % higher for the same database);
 - heterogeneous nucleation and non-isothermal treatments;
 - the mean-radius approach, whose coarsening fraction (eq. 17) is defined only

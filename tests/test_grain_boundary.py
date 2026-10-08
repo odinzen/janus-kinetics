@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from scipy.special import erfc
 
-from calphad_kinetics.grain_boundary import FisherBoundary, boundary_product_from_slope, solve_fisher
+from janus_kinetics.grain_boundary import FisherBoundary, boundary_product_from_slope, solve_fisher
 
 # Fig. 3 (p. 75) at t1 = 100: (y1, x1) -> eq. (8) value in units of C_surface / 1000 (lower numbers)
 FIG3_EQ8 = {(0, 16): 258, (0, 32): 24, (0, 48): 1, (4, 0): 261, (4, 16): 67, (4, 32): 6, (8, 0): 68,
