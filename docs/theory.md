@@ -258,9 +258,14 @@ is taken along that potential, which converges far better than differences in
 composition over magnetite's narrow range. The shipped mobilities are those of
 the paper (eqs. 10-11 and 14), fitted with Sundman's (1991) magnetite and
 Kjellqvist et al.'s (2008) hematite. pycalphad's alfeo.tdb carries Kjellqvist et
-al.'s Fe-O spinel and corundum term for term; with it, magnetite's minimum D*
-matches the paper's Fig. 4 within 0.05 decades at 1573-1673 K but not at 1273 K,
-where Kjellqvist's spinel departs from Sundman's near stoichiometry, and hematite
+al.'s Fe-O spinel and corundum term for term. Its spinel gives the defect fractions
+of the paper's Fig. 3 within about 5 % from 1e-16 to 1e-2 atm at 1273 K, whereas
+Sundman's own printed Table 1 has Fe+2:Fe+2:Va:O-2 = 7G - B where Kjellqvist has
+7G + B, and with that sign misses Fig. 3 by a factor of three; the paper's "Sundman
+data" evidently carried +B. The pressure of lowest D* then follows Fig. 4 within
+0.25 decades from 1273 to 1623 K, but the level sits 0.1-0.25 decades below the
+figure. That offset is the paper's: its eq. 7 with its eqs. 10-11 and its own Fig. 3
+fractions lies 0.21-0.30 decades below its Fig. 4 at 1273 K, the same gap. Hematite
 comes out 0.4-0.7 decades below the paper's Figs. 7-8 although the thermodynamics
 is the one the paper used, a gap not yet explained.
 

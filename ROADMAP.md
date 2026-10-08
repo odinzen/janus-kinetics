@@ -22,8 +22,9 @@ passes. Every reference is checked against Crossref by tools/check_references.py
   volumes that vary with composition, and the other solvers, still use one V_m.
 - Adaptive time stepping.
 - Oxides: cation tracer and chemical diffusion done (OxideCationDiffusion,
-  Hallstrom et al. 2011). Open: their Fig. 4, which needs Sundman's (1991)
-  magnetite; their Figs. 7-8, 0.4-0.7 decades above our hematite with the same
+  Hallstrom et al. 2011). Magnetite checked against their Figs. 3-4 (the Fig. 4
+  level is 0.2 decades off their own eq. 7, a gap inside the paper). Open: their
+  Figs. 7-8, 0.4-0.7 decades above our hematite with the same
   Kjellqvist et al. (2008) thermodynamics, cause not found; the general sublattice
   formalism of Agren (1982).
 - Oxide scale growth: done for a compact scale of one oxide on its metal

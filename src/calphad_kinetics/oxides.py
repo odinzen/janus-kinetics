@@ -19,7 +19,10 @@ of eq. (9), D_M = (D*_M / RT) n_M dmu_M/dn_M. The site fractions and chemical
 potentials come from ``pycalphad.equilibrium`` of the oxide alone at the given
 oxygen potential, so the results are only as good as the thermodynamic
 description; the paper's mobilities were fitted with Sundman's (1991) Fe-O
-description for magnetite and Kjellqvist et al.'s (2008) for hematite.
+description for magnetite and Kjellqvist et al.'s (2008) for hematite. Kjellqvist et
+al.'s spinel, which pycalphad's alfeo.tdb carries, reproduces the paper's magnetite
+defect fractions (its Fig. 3); Sundman's printed Table 1 does not (one end member
+differs in sign).
 
 Hallstrom, Halvarsson, Hoglund, Jonsson and Agren, Solid State Ionics 240 (2013)
 41, apply the same scheme to Cr2O3 and add oxygen, which moves by vacancies on
