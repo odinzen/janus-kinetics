@@ -65,6 +65,10 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   with local equilibrium at the metal/oxide interface. It reproduces their 24 h
   scale thicknesses at 625 and 700 C within 1.5 % and their late-time growth rates
   within 8 %.
+- **Microsegregation and homogenization**: Scheil-Gulliver paths from pycalphad for
+  any number of elements (Bocklund et al. 2020), the closed-form segregation limits,
+  Kobayashi's exact Brody-Flemings solution, a back-diffusion solidification model
+  in a plate, cylinder or sphere, and the anneal that removes the segregation.
 - **Homogenization model** for diffusion through multiphase mixtures (Larsson and
   Hoglund 2009), with local equilibrium tabulated up front for binaries and
   ternaries or computed on demand for any number of elements (their section 2.5).

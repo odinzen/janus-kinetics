@@ -456,3 +456,36 @@ with two chained isothermal runs within 2 % in volume fraction, number and radiu
 893 K most of the gamma' dissolves, the small particles falling below the new
 critical radius.
 
+## Microsegregation and homogenization
+
+For a constant partition ratio k the closed forms are taken as Kobayashi (1988)
+states them: Scheil k (1 - f_s)^(k-1), the lever rule k / (1 - (1 - k) f_s), and
+Brody-Flemings, Clyne-Kurz and Ohnaka, with gamma = 2 D t_f / L^2 for parabolic
+growth over half an arm spacing L. Kobayashi's exact solution of the Brody-Flemings
+model (his eqs. 37-40, confluent hypergeometric series) converges slowly at f_s = 1:
+for P in delta-Fe (k = 0.13, gamma = 0.8) it reaches 4.5130 by 5000 terms, where
+the paper prints 4.48, the value of a series stopped near 1000 terms. Clyne-Kurz
+and Ohnaka give about 1.8 there, as he says.
+
+The same model is solved numerically on the package's moving-grid scheme, in a plate,
+cylinder or sphere: the solid grows from the spine at a prescribed fraction solid,
+holds k C_L at the interface and diffuses with constant D, while the liquid stays
+uniform. The solid's response is linear in C_L, so two solves per step give the
+liquid composition that closes the solute balance exactly (to 1e-15). Against the
+exact solution the interface composition is within 0.2 % up to f_s = 0.95 and 4.49 at
+f_s = 1, converging with the grid; with no solid diffusion it gives Scheil and with
+fast diffusion the lever rule, in every geometry.
+
+For any number of elements the Scheil-Gulliver path follows the algorithm Bocklund
+et al. (2020) give: equilibrate the remaining liquid at each temperature, set the
+solid aside, shrink the liquid. On an ideal binary built so that x_s / x_l = k exactly
+it reproduces the Scheil equation within 1.5 % at 4 K steps, the error falling with the
+step. A Scheil or back-diffusion record is laid across the volume element core first
+(fraction f at r = L f^(1/(p+1))) as the starting profile of a homogenization anneal,
+whose progress is followed by the residual segregation index (max - min over its
+start). In a closed plate, cylinder and sphere the slowest mode decays as
+exp(-alpha^2 D t / L^2) with alpha = pi, 3.8317 and 4.4934, which the anneal follows
+within 1 %. The worked example takes Ni-5.2Al-14.2Cr through Scheil solidification
+on Dupin's description and a 1200 C anneal of a 25 um dendrite arm with Campbell's
+mobilities.
+

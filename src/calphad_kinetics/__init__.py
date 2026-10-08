@@ -57,6 +57,15 @@ from .precipitation import (
 )
 from .reaction_layers import LineCompound, ParabolicGrowth, ReactionResult, integrated_diffusivity, parabolic_growth, solve_reaction_layers
 from .schedule import TemperatureSchedule
+from .solidification import (
+    BackDiffusionResult,
+    ScheilResult,
+    kobayashi,
+    scheil_gulliver,
+    segregation_index,
+    segregation_profile,
+    solve_back_diffusion,
+)
 from .solver import Boundary, DiffusionResult, solve_planar, uniform_faces
 from .thermo import GibbsEnergy, R, dmu_dx, reduced_hessian, thermodynamic_factor
 
@@ -65,6 +74,7 @@ __version__ = "0.1.0"
 __all__ = [
     "AnionPath",
     "B2Phase",
+    "BackDiffusionResult",
     "Boundary",
     "ConvergenceError",
     "DiffusionResult",
@@ -95,6 +105,7 @@ __all__ = [
     "R",
     "ReactionResult",
     "ScaleGrowth",
+    "ScheilResult",
     "ShortCircuit",
     "SolutionPhase",
     "StackResult",
@@ -118,6 +129,7 @@ __all__ = [
     "jonsson1995_bcc_crfeni",
     "junction_barrier_factor",
     "kjellqvist2008_cro",
+    "kobayashi",
     "lattice_velocity",
     "layer_thickness",
     "metal_oxide_potential",
@@ -128,7 +140,11 @@ __all__ = [
     "parabolic_growth",
     "parabolic_scale_growth",
     "reduced_hessian",
+    "scheil_gulliver",
+    "segregation_index",
+    "segregation_profile",
     "solubility_from_pycalphad",
+    "solve_back_diffusion",
     "solve_fisher",
     "solve_homogenized",
     "solve_kwn",

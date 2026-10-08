@@ -819,6 +819,67 @@ it, so a single point is an isothermal hold. Ramps, spikes and multi-step anneal
 are lists of points, e.g. ``TemperatureSchedule([0, 10, 70, 80], [300, 1300, 1300, 300])``.
 
 
+## `calphad_kinetics.solidification`
+
+### `class BackDiffusionResult(fs: 'np.ndarray', liquid: 'np.ndarray', interface_solid: 'np.ndarray', z_faces: 'np.ndarray', solid: 'np.ndarray', geometry: 'Geometry') -> None`
+
+Fraction solid, liquid composition and interface solid composition (both over C0) at each step,
+with the solid profile (positions in m, compositions over C0) at the end.
+
+- `mean_solid(self) -> 'float'`: Average composition of the solid over C0 at the end; with no liquid left this is 1 by mass balance.
+
+### `class ScheilResult(temperatures: 'np.ndarray', fraction_solid: 'np.ndarray', liquid_composition: 'np.ndarray', solids: 'list', components: 'tuple') -> None`
+
+Temperatures (K), fraction solid, liquid mole fractions (n_T, n) and the solid formed at each step:
+for every temperature step the phases that formed with their amounts (fraction of the alloy) and
+mole fractions.
+
+- `increments(self) -> 'tuple[np.ndarray, np.ndarray]'`: (fraction-solid edges, independent mole fractions of the solid laid down in each step), the input
+- `solid_phase_fractions(self) -> 'dict'`: Amount of each solid phase formed over the whole path, as a fraction of the alloy.
+
+### `def kobayashi(k: 'float', gamma: 'float', fs, x=None, terms: 'int' = 10000) -> 'np.ndarray'`
+
+Exact solution of the Brody-Flemings model over C0 (Kobayashi eqs. 37-40): the interface solid
+composition at fraction solid ``fs``, or with ``x`` (x* = x / X, 0 at the dendrite spine) the profile
+in the solid. The series converges for 0 < k < 2 and gamma > 0; ``terms`` must grow as f_s
+approaches 1 with k small, where the terms fall off slowly.
+
+### `def scheil_gulliver(db: 'Database', components: 'Sequence[str]', phases: 'Sequence[str]', composition: 'Sequence[float]', start: 'float', step: 'float' = 1.0, liquid: 'str' = 'LIQUID', stop_fraction: 'float' = 0.0001, t_min: 'float' = 300.0) -> 'ScheilResult'`
+
+Scheil-Gulliver solidification by the algorithm Bocklund et al., Materialia 11 (2020) 100689, give
+(section 2): from ``start`` (K, above the liquidus) the remaining liquid is equilibrated at each
+temperature, the solid that forms is set aside and never changes again, the liquid's fraction is
+reduced by the solid's, and its composition becomes that of the equilibrium liquid, until less than
+``stop_fraction`` liquid is left. ``composition`` is the n-1 independent mole fractions in the order of
+``components`` (the last element dependent).
+
+### `def segregation_index(x) -> 'np.ndarray'`
+
+Residual segregation (max - min) of each profile in ``x`` (times, cells, ...) relative to the first,
+the index homogenization treatments are judged by.
+
+### `def segregation_profile(fs_edges, solid_composition, length: 'float', n_cells: 'int', geometry: 'Geometry' = 'planar') -> 'tuple[np.ndarray, np.ndarray]'`
+
+Face positions (m) and cell-averaged solid composition (n_cells, m) across a volume element of size
+``length`` from the solid laid down in increments: increment i, of composition ``solid_composition[i]``
+(m independent fractions), filled the fraction solid from ``fs_edges[i]`` to ``fs_edges[i + 1]``,
+counted by volume. The solid grows from r = 0, so fraction f sits at r = length f^(1/(p+1)). Solid not
+yet formed when the record ends (fs_edges[-1] < 1) takes the last increment's composition. This turns
+a Scheil or back-diffusion record into the starting profile of a homogenization anneal.
+
+### `def solve_back_diffusion(k: 'float', diffusivity: 'float', length: 'float', solidification_time: 'float', n_cells: 'int' = 200, steps: 'int' = 2000, geometry: 'Geometry' = 'planar', fraction_solid: 'Callable[[float], float] | None' = None, fs_start: 'float' = 0.0001, fs_end: 'float' = 1.0) -> 'BackDiffusionResult'`
+
+The Brody-Flemings model solved numerically: a solid grows from the dendrite spine (r = 0) across
+a volume element of size ``length`` (half the arm spacing) while the liquid stays uniform; the
+interface solid holds k C_L, the solid diffuses with constant D, and nothing leaves the element.
+
+The solid grows to ``fraction_solid(t / solidification_time)`` (default sqrt, the parabolic growth
+Kobayashi assumes, his eq. 14); in a cylinder or sphere the fraction is that of the volume. Each step
+the solid is solved on its stretched grid by the package's moving-grid scheme, and the liquid
+composition from the element's solute balance. The solid's response is linear in the held interface
+value, so two solves give the exact C_L of the step. The run starts at ``fs_start`` with the solid at
+k C0 (the Scheil and exact solutions agree there to order f_s). Compositions are over C0.
+
 ## `calphad_kinetics.solver`
 
 ### `class Boundary(kind: "Literal['no_flux', 'fixed']", composition: 'np.ndarray | Callable | None' = None, held: 'tuple[int, ...] | None' = None) -> None`

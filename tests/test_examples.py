@@ -14,6 +14,7 @@ import film_reaction  # noqa: E402
 import ni_sn_kirkendall  # noqa: E402
 import oxygen_uptake  # noqa: E402
 import precipitation_table1  # noqa: E402
+import solidify_and_homogenize  # noqa: E402
 import surface_depletion  # noqa: E402
 import thin_film_anneal  # noqa: E402
 import two_phase_couple  # noqa: E402
@@ -116,3 +117,19 @@ def test_chromia_scale_gives_the_papers_thicknesses():
     out = chromia_scale.run(coarse=True)
     for label, paper in (("625 C, 100 nm grains", 340e-9), ("700 C, 200 nm grains", 660e-9)):
         assert out[label].thickness(86400.0) == pytest.approx(paper, rel=0.02)
+
+
+def test_solidify_and_homogenize():
+    """The cast profile rises from the first solid at the axis to the last at the arm edge, the anneal keeps
+    every element (cylinder inventory), and the Cr segregation index falls throughout."""
+    from calphad_kinetics.solidification import segregation_index
+
+    out = solidify_and_homogenize.run(coarse=True)
+    res, scheil = out["anneal"], out["scheil"]
+    edges, solid = scheil.increments()
+    first = solid[np.argmax(np.diff(edges) > 1e-6)]
+    assert res.x[0, 0, 0] == pytest.approx(first[0], rel=0.01)
+    assert res.x[0, -1, 0] > res.x[0, 0, 0] and res.x[0, -1, 1] > res.x[0, 0, 1]
+    inv = res.inventory()
+    assert np.max(np.abs(inv - inv[0])) < 1e-10 * np.max(inv[0])
+    assert np.all(np.diff(segregation_index(res.x[:, :, 1])) < 0)

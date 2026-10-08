@@ -73,6 +73,11 @@ Loo's eqs. 25-27, checked against an independent derivation and his Figs.
 2.20-2.21. Interface-reaction control (Dybkov, cited by van Loo) and first-phase
 selection by nucleation are not modelled.
 
+Microsegregation: done (solidification module; Kobayashi 1988 exact solution,
+Bocklund et al. 2020 Scheil-Gulliver). Open: back-diffusion with CALPHAD tie-lines
+and several elements (the DICTRA solidification case of Lippard et al. 1998, whose
+AerMet100 data need commercial databases), and measured homogenization data.
+
 Cylindrical and spherical geometry: done for solve_planar and solve_layers
 (Zener 1949 eq. 12 with lambda = 2, 3; series solutions). Not yet in the
 homogenization and reaction-layer solvers.
