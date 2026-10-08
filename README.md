@@ -68,6 +68,11 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
 - **Precipitation**: classical nucleation, growth and coarsening on a size-class
   distribution (Perez, Dumont and Acevedo-Reyes 2008, with its 2009 corrigendum),
   for precipitates of fixed composition in a binary matrix.
+- **Multicomponent precipitation** with driving forces and nucleus compositions from
+  the full CALPHAD Gibbs energies (Svoboda, Fischer, Fratzl and Kozeschnik 2004):
+  classes that keep their nucleation composition, ordered precipitates such as
+  gamma', checked against the LSW limit and against atom-probe kinetics of gamma'
+  in Ni-Al-Cr (Sudbrack et al. 2006).
 
 Three published mobility databases ship with the package:
 `jonsson1995_bcc_crfeni()` (bcc Cr-Fe-Ni, Jonsson 1995), `campbell2002_fcc_ni()`

@@ -391,6 +391,55 @@ uniform grids over [0, interface] and [interface, length]; a binary may pass
 of :func:`solve_planar`, for example ``lambda x: alpha.interdiffusion_matrix(x, T)``.
 ``left``/``right`` are the conditions at z = 0 and z = length.
 
+## `calphad_kinetics.multicomponent_precipitation`
+
+### `class MulticomponentResult(times: 'np.ndarray', mean_radius: 'np.ndarray', number_density: 'np.ndarray', volume_fraction: 'np.ndarray', matrix_composition: 'np.ndarray', precipitate_composition: 'np.ndarray', classes: 'list', steps: 'int') -> None`
+
+Saved states: times (s), mean radius (m), number density (m^-3), precipitate volume
+fraction, matrix mole fractions (t, n), mean precipitate mole fractions (t, n, volume-weighted),
+and the class radii, densities and compositions at each saved time.
+
+
+### `class NucleationSettings(gamma: 'float', molar_volume: 'float', lattice_parameter: 'float', sites: 'float | None' = None) -> None`
+
+Interfacial energy ``gamma`` (J/m^2), molar volume ``molar_volume`` (m^3 per mole of atoms,
+both phases), lattice parameter (m) of the attachment rate eq. (46), and nucleation sites per
+m^3 (default N_A / molar_volume, every lattice site, homogeneous nucleation).
+
+
+### `class PrecipitateThermo(db: 'Database', phase: 'str', components: 'Sequence[str]', composition: 'Sequence[float] | None' = None)`
+
+Gibbs energy of the precipitate phase from pycalphad, with its internal degrees of freedom
+(ordering, sublattice occupancy) at equilibrium for each composition.
+
+``components`` are the elements in the matrix's order, dependent element last.
+A ``composition`` fixes the precipitate's mole fractions (a line compound or a
+chosen stoichiometry); without it nuclei take the composition of largest driving force.
+
+- `gm(self, x: 'Sequence[float]', T: 'float') -> 'float'`: Molar Gibbs energy (J per mole of atoms) at mole fractions ``x``.
+- `nucleus(self, mu_matrix: 'np.ndarray', T: 'float') -> 'tuple[np.ndarray, float]'`: (composition, molar driving force in J/mol) of the precipitate with the largest driving force
+
+### `def solve_multicomponent_precipitation(matrix: 'SolutionPhase', precipitate: 'PrecipitateThermo', alloy: 'Sequence[float]', T: 'float', t_end: 'float', settings: 'NucleationSettings', save_times: 'Sequence[float]', t_start: 'float' = 0.001, max_radius_change: 'float' = 0.02, max_matrix_change: 'float' = 0.0002, max_classes: 'int' = 400, min_classes: 'int' = 100, smallest_radius: 'float' = 1e-10, nucleus_update: 'float' = 0.001, initial: 'dict | None' = None) -> 'MulticomponentResult'`
+
+Isothermal precipitation from a supersaturated matrix of mole fractions ``alloy``.
+
+Steps are explicit, limited so no class radius changes by more than
+``max_radius_change`` (relative) and no matrix fraction by more than
+``max_matrix_change``, and growing by at most 20 % from step to step. Classes
+that shrink below ``smallest_radius`` dissolve, their solute returning to the
+matrix through the mass balance. Above ``max_classes`` the two classes closest in
+radius are merged, conserving number, volume and solute; the merged class's Gibbs
+energy is the volume-weighted mean of the two, which keeps the total Gibbs energy
+and hence the mean driving force exact. Below ``min_classes`` the class holding
+the most precipitates splits into two of equal number, 1 % apart in radius with
+the volume kept, as part II (p. 162) splits classes to hold their count, since a
+handful of classes cannot carry a coarsening distribution. The nucleus composition is redone
+when the matrix has moved by ``nucleus_update`` in mole fraction since it was
+last found; between updates its driving force follows the matrix potentials,
+which is exact to first order because the nucleus maximises it. ``initial``
+holds precipitates present at ``t_start`` as arrays "number" (m^-3), "radius" (m)
+and "composition" (k, n).
+
 ## `calphad_kinetics.ordered`
 
 ### `class B2Phase(db: 'Database', phase_name: 'str', elements, mobility_db: 'Database', disordered_phase: 'str', ordering: 'Mapping[tuple[str, str, str], float]', dependent: 'str | None' = None)`

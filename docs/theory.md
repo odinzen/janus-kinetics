@@ -342,3 +342,45 @@ exchange particles through upwind fluxes at their edges (eq. 24), solved
 implicitly. Steps grow by 10% and are halved when R* changes by more than 1%,
 the rule of section 3.4.1 (given there for the Lagrange-like approach); the same
 limit on X and on the mean radius is this package's addition.
+
+## Multicomponent precipitation
+
+Svoboda, Fischer, Fratzl and Kozeschnik (2004, part I) derive the growth of a
+precipitate in a multicomponent matrix from the thermodynamic extremum principle.
+For a precipitate of fixed composition, infinite interface mobility and one molar
+volume Omega for both phases, their eq. 45 reads
+
+    drho/dt = (F - 2 gamma / rho) / (R T rho) [ sum_i (c_ki - c_0i)^2 / (c_0i D_0i) ]^-1
+    F = (sum_i x_ki mu_0i - G_k) / Omega                                    (eq. 37)
+
+with D_0i = RT M_i the tracer diffusivity of i in the matrix and G_k the molar
+Gibbs energy of the precipitate at its composition, from pycalphad with its internal
+degrees of freedom (ordering) at equilibrium. Nuclei take the composition of largest
+driving force, the parallel tangent to the matrix: the precipitate is equilibrated at
+MU_i = mu_0i + d for all but the last element and d is solved so the last potential
+also shifts by d; the driving force is then -d per mole. The nucleation rate is part
+I's eqs. 40-41 and 46-48, with beta* = 4 pi rho*^2 / (a^4 Omega) times the inverse of
+the same sum and tau = 1 / (2 beta* Z^2), and Perez et al.'s corrected Zeldovich factor.
+Each step's nuclei form a class at 1.05 rho* (part II, p. 158); classes are merged
+when there are too many (number, volume, solute and Gibbs energy kept) and the most
+populated class is split, 1 % apart in radius, when there are too few (part II
+splits classes to keep their count). The split widens the distribution: against
+the LSW rate the coarsening comes out 2.3, 1.2 and 1.0 times as fast for 20, 5 and
+1 % splits.
+
+Checks. For a dilute binary the growth law reduces to the LSW law with Perez et
+al.'s eq. 11 rate constant, which the class model reproduces within 7 % over two
+decades of time, with the LSW size distribution's 99th percentile at 1.33 <R>. For
+Ni-5.2Al-14.2Cr at.% at 873 K with pycalphad's alcrni.tdb (Dupin et al. 2001, its
+L1_2 checked against the paper's relations 12-28) the gamma/gamma' equilibrium and the
+critical nucleus (16.37 Al, 8.25 Cr at.%) agree with Thermo-Calc on the same
+database (Sudbrack et al. 2007, Table 3) within 0.1 at.%. Against the atom-probe
+kinetics of Sudbrack et al. (2006), with Campbell's mobilities and gamma = 22.5 mJ/m^2
+from the measured coarsening and nothing adjusted, the state at 4 h matches (5.4 %
+against 5.2 %, 3.0e24 against 3.2e24 m^-3, 1.57 against 1.27 nm). Coarsening is
+4.5 times faster than measured, close to the paper's own estimate with these
+mobilities, which they attribute to diffusion through the gamma' as well.
+Nucleation comes too early: classical theory at a 5 kT barrier gives 2.6e25 m^-3 s^-1
+against the measured 5.9e21, a comparison the authors themselves warn against. The
+final volume fraction is bounded by Dupin's 11.8 % rather than the measured 15.6 %.
+

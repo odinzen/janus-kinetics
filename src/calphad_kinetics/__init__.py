@@ -22,6 +22,12 @@ from .homogenization import (
 from .datasets import campbell2002_fcc_ni, helander1999_bcc_alni, jonsson1995_bcc_crfeni, kjellqvist2008_cro
 from .errors import ConvergenceError, MissingParameterError, UnstableCompositionError, UnsupportedPhaseError
 from .mobility import MobilityModel
+from .multicomponent_precipitation import (
+    MulticomponentResult,
+    NucleationSettings,
+    PrecipitateThermo,
+    solve_multicomponent_precipitation,
+)
 from .ordered import B2Phase, ordering_energy
 from .oxide_scale import ScaleGrowth, metal_oxide_potential, parabolic_scale_growth
 from .oxides import AnionPath, GrainBoundaryMobility, JumpPath, OxideCationDiffusion
@@ -74,10 +80,13 @@ __all__ = [
     "MissingParameterError",
     "MobilityModel",
     "MovingBoundaryResult",
+    "MulticomponentResult",
+    "NucleationSettings",
     "OnDemandEquilibriumTable",
     "OxideCationDiffusion",
     "ParabolicGrowth",
     "PhaseDissolvedError",
+    "PrecipitateThermo",
     "PrecipitationResult",
     "R",
     "ReactionResult",
@@ -119,6 +128,7 @@ __all__ = [
     "solve_kwn",
     "solve_layers",
     "solve_moving_boundary",
+    "solve_multicomponent_precipitation",
     "solve_planar",
     "solve_reaction_layers",
     "thermodynamic_factor",
