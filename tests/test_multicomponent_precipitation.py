@@ -340,7 +340,7 @@ def test_mass_balance_holds_at_every_saved_time():
 
 def test_kinetics_at_4_h_against_table_1():
     """Table 1 at 4 h: <R> = 1.27 nm, N_v = 3.2e24 m^-3, phi = 5.2 %. With gamma from coarsening (22.5 mJ/m^2)
-    and no adjustment, the model gives 1.57 nm, 3.0e24 m^-3 and 5.4 %."""
+    and no adjustment, the model gives 1.54 nm, 3.2e24 m^-3 and 5.3 %."""
     res = _sudbrack_run()
     i = list(HOURS).index(4)
     assert res.volume_fraction[i] == pytest.approx(0.052, rel=0.10)
@@ -351,8 +351,10 @@ def test_kinetics_at_4_h_against_table_1():
 def test_coarsening_rate_against_the_papers_own_model():
     """Sudbrack et al. (2007) p. 126: Campbell mobilities give K(phi) = 1.29e-30 m^3/s with their f(phi) = 2.3,
     so 5.6e-31 for isolated particles, 15 times the measured K = 8.8e-32 (they attribute the gap to diffusion
-    through the gamma' as well). Between 256 and 1024 h the model here gives 4.0e-31: within a factor of 1.5 of
-    the paper's model and 4.5 times faster than the measurement."""
+    through the gamma' as well). Between 256 and 1024 h the model here gives 3.9e-31: within a factor of 1.5 of
+    the paper's model and 4.5 times faster than the measurement. A line through <R>^3 from 64 to 1024 h gives
+    4.4-5.0 times the measurement whether the step limits are 1, 4 or 8 times tighter (checked when written;
+    too slow to repeat here)."""
     res = _sudbrack_run()
     i, j = list(HOURS).index(256), list(HOURS).index(1024)
     k = (res.mean_radius[j] ** 3 - res.mean_radius[i] ** 3) / ((HOURS[j] - HOURS[i]) * 3600)
@@ -512,8 +514,9 @@ def test_evolving_inputs_are_checked():
 def test_second_alloy_shows_the_same_coarsening_gap():
     """Booth-Morrison et al., Acta Mater. 56 (2008) 3422, Table 1 and p. 3432: Ni-7.5Al-8.5Cr at 873 K,
     gamma = 24 mJ/m^2, measured K = 1.84e-31 m^3/s. The model matches <R> at 1 h (1.22 against 1.24 nm) and
-    coarsens 6 times faster than measured between 256 and 1024 h, as for Ni-5.2Al-14.2Cr (4.5 times): the gap
-    follows the mobilities, not the alloy."""
+    coarsens 5-6 times faster than measured, as for Ni-5.2Al-14.2Cr with evolving compositions (5.6-6.5 times,
+    from <R>^3 over 64-1024 h with 1-8 times tighter step limits and 100-800 classes): the gap follows the
+    mobilities, not the alloy."""
     s = NucleationSettings(gamma=0.024, molar_volume=SETTINGS.molar_volume, lattice_parameter=SETTINGS.lattice_parameter)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -523,3 +526,159 @@ def test_second_alloy_shows_the_same_coarsening_gap():
     assert res.mean_radius[i1] == pytest.approx(1.24e-9, rel=0.10)
     k = (res.mean_radius[j] ** 3 - res.mean_radius[i] ** 3) / ((HOURS[j] - HOURS[i]) * 3600)
     assert 4 < k / 1.84e-31 < 8
+
+
+# --- misfit energy (part I eq. 37 and Appendix A) ----------------------------------------------------------
+
+def test_misfit_energy_follows_appendix_a():
+    """Eq. (A.1) lambda0 = eps0^2 E / (1 - nu); with yielding f(S) = 2 S (1 - ln S) - S^2, which the appendix
+    says reaches 1.0 at S = 0.199 and its maximum 1.456 at S = 0.567 (p. 173)."""
+    from calphad_kinetics.multicomponent_precipitation import misfit_energy
+
+    e, nu, eps = 200e9, 0.3, 0.01
+    lam0 = eps**2 * e / (1 - nu)
+    assert misfit_energy(eps, e, nu) == pytest.approx(lam0, rel=1e-14)
+
+    def sigma_for(s):  # yield stress giving a softening factor S, eq. (A.2)
+        return s * e * eps / (1 - nu)
+
+    assert misfit_energy(eps, e, nu, sigma_for(0.199)) / lam0 == pytest.approx(1.0, abs=2e-3)
+    assert misfit_energy(eps, e, nu, sigma_for(0.567)) / lam0 == pytest.approx(1.456, abs=1e-3)
+    s = np.linspace(0.05, 0.99, 400)
+    f = np.array([misfit_energy(eps, e, nu, sigma_for(x)) for x in s]) / lam0
+    assert s[np.argmax(f)] == pytest.approx(0.567, abs=0.005)
+    assert misfit_energy(eps, e, nu, sigma_for(2.0)) == pytest.approx(lam0, rel=1e-14)  # no yielding
+
+
+def test_misfit_lowers_the_driving_force_everywhere():
+    """Eq. (37) F = -lambda - sum c (mu_k - mu_0): the frozen-composition rate with misfit equals eq. (45)
+    with F - lambda, and a misfit above the chemical driving force (5.5e7 J/m^3 for the Ni-Al-Cr alloy)
+    suppresses nucleation."""
+    from calphad_kinetics.multicomponent_precipitation import evolution_rates
+
+    radius, comp, mu_k, x0, mu0, tracer = _class_state()
+    lam = 2e7
+    s = NucleationSettings(SETTINGS.gamma, SETTINGS.molar_volume, SETTINGS.lattice_parameter, misfit=lam)
+    rate, _ = evolution_rates(radius, comp, mu_k, x0, mu0, tracer, np.full(3, 1e-40), s, T)
+    f = (comp @ mu0 - (comp * mu_k).sum(axis=1)) / SETTINGS.molar_volume - lam
+    np.testing.assert_allclose(rate, growth_rates(radius, comp, f, x0, tracer, SETTINGS, T), rtol=1e-9)
+
+    def run(misfit):
+        s = NucleationSettings(SETTINGS.gamma, SETTINGS.molar_volume, SETTINGS.lattice_parameter, misfit=misfit)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return solve_multicomponent_precipitation(_matrix(), _precipitate(), ALLOY, T, 3600.0, s, [3600.0])
+
+    assert run(6e7).volume_fraction[-1] == 0.0
+    assert 0 < run(2e7).number_density[-1] < 0.5 * run(0.0).number_density[-1]
+
+
+def test_misfit_must_not_be_negative():
+    with pytest.raises(ValueError, match="misfit"):
+        NucleationSettings(0.02, 7e-6, 3.5e-10, misfit=-1.0)
+
+
+# --- nucleation on grain boundaries, edges and corners (Clemm and Fisher 1955) ------------------------------
+from calphad_kinetics.multicomponent_precipitation import junction_barrier_factor, junction_factors  # noqa: E402
+
+# Fig. 6 (p. 72): ferrite in austenite, gamma_AA = 850, gamma_AB = 600 erg/cm^2, Delta f_v = -4.35e8 erg/cm^3
+CF_GAA, CF_GAB, CF_DF = 850.0, 600.0, 4.35e8
+CF_FIG6 = {"bulk": 1.913e-8, "boundary": 0.220e-8, "edge": 0.0436e-8, "corner": 0.0096e-8}  # ergs
+
+
+def _cf_barrier(site):
+    a, b, c = junction_factors(site, CF_GAA / (2 * CF_GAB))
+    return 4 / 27 * (b * CF_GAB - a * CF_GAA) ** 3 / (c * c * CF_DF**2)
+
+
+@pytest.mark.parametrize("site", ["bulk", "boundary", "edge"])
+def test_junction_barriers_against_fig_6(site):
+    """W* = (4/27)(b gamma_AB - a gamma_AA)^3 / (c^2 Delta f^2), p. 70, with the paper's a, b, c."""
+    assert _cf_barrier(site) == pytest.approx(CF_FIG6[site], rel=0.005)
+
+
+@pytest.mark.skip(reason="Clemm and Fisher (1955) Fig. 6 gives 0.0096e-8 erg for the four-grain junction; their printed "
+                         "a, b, c give 0.0109e-8 (13 % more). The same coefficients pass every internal check (barrier "
+                         "ratio equal to volume ratio, zero barrier at k = (2/3)^1/2, the sphere at k = 0), so the "
+                         "figure's value is taken as a computing slip. doi 10.1016/0001-6160(55)90014-6")
+def test_corner_barrier_against_fig_6():
+    pass
+
+
+@pytest.mark.parametrize("site", ["boundary", "edge", "corner"])
+def test_junction_coefficients_are_consistent(site):
+    """For caps of one curvature the barrier ratio (b - 2ka)^3 / (36 pi c^2) equals the volume ratio
+    c / (4 pi / 3) at every k, the sphere is recovered at k = 0, and the barrier vanishes at the critical
+    k the paper lists (1, sqrt(3)/2, sqrt(2/3))."""
+    for k in (0.0, 0.2, 0.5, 0.7):
+        a, b, c = junction_factors(site, k)
+        assert junction_barrier_factor(site, k) == pytest.approx(c / (4 * np.pi / 3), rel=1e-9, abs=1e-12)
+    assert junction_barrier_factor(site, 0.0) == pytest.approx(1.0, rel=1e-12)
+    critical = {"boundary": 1.0, "edge": np.sqrt(3) / 2, "corner": np.sqrt(2 / 3)}[site]
+    assert junction_barrier_factor(site, critical * (1 - 1e-6)) < 1e-8
+    with pytest.raises(ValueError, match="no nucleation barrier"):
+        junction_barrier_factor(site, critical)
+
+
+def test_boundary_nucleation_lowers_the_barrier_in_a_run():
+    """Same site density, nuclei on grain boundaries with gamma_gb = gamma (k = 0.5, barrier factor 0.31):
+    the barrier at the start falls from 5.3 kT to 1.7 kT, so more particles form in the first minute."""
+    def run(site, k):
+        s = NucleationSettings(SETTINGS.gamma, SETTINGS.molar_volume, SETTINGS.lattice_parameter, sites=1e22,
+                               site=site, boundary_ratio=k)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return solve_multicomponent_precipitation(_matrix(), _precipitate(), ALLOY, T, 60.0, s, [60.0])
+
+    assert junction_barrier_factor("boundary", 0.5) == pytest.approx(0.3125, rel=1e-12)
+    assert run("boundary", 0.5).number_density[-1] > 2 * run("bulk", 0.0).number_density[-1]
+
+
+# --- temperature schedules ---------------------------------------------------------------------------------
+from calphad_kinetics import TemperatureSchedule  # noqa: E402
+
+
+def _frozen_run(T, t_end, save, **kwargs):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return solve_multicomponent_precipitation(_matrix(), _precipitate(), ALLOY, T, t_end, SETTINGS, save, **kwargs)
+
+
+def test_isothermal_schedule_equals_a_constant_temperature():
+    a = _frozen_run(T, 3600.0, [600.0, 3600.0])
+    b = _frozen_run(TemperatureSchedule.isothermal(T), 3600.0, [600.0, 3600.0])
+    np.testing.assert_allclose(b.mean_radius, a.mean_radius, rtol=1e-12)
+    np.testing.assert_allclose(b.volume_fraction, a.volume_fraction, rtol=1e-12)
+
+
+@pytest.mark.parametrize("T2", [848.0, 893.0])
+def test_temperature_step_matches_two_chained_runs(T2):
+    """873 K for 1 h, then T2 for 1 h, as one schedule (a 1 s ramp) and as two runs, the second started
+    from the classes the first leaves: volume fraction, number and mean radius agree within 2 %. The class
+    Gibbs energies must follow the temperature for this to hold. At 893 K most of the gamma' dissolves
+    (Dupin's equilibrium fraction drops and the small particles fall below the new critical radius)."""
+    first = _frozen_run(T, 3600.0, [3600.0])
+    c = first.classes[-1]
+    second = _frozen_run(T2, 7200.0, [7200.0], t_start=3601.0,
+                         initial={"number": c["number"], "radius": c["radius"], "composition": c["composition"]})
+    sched = _frozen_run(TemperatureSchedule([0.0, 3600.0, 3601.0], [T, T, T2]), 7200.0, [3600.0, 7200.0])
+    assert sched.volume_fraction[-1] == pytest.approx(second.volume_fraction[-1], rel=0.02)
+    assert sched.number_density[-1] == pytest.approx(second.number_density[-1], rel=0.02)
+    assert sched.mean_radius[-1] == pytest.approx(second.mean_radius[-1], rel=0.02)
+    if T2 > T:
+        assert sched.volume_fraction[-1] < 0.7 * first.volume_fraction[-1]
+
+
+
+def test_late_stage_keeps_a_size_distribution():
+    """Late in a run the nucleation rate is astronomically small; nuclei are held back until they would make
+    up a millionth of the population, so no class is empty and the distribution keeps coarsening. Before this,
+    a class of 1e-120 nuclei per step filled the array and merging collapsed the real particles into one class,
+    which stopped coarsening for hundreds of hours."""
+    res = _sudbrack_evolving_run()
+    c = res.classes[-1]
+    assert c["number"].min() / c["number"].sum() > 1e-9
+    assert len(c["radius"]) >= 100
+    r3 = res.mean_radius**3
+    late = HOURS >= 16
+    assert np.all(np.diff(r3[late]) > 0)

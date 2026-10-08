@@ -37,12 +37,14 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 from pycalphad import Database, equilibrium, variables as v
 from scipy.optimize import brentq
 
 from .phase import SolutionPhase
+from .schedule import Temperature, temperature_at
 from .thermo import R
 
 K_B = 1.380649e-23  # J/K
@@ -219,24 +221,106 @@ class PrecipitateThermo:
 @dataclass(frozen=True)
 class NucleationSettings:
     """Interfacial energy ``gamma`` (J/m^2), molar volume ``molar_volume`` (m^3 per mole of atoms,
-    both phases), lattice parameter (m) of the attachment rate eq. (46), and nucleation sites per
-    m^3 (default N_A / molar_volume, every lattice site, homogeneous nucleation)."""
+    both phases), lattice parameter (m) of the attachment rate eq. (46), nucleation sites per
+    m^3 (default N_A / molar_volume, every lattice site, homogeneous nucleation), and the misfit
+    energy lambda (J/m^3) stored per volume of precipitate, which part I eq. (37) subtracts from the
+    chemical driving force (see :func:`misfit_energy`).
+
+    ``site`` places the nuclei on grain boundaries ("boundary"), edges where three grains meet
+    ("edge") or corners where four meet ("corner"), with ``boundary_ratio`` k = gamma_gb / (2 gamma)
+    from the grain boundary energy; the barrier is then the fraction :func:`junction_barrier_factor`
+    of the homogeneous one. ``sites`` should then count the boundary, edge or corner sites per m^3.
+    """
 
     gamma: float
     molar_volume: float
     lattice_parameter: float
     sites: float | None = None
+    misfit: float = 0.0
+    site: Literal["bulk", "boundary", "edge", "corner"] = "bulk"
+    boundary_ratio: float = 0.0
 
     def __post_init__(self):
         if self.gamma <= 0 or self.molar_volume <= 0:
             raise ValueError("interfacial energy and molar volume must be positive")
+        if self.misfit < 0:
+            raise ValueError("the misfit energy cannot be negative")
         if not 1e-11 < self.lattice_parameter < 1e-8:
             raise ValueError(f"lattice parameter {self.lattice_parameter:g} m is not a lattice parameter "
                              "(about 4e-10 m; give it in metres)")
+        junction_barrier_factor(self.site, self.boundary_ratio)  # checks site and k
+
+    @property
+    def barrier_factor(self) -> float:
+        return junction_barrier_factor(self.site, self.boundary_ratio)
 
     @property
     def site_density(self) -> float:
         return N_A / self.molar_volume if self.sites is None else self.sites
+
+
+_CRITICAL_RATIO = {"bulk": np.inf, "boundary": 1.0, "edge": np.sqrt(3) / 2, "corner": np.sqrt(2 / 3)}
+
+
+def junction_factors(site: str, k: float) -> tuple[float, float, float]:
+    """Coefficients (a, b, c) of Clemm and Fisher, Acta Metall. 3 (1955) 70, for a nucleus whose bounding
+    spherical caps have radius of curvature r: it removes a r^2 of matrix grain boundary, creates b r^2
+    of interface and has volume c r^3. k = gamma_AA / (2 gamma_AB) = cos(theta), the dihedral half angle.
+    Two-grain junction (a lens) p. 71; three-grain p. 71-72; four-grain p. 72."""
+    if site == "bulk":
+        return 0.0, 4 * np.pi, 4 * np.pi / 3
+    if site == "boundary":
+        return np.pi * (1 - k * k), 4 * np.pi * (1 - k), 2 * np.pi / 3 * (2 - 3 * k + k**3)
+    if site == "edge":
+        alpha = np.arcsin(1 / (2 * np.sqrt(1 - k * k)))
+        beta = np.arccos(k / np.sqrt(3 * (1 - k * k)))
+        a = 3 * beta * (1 - k * k) - k * np.sqrt(3 - 4 * k * k)
+        b = 12 * (np.pi / 2 - alpha - k * beta)
+        c = 2 * (np.pi - 2 * alpha + k * k / 3 * np.sqrt(3 - 4 * k * k) - beta * k * (3 - k * k))
+        return a, b, c
+    if site == "corner":
+        big_k = 4 / 3 * np.sqrt(1.5 - 2 * k * k) - 2 * k / 3
+        phi = np.arcsin(big_k / (2 * np.sqrt(1 - k * k)))
+        delta = np.arccos(np.clip((np.sqrt(2) - k * np.sqrt(3 - big_k**2)) / (big_k * np.sqrt(1 - k * k)), -1, 1))
+        root = np.sqrt(max(1 - k * k - big_k**2 / 4, 0.0)) - big_k / np.sqrt(8)
+        a = 3 * (2 * phi * (1 - k * k) - big_k * root)
+        b = 24 * (np.pi / 3 - k * phi - delta)
+        c = 2 * (4 * (np.pi / 3 - delta) + k * big_k * root - 2 * k * phi * (3 - k * k))
+        return a, b, c
+    raise ValueError(f"site must be one of {sorted(_CRITICAL_RATIO)}, got {site!r}")
+
+
+def junction_barrier_factor(site: str, k: float) -> float:
+    """Nucleation barrier at a grain junction over the homogeneous one. Clemm and Fisher's
+    W* = (4/27) (b gamma_AB - a gamma_AA)^3 / (c^2 Delta f_v^2) with gamma_AA = 2 k gamma_AB, divided by
+    16 pi gamma_AB^3 / (3 Delta f_v^2), is (b - 2 k a)^3 / (36 pi c^2). The critical radius of curvature
+    is that of the homogeneous nucleus, 2 gamma / F. Beyond the critical k of the paper (1, sqrt(3)/2,
+    sqrt(2/3)) there is no barrier and the phase grows from the junction without nucleating."""
+    if site not in _CRITICAL_RATIO:
+        raise ValueError(f"site must be one of {sorted(_CRITICAL_RATIO)}, got {site!r}")
+    if site == "bulk":
+        return 1.0
+    if not 0 <= k < _CRITICAL_RATIO[site]:
+        raise ValueError(f"k = gamma_gb / (2 gamma) must lie in [0, {_CRITICAL_RATIO[site]:.4f}) for a {site} "
+                         "nucleus; beyond it there is no nucleation barrier (Clemm and Fisher 1955, p. 72)")
+    a, b, c = junction_factors(site, k)
+    return (b - 2 * k * a) ** 3 / (36 * np.pi * c * c)
+
+
+def misfit_energy(strain: float, youngs_modulus: float, poisson: float, yield_stress: float | None = None) -> float:
+    """Energy per volume of precipitate (J/m^3) from a linear misfit strain eps0 (volume misfit 3 eps0),
+    part I Appendix A: elastic lambda0 = eps0^2 E / (1 - nu), eq. (A.1), for equal elastic constants in
+    both phases. With a yield stress the matrix around the particle may yield (Fischer and Oberaigner,
+    as the appendix gives it): S = sigma_f (1 - nu) / (E eps0), eq. (A.2), and lambda = lambda0 f(S) with
+    f(S) = 2 S (1 - ln S) - S^2 for S < 1, eq. (A.3), which exceeds 1 between S = 0.199 and 1 (plastic
+    work added to the stored elastic energy)."""
+    if youngs_modulus <= 0 or not -1 < poisson < 0.5:
+        raise ValueError("need E > 0 and -1 < nu < 0.5")
+    elastic = strain**2 * youngs_modulus / (1 - poisson)
+    if yield_stress is None or strain == 0:
+        return elastic
+    s = yield_stress * (1 - poisson) / (youngs_modulus * abs(strain))
+    return elastic * (2 * s * (1 - np.log(s)) - s**2) if s < 1 else elastic
 
 
 def growth_rates(radius, composition, driving_force, x_matrix, tracer, settings: NucleationSettings, T: float):
@@ -282,7 +366,7 @@ def evolution_rates(radius, composition, mu_precipitate, x_matrix, mu_matrix, tr
     common = 1 / ckd[:, -1] + 5 / c0d[-1]
     a[:, 1:, 1:] = rt * rho[:, None, None] ** 3 / 45 * (diag[:, :, None] * np.eye(n - 1) + common[:, None, None])
     mu_k = np.asarray(mu_precipitate, dtype=float)
-    f = (xk @ np.asarray(mu_matrix) - (xk * mu_k).sum(axis=1)) / omega
+    f = (xk @ np.asarray(mu_matrix) - (xk * mu_k).sum(axis=1)) / omega - settings.misfit
     b = np.empty((k, n))
     b[:, 0] = f - 2 * settings.gamma / rho
     b[:, 1:] = -rho[:, None] / 3 * (mu_k[:, :-1] - mu_matrix[:-1] - (mu_k[:, -1] - mu_matrix[-1])[:, None])
@@ -295,13 +379,19 @@ def evolution_rates(radius, composition, mu_precipitate, x_matrix, mu_matrix, tr
 
 def nucleation(composition, driving_force, x_matrix, tracer, settings: NucleationSettings, T: float, t: float):
     """(rate in m^-3 s^-1, critical radius in m) for nuclei of mole fractions ``composition`` with
-    driving force ``driving_force`` (J/m^3), part I eqs. (40)-(41) and (46)-(48)."""
+    driving force ``driving_force`` (J/m^3), part I eqs. (40)-(41) and (46)-(48).
+
+    On a grain junction (``settings.site``) only the barrier changes, by Clemm and Fisher's factor;
+    the Zeldovich factor and attachment rate keep their homogeneous form, which the paper does not
+    address. The nucleus then enters the class array as a sphere of the critical radius of
+    curvature, which grows by the same capillarity law; its volume is larger than that of the
+    lens or tetrahedron it stands for, a choice of this package."""
     if driving_force <= 0 or t <= 0:
         return 0.0, np.inf
     kt = K_B * T
     g, omega = settings.gamma, settings.molar_volume
     rho = 2 * g / driving_force
-    barrier = 16 * np.pi * g**3 / (3 * driving_force**2)
+    barrier = 16 * np.pi * g**3 / (3 * driving_force**2) * settings.barrier_factor
     resistance = (((np.asarray(composition) - x_matrix) ** 2) / (x_matrix * tracer)).sum() / omega
     beta = 4 * np.pi * rho**2 / (settings.lattice_parameter**4 * omega) / resistance
     zeldovich = omega / N_A / (2 * np.pi * rho**2) * np.sqrt(g / kt)
@@ -329,11 +419,12 @@ def solve_multicomponent_precipitation(
     matrix: SolutionPhase,
     precipitate: PrecipitateThermo,
     alloy: Sequence[float],
-    T: float,
+    T: Temperature,
     t_end: float,
     settings: NucleationSettings,
     save_times: Sequence[float],
     t_start: float = 1e-3,
+    max_temperature_change: float = 1.0,
     max_radius_change: float = 0.02,
     max_matrix_change: float = 2e-4,
     max_composition_change: float = 1e-3,
@@ -341,10 +432,16 @@ def solve_multicomponent_precipitation(
     min_classes: int = 100,
     smallest_radius: float = 1e-10,
     nucleus_update: float = 1e-3,
+    min_class_number: float = 1e-6,
     initial: dict | None = None,
     precipitate_tracer: Sequence[float] | None = None,
 ) -> MulticomponentResult:
-    """Isothermal precipitation from a supersaturated matrix of mole fractions ``alloy``.
+    """Precipitation from a supersaturated matrix of mole fractions ``alloy`` at temperature ``T``, a
+    constant or a :class:`TemperatureSchedule` (quench and age, ramps, multi-step treatments).
+    Along a schedule the steps are also limited to ``max_temperature_change`` (K), and the
+    Gibbs energy of every class is recomputed at each new temperature (by the
+    :class:`PhaseMinimizer` for a precipitate of variable composition, which must then be
+    vacancy-free), as is the nucleus.
 
     Without ``precipitate_tracer`` each class keeps the composition it nucleated with and
     grows by eq. (45). With it (tracer diffusivities of each element in the precipitate,
@@ -368,8 +465,10 @@ def solve_multicomponent_precipitation(
     distribution. The nucleus composition is redone when the matrix has moved by
     ``nucleus_update`` in mole fraction since it was last found; between updates its
     driving force follows the matrix potentials, which is exact to first order because
-    the nucleus maximises it. ``initial`` holds precipitates present at ``t_start`` as
-    arrays "number" (m^-3), "radius" (m) and "composition" (k, n).
+    the nucleus maximises it. Nuclei open a new class only once more than
+    ``min_class_number`` times the precipitates present (and at least one per m^3) have
+    formed; until then they are held back. ``initial`` holds precipitates present at
+    ``t_start`` as arrays "number" (m^-3), "radius" (m) and "composition" (k, n).
     """
     alloy = np.asarray(alloy, dtype=float)
     n_el = alloy.size
@@ -384,13 +483,17 @@ def solve_multicomponent_precipitation(
     if not 0 < min_classes <= max_classes // 2:
         raise ValueError("need 0 < min_classes <= max_classes / 2, or splitting and merging would fight")
     evolving = precipitate_tracer is not None
+    varying = callable(T)
+    schedule = T  # T is reassigned to the current temperature each step
+    temp = (lambda t: temperature_at(schedule, t))
+    if varying or evolving:
+        minimizer = precipitate.minimizer if precipitate.fixed is None else None
     if evolving:
         precipitate_tracer = np.asarray(precipitate_tracer, dtype=float)
         if precipitate_tracer.shape != (n_el,) or np.any(precipitate_tracer <= 0):
             raise ValueError("precipitate_tracer needs one positive diffusivity per element")
         if precipitate.fixed is not None:
             raise ValueError("a precipitate of fixed composition cannot evolve; leave out precipitate_tracer")
-        minimizer = precipitate.minimizer
 
     cls = {"number": np.zeros(0), "radius": np.zeros(0), "comp": np.zeros((0, n_el)), "gibbs": np.zeros(0)}
     if initial is not None:
@@ -399,11 +502,14 @@ def solve_multicomponent_precipitation(
         cls["comp"] = np.atleast_2d(np.asarray(initial["composition"], dtype=float))
         if not cls["number"].shape == cls["radius"].shape == cls["comp"].shape[:1] or cls["comp"].shape[1] != n_el:
             raise ValueError("initial needs one number, radius and composition row per class")
-        cls["gibbs"] = np.array([precipitate.gm(x, T) for x in cls["comp"]])
-    if evolving:
-        cls["sites"] = np.array([precipitate.site_fractions(x, T) for x in cls["comp"]]).reshape(
+        cls["gibbs"] = np.array([precipitate.gm(x, temp(t_start)) for x in cls["comp"]])
+    track_sites = (evolving or varying) and precipitate.fixed is None
+    if track_sites:
+        cls["sites"] = np.array([precipitate.site_fractions(x, temp(t_start)) for x in cls["comp"]]).reshape(
             len(cls["number"]), len(minimizer.y_symbols))
-    nucleus_x = nucleus_g = nucleus_at = nucleus_y = None
+    nucleus_x = nucleus_g = nucleus_at = nucleus_y = nucleus_t = None
+    pending = 0.0  # nuclei formed but not yet numerous enough for a class of their own
+    gibbs_t = temp(t_start)
     t, dt = t_start, t_start
     out = {k: [] for k in ("t", "r", "n", "phi", "x0", "xp", "classes")}
     steps = 0
@@ -415,19 +521,27 @@ def solve_multicomponent_precipitation(
         return phi, (alloy - vol @ c["comp"]) / (1 - phi), vol
 
     while next_save < save.size:
+        T = temp(t)
         phi, x0, vol = matrix_state(cls)
         if np.any(x0 <= 0):
             raise ValueError("the precipitates have used up an element of the matrix; reduce the step limits")
         mu0 = np.asarray(matrix.chemical_potentials(x0, T), dtype=float)
         tracer = R * T * np.asarray(matrix.mobility(x0, T), dtype=float)
 
-        if nucleus_at is None or np.abs(x0 - nucleus_at).max() > nucleus_update:
+        if nucleus_at is None or np.abs(x0 - nucleus_at).max() > nucleus_update or abs(T - nucleus_t) > 0.5:
             nucleus_x, _ = precipitate.nucleus(mu0, T)
             nucleus_g = precipitate.gm(nucleus_x, T)
-            nucleus_at = x0.copy()
-            if evolving:
+            nucleus_at, nucleus_t = x0.copy(), T
+            if track_sites:
                 nucleus_y = precipitate.site_fractions(nucleus_x, T)
-        f_nuc = (nucleus_x @ mu0 - nucleus_g) / omega
+        if varying and not evolving and cls["radius"].size and T != gibbs_t:
+            # a class keeps its composition, but its Gibbs energy follows the temperature
+            if precipitate.fixed is not None:
+                cls["gibbs"] = np.full(cls["radius"].size, precipitate.gm(precipitate.fixed, T))
+            else:
+                cls["sites"], cls["gibbs"], _ = minimizer.solve(cls["comp"], cls["sites"], T)
+        gibbs_t = T
+        f_nuc = (nucleus_x @ mu0 - nucleus_g) / omega - settings.misfit
 
         radius, comp = cls["radius"], cls["comp"]
         dcomp = np.zeros_like(comp)
@@ -435,7 +549,8 @@ def solve_multicomponent_precipitation(
             cls["sites"], cls["gibbs"], mu_k = minimizer.solve(comp, cls["sites"], T)
             rate, dcomp = evolution_rates(radius, comp, mu_k, x0, mu0, tracer, precipitate_tracer, settings, T)
         elif radius.size:
-            rate = growth_rates(radius, comp, (comp @ mu0 - cls["gibbs"]) / omega, x0, tracer, settings, T)
+            rate = growth_rates(radius, comp, (comp @ mu0 - cls["gibbs"]) / omega - settings.misfit, x0, tracer,
+                                settings, T)
         else:
             rate = np.zeros(0)
         j, rho_star = nucleation(nucleus_x, f_nuc, x0, tracer, settings, T, t)
@@ -443,11 +558,16 @@ def solve_multicomponent_precipitation(
         # step size from the growing classes and the matrix depletion they cause
         dt_new = 1.2 * dt
         number = cls["number"]
-        # a shrinking class whose whole solute content is within the matrix step limit may
-        # dissolve inside a step; following it to the end would cost steps without accuracy,
-        # since its rate diverges as it vanishes
+        # shrinking classes whose solute content together stays within the matrix step limit
+        # may dissolve inside a step; following each to the end would cost steps without
+        # accuracy, since its rate diverges as it vanishes. The budget is shared, or a whole
+        # population shrinking at once (on heating) would vanish in one step.
         content = number * 4 * np.pi / 3 * radius**3 * np.abs(comp - x0).max(axis=-1) if radius.size else radius
-        limiting = (radius > 2 * smallest_radius) & ~((rate < 0) & (content < max_matrix_change))
+        free = np.zeros(radius.size, dtype=bool)
+        shrinking = np.flatnonzero(rate < 0)
+        order = shrinking[np.argsort(content[shrinking])]
+        free[order[np.cumsum(content[order]) < max_matrix_change]] = True
+        limiting = (radius > 2 * smallest_radius) & ~free
         if np.any(limiting):
             dt_new = min(dt_new, max_radius_change
                          * np.min(radius[limiting] / np.maximum(np.abs(rate[limiting]), 1e-300)))
@@ -464,15 +584,25 @@ def solve_multicomponent_precipitation(
             dt_new = min(dt_new, max_matrix_change / max(new_vol, 1e-300))
         dt = min(dt_new, save[next_save] - t) if save[next_save] > t else dt_new
         dt = max(dt, 1e-12)
+        if varying:
+            for _ in range(60):
+                if abs(temp(t + dt) - T) <= max_temperature_change:
+                    break
+                dt *= 0.5
 
         cls["radius"] = radius + rate * dt
         if evolving and radius.size:
             cls["comp"] = np.clip(comp + dcomp * dt, 1e-12, None)
             cls["comp"] /= cls["comp"].sum(axis=1, keepdims=True)
         cls = {key: val[cls["radius"] > smallest_radius] for key, val in cls.items()}
-        if j * dt > 0 and np.isfinite(rho_star):
-            new = {"number": j * dt, "radius": 1.05 * rho_star, "comp": nucleus_x, "gibbs": nucleus_g}
-            if evolving:
+        pending += j * dt if np.isfinite(rho_star) else 0.0
+        # Late in a run the nucleation rate is astronomically small but not zero; a class for every
+        # step's 1e-100 nuclei would fill the array with empty classes, whose merging then collapses
+        # the real size distribution into one class that can no longer coarsen.
+        if np.isfinite(rho_star) and pending > max(min_class_number * cls["number"].sum(), 1.0):
+            new = {"number": pending, "radius": 1.05 * rho_star, "comp": nucleus_x, "gibbs": nucleus_g}
+            pending = 0.0
+            if track_sites:
                 new["sites"] = nucleus_y
             cls = {key: np.concatenate([val, np.atleast_1d(new[key])[None] if val.ndim == 2 else [new[key]]])
                    for key, val in cls.items()}

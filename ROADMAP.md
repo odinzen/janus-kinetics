@@ -108,10 +108,11 @@ Left for later, each needing a source to be opened first:
 - driving force and multicomponent growth from the full CALPHAD Gibbs energies:
   done (multicomponent_precipitation, Svoboda et al. 2004 eq. 45, checked against
   LSW, Sudbrack et al. 2006 and Booth-Morrison et al. 2008), with precipitate
-  compositions that evolve after nucleation (part I eqs. 27-39). Open there: several
-  precipitate phases at once, misfit energy, non-isothermal schedules, heterogeneous
-  nucleation (Clemm and Fisher 1955), and the Thermo-Calc curvatures of Sudbrack et
-  al. (2007) Table 4 (ours 10-30 % higher for the same database);
+  compositions that evolve after nucleation (part I eqs. 27-39), misfit energy
+  (Appendix A), nucleation on grain boundaries, edges and corners (Clemm and Fisher
+  1955) and temperature schedules. Open there: several precipitate phases at once,
+  site densities computed from grain size, and the Thermo-Calc curvatures of Sudbrack
+  et al. (2007) Table 4 (ours 10-30 % higher for the same database);
 - heterogeneous nucleation and non-isothermal treatments;
 - the mean-radius approach, whose coarsening fraction (eq. 17) is defined only
   for 0.99 R* < R_mean < 1.01 R* in the paper.

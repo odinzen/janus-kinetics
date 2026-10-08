@@ -402,11 +402,18 @@ fraction, matrix mole fractions (t, n), mean precipitate mole fractions (t, n, v
 and the class radii, densities and compositions at each saved time.
 
 
-### `class NucleationSettings(gamma: 'float', molar_volume: 'float', lattice_parameter: 'float', sites: 'float | None' = None) -> None`
+### `class NucleationSettings(gamma: 'float', molar_volume: 'float', lattice_parameter: 'float', sites: 'float | None' = None, misfit: 'float' = 0.0, site: "Literal['bulk', 'boundary', 'edge', 'corner']" = 'bulk', boundary_ratio: 'float' = 0.0) -> None`
 
 Interfacial energy ``gamma`` (J/m^2), molar volume ``molar_volume`` (m^3 per mole of atoms,
-both phases), lattice parameter (m) of the attachment rate eq. (46), and nucleation sites per
-m^3 (default N_A / molar_volume, every lattice site, homogeneous nucleation).
+both phases), lattice parameter (m) of the attachment rate eq. (46), nucleation sites per
+m^3 (default N_A / molar_volume, every lattice site, homogeneous nucleation), and the misfit
+energy lambda (J/m^3) stored per volume of precipitate, which part I eq. (37) subtracts from the
+chemical driving force (see :func:`misfit_energy`).
+
+``site`` places the nuclei on grain boundaries ("boundary"), edges where three grains meet
+("edge") or corners where four meet ("corner"), with ``boundary_ratio`` k = gamma_gb / (2 gamma)
+from the grain boundary energy; the barrier is then the fraction :func:`junction_barrier_factor`
+of the homogeneous one. ``sites`` should then count the boundary, edge or corner sites per m^3.
 
 
 ### `class PhaseMinimizer(db: 'Database', phase: 'str', components: 'Sequence[str]')`
@@ -436,9 +443,31 @@ chosen stoichiometry); without it nuclei take the composition of largest driving
 - `nucleus(self, mu_matrix: 'np.ndarray', T: 'float') -> 'tuple[np.ndarray, float]'`: (composition, molar driving force in J/mol) of the precipitate with the largest driving force
 - `site_fractions(self, x: 'Sequence[float]', T: 'float') -> 'np.ndarray'`: Equilibrium site fractions of the phase at mole fractions ``x``, in pycalphad's order, from the
 
-### `def solve_multicomponent_precipitation(matrix: 'SolutionPhase', precipitate: 'PrecipitateThermo', alloy: 'Sequence[float]', T: 'float', t_end: 'float', settings: 'NucleationSettings', save_times: 'Sequence[float]', t_start: 'float' = 0.001, max_radius_change: 'float' = 0.02, max_matrix_change: 'float' = 0.0002, max_composition_change: 'float' = 0.001, max_classes: 'int' = 400, min_classes: 'int' = 100, smallest_radius: 'float' = 1e-10, nucleus_update: 'float' = 0.001, initial: 'dict | None' = None, precipitate_tracer: 'Sequence[float] | None' = None) -> 'MulticomponentResult'`
+### `def junction_barrier_factor(site: 'str', k: 'float') -> 'float'`
 
-Isothermal precipitation from a supersaturated matrix of mole fractions ``alloy``.
+Nucleation barrier at a grain junction over the homogeneous one. Clemm and Fisher's
+W* = (4/27) (b gamma_AB - a gamma_AA)^3 / (c^2 Delta f_v^2) with gamma_AA = 2 k gamma_AB, divided by
+16 pi gamma_AB^3 / (3 Delta f_v^2), is (b - 2 k a)^3 / (36 pi c^2). The critical radius of curvature
+is that of the homogeneous nucleus, 2 gamma / F. Beyond the critical k of the paper (1, sqrt(3)/2,
+sqrt(2/3)) there is no barrier and the phase grows from the junction without nucleating.
+
+### `def misfit_energy(strain: 'float', youngs_modulus: 'float', poisson: 'float', yield_stress: 'float | None' = None) -> 'float'`
+
+Energy per volume of precipitate (J/m^3) from a linear misfit strain eps0 (volume misfit 3 eps0),
+part I Appendix A: elastic lambda0 = eps0^2 E / (1 - nu), eq. (A.1), for equal elastic constants in
+both phases. With a yield stress the matrix around the particle may yield (Fischer and Oberaigner,
+as the appendix gives it): S = sigma_f (1 - nu) / (E eps0), eq. (A.2), and lambda = lambda0 f(S) with
+f(S) = 2 S (1 - ln S) - S^2 for S < 1, eq. (A.3), which exceeds 1 between S = 0.199 and 1 (plastic
+work added to the stored elastic energy).
+
+### `def solve_multicomponent_precipitation(matrix: 'SolutionPhase', precipitate: 'PrecipitateThermo', alloy: 'Sequence[float]', T: 'Temperature', t_end: 'float', settings: 'NucleationSettings', save_times: 'Sequence[float]', t_start: 'float' = 0.001, max_temperature_change: 'float' = 1.0, max_radius_change: 'float' = 0.02, max_matrix_change: 'float' = 0.0002, max_composition_change: 'float' = 0.001, max_classes: 'int' = 400, min_classes: 'int' = 100, smallest_radius: 'float' = 1e-10, nucleus_update: 'float' = 0.001, min_class_number: 'float' = 1e-06, initial: 'dict | None' = None, precipitate_tracer: 'Sequence[float] | None' = None) -> 'MulticomponentResult'`
+
+Precipitation from a supersaturated matrix of mole fractions ``alloy`` at temperature ``T``, a
+constant or a :class:`TemperatureSchedule` (quench and age, ramps, multi-step treatments).
+Along a schedule the steps are also limited to ``max_temperature_change`` (K), and the
+Gibbs energy of every class is recomputed at each new temperature (by the
+:class:`PhaseMinimizer` for a precipitate of variable composition, which must then be
+vacancy-free), as is the nucleus.
 
 Without ``precipitate_tracer`` each class keeps the composition it nucleated with and
 grows by eq. (45). With it (tracer diffusivities of each element in the precipitate,
@@ -462,8 +491,10 @@ classes to hold their count, since a handful of classes cannot carry a coarsenin
 distribution. The nucleus composition is redone when the matrix has moved by
 ``nucleus_update`` in mole fraction since it was last found; between updates its
 driving force follows the matrix potentials, which is exact to first order because
-the nucleus maximises it. ``initial`` holds precipitates present at ``t_start`` as
-arrays "number" (m^-3), "radius" (m) and "composition" (k, n).
+the nucleus maximises it. Nuclei open a new class only once more than
+``min_class_number`` times the precipitates present (and at least one per m^3) have
+formed; until then they are held back. ``initial`` holds precipitates present at
+``t_start`` as arrays "number" (m^-3), "radius" (m) and "composition" (k, n).
 
 ## `calphad_kinetics.ordered`
 

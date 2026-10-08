@@ -74,8 +74,10 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
 - **Multicomponent precipitation** with driving forces and nucleus compositions from
   the full CALPHAD Gibbs energies (Svoboda, Fischer, Fratzl and Kozeschnik 2004):
   classes that keep their nucleation composition, ordered precipitates such as
-  gamma', checked against the LSW limit and against atom-probe kinetics of gamma'
-  in Ni-Al-Cr (Sudbrack et al. 2006).
+  gamma', compositions that evolve after nucleation, misfit energy, nucleation on
+  grain boundaries, edges and corners (Clemm and Fisher 1955) and temperature
+  schedules; checked against the LSW limit and against atom-probe kinetics of gamma'
+  in two Ni-Al-Cr alloys (Sudbrack et al. 2006; Booth-Morrison et al. 2008).
 
 Three published mobility databases ship with the package:
 `jonsson1995_bcc_crfeni()` (bcc Cr-Fe-Ni, Jonsson 1995), `campbell2002_fcc_ni()`

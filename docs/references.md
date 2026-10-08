@@ -6,6 +6,7 @@ Every work cited in calphad-kinetics, written from its Crossref record by `tools
 - Ansara I., Dupin N., Lukas H.L., Sundman B. (1997). Thermodynamic assessment of the Al-Ni system. *Journal of Alloys and Compounds* 247, 20-30. https://doi.org/10.1016/s0925-8388(96)02652-7
 - Booth-Morrison C., Weninger J., Sudbrack C.K., Mao Z., Noebe R.D., Seidman D.N. (2008). Effects of solute concentrations on kinetic pathways in Ni-Al-Cr alloys. *Acta Materialia* 56, 3422-3438. https://doi.org/10.1016/j.actamat.2008.03.016
 - Campbell C., Boettinger W., Kattner U. (2002). Development of a diffusion mobility database for Ni-base superalloys. *Acta Materialia* 50, 775-792. https://doi.org/10.1016/s1359-6454(01)00383-4
+- Clemm P., Fisher J. (1955). The influence of grain boundaries on the nucleation of secondary phases. *Acta Metallurgica* 3, 70-73. https://doi.org/10.1016/0001-6160(55)90014-6
 - Dupin N., Ansara I., Sundman B. (2001). Thermodynamic re-assessment of the ternary system Al-Cr-Ni. *Calphad* 25, 279-298. https://doi.org/10.1016/s0364-5916(01)00049-9
 - Fisher J.C. (1951). Calculation of Diffusion Penetration Curves for Surface and Grain Boundary Diffusion. *Journal of Applied Physics* 22, 74-77. https://doi.org/10.1063/1.1699825
 - Hallström S., Halvarsson M., Höglund L., Jonsson T., Ågren J. (2013). High temperature oxidation of chromium: Kinetic modeling and microstructural investigation. *Solid State Ionics* 240, 41-50. https://doi.org/10.1016/j.ssi.2013.02.017

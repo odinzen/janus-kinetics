@@ -393,10 +393,20 @@ L1_2 checked against the paper's relations 12-28) the gamma/gamma' equilibrium a
 critical nucleus (16.37 Al, 8.25 Cr at.%) agree with Thermo-Calc on the same
 database (Sudbrack et al. 2007, Table 3) within 0.1 at.%. Against the atom-probe
 kinetics of Sudbrack et al. (2006), with Campbell's mobilities and gamma = 22.5 mJ/m^2
-from the measured coarsening and nothing adjusted, the state at 4 h matches (5.4 %
-against 5.2 %, 3.0e24 against 3.2e24 m^-3, 1.57 against 1.27 nm). Coarsening is
-4.5 times faster than measured, close to the paper's own estimate with these
-mobilities, which they attribute to diffusion through the gamma' as well.
+from the measured coarsening and nothing adjusted, the state at 4 h matches (5.3 %
+against 5.2 %, 3.2e24 against 3.2e24 m^-3, 1.54 against 1.27 nm). Coarsening, from
+<R>^3 over 64-1024 h, is 4.4-5.0 times faster than measured with step limits 1 to 8
+times tighter, close to the paper's own estimate with these mobilities, which they
+attribute to diffusion through the gamma' as well.
+
+Two class-model details decide whether the late stage is right. Nuclei are held back
+until they make up a millionth of the population: late in a run the nucleation rate
+is tiny but not zero, and a class for each step's 1e-100 nuclei fills the array,
+whose merging then collapses the real particles into one class that stops
+coarsening (it did, for hundreds of hours, before this). And shrinking classes may
+dissolve within a step only while their solute content together, not each alone,
+stays under the matrix step limit; otherwise a population that all shrinks at once,
+as on heating, vanishes in a single step.
 Nucleation comes too early: classical theory at a 5 kT barrier gives 2.6e25 m^-3 s^-1
 against the measured 5.9e21, a comparison the authors themselves warn against. The
 final volume fraction is bounded by Dupin's 11.8 % rather than the measured 15.6 %.
@@ -412,6 +422,37 @@ which matches pycalphad within 0.01 J/mol where gamma' is one phase. In
 Ni-5.2Al-14.2Cr the gamma' then leaves its nucleus composition for Dupin's solvus: Al
 falls as measured, Cr rises where the measurement falls, Dupin putting the gamma' Cr
 at 9.5 % against the measured 6.8 %. A second alloy, Ni-7.5Al-8.5Cr (Booth-Morrison et
-al. 2008), matches <R> at 1 h and coarsens 6 times faster than measured, the same gap
-as the first, so it follows the mobilities rather than the alloy.
+al. 2008), matches <R> at 1 h. With evolving compositions the coarsening rate is
+5.2-5.8 times the measured one for that alloy and 5.6-6.5 times for Ni-5.2Al-14.2Cr,
+over a fourfold range of step limits and 100-800 classes, so the gap follows the
+mobilities rather than the alloy; the paper's own estimate for isolated particles is
+6.4 times.
+
+Misfit. Part I eq. 37 subtracts the misfit energy lambda per volume of precipitate
+from the driving force. Appendix A gives it as lambda0 = eps0^2 E / (1 - nu) for a
+linear misfit eps0, or lambda0 f(S), f = 2 S (1 - ln S) - S^2, when the matrix yields
+with S = sigma_f (1 - nu) / (E eps0); f reaches 1 at S = 0.199 and peaks at 1.456 at
+S = 0.567, both checked.
+
+Grain junctions. Clemm and Fisher (1955) give the coefficients a, b, c of a nucleus
+bounded by spherical caps of radius r at a grain boundary (a lens), an edge where
+three grains meet or a corner where four meet: it removes a r^2 of grain boundary,
+creates b r^2 of interface and holds c r^3. With k = gamma_gb / (2 gamma) the barrier
+is (b - 2 k a)^3 / (36 pi c^2) times the homogeneous one at the same critical radius
+of curvature; it vanishes at k = 1, sqrt(3)/2 and sqrt(2/3). Their Fig. 6 barriers
+for ferrite in austenite are reproduced within 0.5 % for the bulk, boundary and edge,
+but the corner value printed, 0.0096e-8 erg, is 13 % below what their own
+coefficients give (0.0109e-8), although those pass every internal check (the barrier
+ratio equals the volume ratio at every k, and the limits hold); the figure is taken
+as a computing slip. Only the barrier changes; the attachment rate and Zeldovich
+factor keep their homogeneous form, and a junction nucleus enters the classes as a
+sphere of the critical radius of curvature, larger in volume than the lens it stands
+for. These two choices are this package's.
+
+Temperature schedules. The temperature may follow a piecewise-linear schedule; steps
+then also move T by at most 1 K, and the class Gibbs energies and the nucleus are
+recomputed at each temperature. A run along an 873 K to 848 K or 893 K step agrees
+with two chained isothermal runs within 2 % in volume fraction, number and radius; at
+893 K most of the gamma' dissolves, the small particles falling below the new
+critical radius.
 

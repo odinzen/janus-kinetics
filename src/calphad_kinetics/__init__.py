@@ -27,6 +27,8 @@ from .multicomponent_precipitation import (
     NucleationSettings,
     PhaseMinimizer,
     PrecipitateThermo,
+    junction_barrier_factor,
+    misfit_energy,
     solve_multicomponent_precipitation,
 )
 from .ordered import B2Phase, ordering_energy
@@ -114,10 +116,12 @@ __all__ = [
     "intrinsic_from_profile",
     "intrinsic_matrix",
     "jonsson1995_bcc_crfeni",
+    "junction_barrier_factor",
     "kjellqvist2008_cro",
     "lattice_velocity",
     "layer_thickness",
     "metal_oxide_potential",
+    "misfit_energy",
     "nucleation_rate",
     "number_fixed_matrix",
     "ordering_energy",
