@@ -33,6 +33,21 @@ def campbell2002_fcc_ni() -> Database:
     return Database(str(files("calphad_kinetics") / "data" / "campbell2002_fcc_ni_mob.tdb"))
 
 
+def kjellqvist2008_cro() -> Database:
+    """Thermodynamics of Cr-O between Cr and Cr2O3: bcc Cr with interstitial O, corundum
+    (Cr+2,Cr+3)2(Cr+3,Va)1(O-2)3 and O2 gas.
+
+    The Cr-O part of Table 5 of Kjellqvist, Selleby and Sundman, Calphad 32 (2008)
+    577, for :func:`calphad_kinetics.oxides.chromia`. Hallstrom et al. (2013) fitted
+    their Cr2O3 mobilities with Taylor and Dinsdale's Cr-O description, which this
+    one builds on; their oxygen tracer curves (Fig. 7) come out within 0.07 decades
+    with it. The antiferromagnetic and structure factors are not printed and are
+    the usual ones (see the file header); they change nothing above 600 K that
+    matters here.
+    """
+    return Database(str(files("calphad_kinetics") / "data" / "kjellqvist2008_cro.tdb"))
+
+
 # Appendix A (p. 1151) of Helander and Agren, Acta Mater. 47 (1999) 1141: ordering
 # contributions dQ^order_kij (J/mol) to the activation energy of element k in B2
 # Al-Ni, keyed (k, i, j) with i, j in either order; VA marks structural vacancies.

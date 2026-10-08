@@ -24,9 +24,14 @@ passes. Every reference is checked against Crossref by tools/check_references.py
 - Oxides: cation tracer and chemical diffusion done (OxideCationDiffusion,
   Hallstrom et al. 2011). Open: their Fig. 4, which needs Sundman's (1991)
   magnetite; their Figs. 7-8, 0.4-0.7 decades above our hematite with the same
-  Kjellqvist et al. (2008) thermodynamics, cause not found; oxygen diffusion and scale growth
-  (Hallstrom et al., Solid State Ionics 240 (2013) 41); the general sublattice
+  Kjellqvist et al. (2008) thermodynamics, cause not found; the general sublattice
   formalism of Agren (1982).
+- Oxide scale growth: done for a compact scale of one oxide on its metal
+  (parabolic_scale_growth, Cr2O3 after Hallstrom et al., Solid State Ionics 240
+  (2013) 41). Open: their Fig. 6 Cr tracer lines, 0.2-0.75 decades below their own
+  eq. (11), which their thicknesses do follow; the oxygen share of growth, about
+  10 % in their Fig. 11 against 18 % from their eqs. (11)-(12); scales of more than
+  one oxide, alloys, and the start-up transient their numerical runs show.
 - Ordered B2 phases: done for mobilities and diffusivities at a point (B2Phase,
   Helander and Agren 1999). Open: the Al-rich vacancy range (0.3 decades off their
   Fig. 2 with Ansara's own B2 model as well as Dupin's reformulation, so the cause

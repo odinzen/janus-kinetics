@@ -9,6 +9,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parents[1] / "examples"))
 
 import fe_cr_couple  # noqa: E402
+import chromia_scale  # noqa: E402
 import film_reaction  # noqa: E402
 import ni_sn_kirkendall  # noqa: E402
 import oxygen_uptake  # noqa: E402
@@ -107,3 +108,11 @@ def test_film_reaction_ends_with_the_film_inventory_in_ms():
     metal, ms = film_reaction.PHASES[0], film_reaction.PHASES[2]
     expected = film_reaction.FILM * metal.concentrations()[0] / ms.concentrations()[0]
     assert res.thickness["MS"][-1] == pytest.approx(expected, rel=1e-6)
+
+
+def test_chromia_scale_gives_the_papers_thicknesses():
+    """Hallstrom et al. (2013), section 4.5.2: 340 nm at 625 C (100 nm grains) and 660 nm at
+    700 C (200 nm grains) after 24 h; the coarse quadrature still lands within 2 %."""
+    out = chromia_scale.run(coarse=True)
+    for label, paper in (("625 C, 100 nm grains", 340e-9), ("700 C, 200 nm grains", 660e-9)):
+        assert out[label].thickness(86400.0) == pytest.approx(paper, rel=0.02)

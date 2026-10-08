@@ -21,6 +21,10 @@ First version.
 - Conversion of plates, cylinders and spheres through a reaction layer (van Loo
   1990, eqs. 25-27), including anneal schedules and the inverse for k_p.
 - Homogenization model for multiphase diffusion (binaries and ternaries).
+- Parabolic growth of a compact oxide scale from cation and anion transport with
+  grain-boundary averaging, checked against the Cr2O3 thicknesses and figures of
+  Hallstrom et al. (2013), with the Cr-O description of Kjellqvist et al. (2008)
+  shipped as `kjellqvist2008_cro()`.
 - Precipitation by classical nucleation, growth and coarsening on a size-class
   distribution.
 - The fcc Ni-superalloy mobility database of Campbell, Boettinger and Kattner

@@ -64,6 +64,19 @@ temperature but still lowers Fe-rich mobilities above it: against the paper's
 Fig. 5 the Fe tracer diffusivity in pure bcc Fe comes out 0.12 decades too high
 at 1250 C and 0.38 at 960 C, while Cr-rich alloys agree within 0.07.
 
+### `def kjellqvist2008_cro() -> 'Database'`
+
+Thermodynamics of Cr-O between Cr and Cr2O3: bcc Cr with interstitial O, corundum
+(Cr+2,Cr+3)2(Cr+3,Va)1(O-2)3 and O2 gas.
+
+The Cr-O part of Table 5 of Kjellqvist, Selleby and Sundman, Calphad 32 (2008)
+577, for :func:`calphad_kinetics.oxides.chromia`. Hallstrom et al. (2013) fitted
+their Cr2O3 mobilities with Taylor and Dinsdale's Cr-O description, which this
+one builds on; their oxygen tracer curves (Fig. 7) come out within 0.07 decades
+with it. The antiferromagnetic and structure factors are not printed and are
+the usual ones (see the file header); they change nothing above 600 K that
+matters here.
+
 ## `calphad_kinetics.diffusivity`
 
 ### `def intrinsic_matrix(x: 'np.ndarray', mobility: 'np.ndarray', dmu: 'np.ndarray') -> 'np.ndarray'`
@@ -404,7 +417,56 @@ Eq. 12: dQ^ord (J/mol) of ``element`` for site fractions y_a, y_b over ``constit
 ``terms`` maps (k, i, j) to dQ^order_kij, with i and j in either order. The two
 sublattices must have equal site numbers, as in B2, so x_i = (y_i^a + y_i^b) / 2.
 
+## `calphad_kinetics.oxide_scale`
+
+### `class ScaleGrowth(k: 'float', cation: 'float', anion: 'float', mu_inner: 'float', mu_outer: 'float', n_metal_range: 'tuple[float, float]') -> None`
+
+Parabolic constant ``k`` (m^2/s, X^2 = 2 k t) split into its ``cation`` (scale grown at the
+gas side) and ``anion`` (grown at the metal side) parts, with the oxygen potentials (J/mol)
+at the metal/oxide and oxide/gas interfaces and the range of metal per anion site across the scale.
+
+- `inward_fraction` (property): Share of the scale formed at the metal/oxide interface by oxygen transport.
+- `thickness(self, t)`: Scale thickness (m) after time ``t`` (s).
+
+### `def metal_oxide_potential(db: 'Database', T: 'float', metal: 'str', metal_phase: 'str', oxide_phase: 'str', x_anion: 'float', anion: 'str' = 'O') -> 'float'`
+
+Anion chemical potential (J/mol) at which ``metal_phase`` and ``oxide_phase`` coexist,
+from an equilibrium of the two at overall anion fraction ``x_anion`` lying between them.
+
+### `def parabolic_scale_growth(oxide: 'OxideCationDiffusion', T: 'float', p_outer: 'float', metal_phase: 'str | None' = None, p_inner: 'float | None' = None, x_anion: 'float | None' = None, nodes: 'int' = 16) -> 'ScaleGrowth'`
+
+Parabolic rate constant of a scale of ``oxide`` between O2 at ``p_outer`` (bar) and either
+the metal phase ``metal_phase`` (local equilibrium at the metal/oxide interface) or a
+fixed inner pressure ``p_inner``.
+
+The integral over mu_O uses Gauss-Legendre with ``nodes`` points, each an
+equilibrium of the oxide. ``x_anion`` places the metal/oxide equilibrium
+calculation between the two phases; by default it is half the oxide's anion
+fraction. A ``p_inner`` is taken as given: it must lie inside the oxide's
+stability range, since below the metal/oxide equilibrium the integral runs over
+oxide that would not exist and k comes out too large without any error. The
+model assumes a compact, adherent scale with no voids or porosity, a planar
+front, and transport only through the oxide.
+
 ## `calphad_kinetics.oxides`
+
+### `class AnionPath(sublattice: 'int', mobility: 'Callable[[float], float]') -> None`
+
+Anion jumps into anion vacancies, their fraction taken proportional to the metal on
+sublattice ``sublattice``: M_O = mobility(T) y_M (Hallstrom et al. 2013, eq. 6).
+
+
+### `class GrainBoundaryMobility(bulk: 'Arrhenius', grain_size: 'float', alpha: 'float' = 0.5, width: 'float' = 5e-10) -> None`
+
+Effective mobility of a polycrystal, Hallstrom et al. (2013) eq. (8):
+M_eff = f M_gb + (1 - f) M_b with f = width / grain_size.
+
+The boundary mobility keeps the bulk prefactor and takes ``alpha`` times its
+activation energy (their section 4.5.2, with alpha = 1/2 as the rule of thumb
+and a 5 Angstrom boundary width). The average holds when the diffusion fields
+of neighbouring boundaries overlap, a planar front in a scale with grains much
+thinner than the scale; their results are very sensitive to alpha (Fig. 10).
+
 
 ### `class JumpPath(sublattice: 'int', mobility: 'Callable[[float], float]') -> None`
 
@@ -412,18 +474,21 @@ Jumps of the metal into vacancies of sublattice ``sublattice`` (index in the pha
 mobility ``mobility(T)`` in m^2 mol / (J s).
 
 
-### `class OxideCationDiffusion(db: 'Database', phase: 'str', paths: 'Sequence[JumpPath]', metal: 'str' = 'FE', anion: 'str' = 'O')`
+### `class OxideCationDiffusion(db: 'Database', phase: 'str', paths: 'Sequence[JumpPath]', metal: 'str' = 'FE', anion: 'str' = 'O', anion_path: 'AnionPath | None' = None)`
 
-Metal diffusion in an oxide phase by vacancy jumps on the given sublattices.
+Metal diffusion in an oxide phase by vacancy jumps on the given sublattices, and
+optionally anion diffusion through ``anion_path``.
 
 ``metal`` and ``anion`` are element names (e.g. "FE" and "O"); every constituent
 of the metal (its ions) counts as the metal on a sublattice. The oxygen
 potential is given as a partial pressure of O2 relative to the database's gas
 standard state (1 bar for the usual R*T*LN(1E-05*P) term), using its GAS phase.
 
+- `anion_tracer_diffusivity(self, T: 'float', p_o2: 'float') -> 'float'`: D*_O = RT M_O in m^2/s, Hallstrom et al. (2013) eq. (7); zero without an anion path.
 - `chemical_diffusivity(self, T: 'float', p_o2: 'float', step: 'float' = 0.02) -> 'float'`: D_M = (D*_M / RT) n_M dmu_M/dn_M (eq. 9) in m^2/s, the derivative taken along the
 - `oxygen_potential(self, T: 'float', p_o2: 'float') -> 'float'`: mu_O (J/mol) of O2 gas at T and partial pressure p_o2, from the database's GAS phase.
 - `state(self, T: 'float', p_o2: 'float') -> 'dict'`: Site fractions keyed (sublattice, species), metal per anion site n_M, chemical potentials and mole fractions.
+- `state_at_potential(self, T: 'float', mu_o: 'float') -> 'dict'`: As :meth:`state`, at the oxygen chemical potential ``mu_o`` (J/mol) instead of a pressure.
 - `tracer_diffusivity(self, T: 'float', p_o2: 'float') -> 'float'`: D*_M in m^2/s, eq. (7) (eq. (13) for a single path).
 
 ## `calphad_kinetics.particle_reaction`

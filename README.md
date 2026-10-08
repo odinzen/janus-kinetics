@@ -57,6 +57,11 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   and chemical diffusivities of the metal as functions of temperature and oxygen
   pressure, from vacancy jumps on the sublattices of a Calphad oxide description
   (Hallstrom, Hoglund and Agren 2011).
+- **Oxide scale growth**: the parabolic rate constant of a compact scale from Cr and
+  O transport through bulk and grain boundaries of Cr2O3 (Hallstrom et al. 2013),
+  with local equilibrium at the metal/oxide interface. It reproduces their 24 h
+  scale thicknesses at 625 and 700 C within 1.5 % and their late-time growth rates
+  within 8 %.
 - **Homogenization model** for diffusion through multiphase mixtures (Larsson and
   Hoglund 2009), with local equilibrium tabulated up front for binaries and
   ternaries or computed on demand for any number of elements (their section 2.5).
@@ -68,13 +73,15 @@ Three published mobility databases ship with the package:
 `jonsson1995_bcc_crfeni()` (bcc Cr-Fe-Ni, Jonsson 1995), `campbell2002_fcc_ni()`
 (fcc Ni-Al-Co-Cr-Hf-Mo-Re-Ta-Ti-W for Ni-base superalloys, Campbell, Boettinger
 and Kattner 2002) and `helander1999_bcc_alni()` (B2-ordered Al-Ni, Helander and
-Agren 1999), each checked against numbers or figures its paper prints.
+Agren 1999), each checked against numbers or figures its paper prints. A Cr-O
+thermodynamic description, `kjellqvist2008_cro()` (from Kjellqvist, Selleby and
+Sundman 2008), serves the Cr2O3 scale model.
 
 The equations are collected in [docs/theory.md](docs/theory.md), the API in
 [docs/api.md](docs/api.md), and the references, checked against Crossref, in
 [docs/references.md](docs/references.md). What is not done yet is listed in
 [ROADMAP.md](ROADMAP.md); the main gaps are the ferromagnetic mobility factor,
-interstitial elements and ionic (oxide) phases, and multicomponent precipitates.
+scales of several oxides or on alloys, and multicomponent precipitates.
 
 ## Install
 

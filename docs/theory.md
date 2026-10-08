@@ -247,6 +247,44 @@ where Kjellqvist's spinel departs from Sundman's near stoichiometry, and hematit
 comes out 0.4-0.7 decades below the paper's Figs. 7-8 although the thermodynamics
 is the one the paper used, a gap not yet explained.
 
+## Oxide scale growth
+
+Hallstrom et al. (2013) add oxygen to the same scheme for Cr2O3 on Cr. Cr jumps
+into the empty interstitial sublattice of the corundum model
+(Cr+2,Cr+3)2(Cr+3,Va)1(O-2)3 and O into its own vacancies, whose fraction they take
+proportional to the interstitial Cr:
+
+    J_O = -M_O (1 / V_m) dmu_O/dz,    M_O = k(T) y''_Cr,    D*_O = RT M_O      (eqs. 5-7)
+
+In a fine-grained scale each mobility becomes f M_gb + (1 - f) M_b with
+f = delta / grain size, delta = 5 Angstrom, and M_gb the bulk prefactor with alpha
+times the bulk activation energy (eq. 8, alpha = 1/2). The paper solves the moving
+boundaries numerically. For a scale that stays near stoichiometry, each flux is the
+same at every depth, and integrating eq. (3) (through Gibbs-Duhem,
+n_M dmu_M + dmu_O = 0) and eq. (5) across the scale with the interface balances of
+eq. (15) gives X^2 = 2 k t with
+
+    k = (1/n_g) int sum_s (a_s/a_O) y_Va^s y_M^s M_s / n_M dmu_O + int M_O dmu_O
+      = (1/2) int (D*_M / n_g + D*_O) d ln p_O2,
+
+from the metal/oxide equilibrium to the gas, with n_M local and n_g the
+composition of the oxide formed at the gas side. This is Wagner's rate constant,
+and V_m cancels. The neglected storage is of the order of the change of n_M
+across the scale, under 2 % for Cr2O3. The integral is taken by Gauss-Legendre
+over mu_O. With the Cr-O description of Kjellqvist et al. (2008), the paper's eqs.
+(11)-(12), and 1 atm O2, the 24 h thicknesses come out at 345, 282, 658 and 588 nm
+against the paper's 340, 280, 660 and 590 nm (625 C with 100 and 150 nm grains,
+700 C with 200 and 250 nm). That closeness is partly a crossing. Their curves
+(Figs. 8-9) start slower than any parabola and then grow faster, with a common
+offset of about 5400 s, and their late-time k is 5 % above ours at 625 C and 8 %
+above at 700 C. The oxygen tracer lines of their Fig. 7 agree within 0.07 decades.
+Two things do not. Their Cr tracer lines (Fig. 6) lie 0.2-0.75 decades below eq.
+(11) with the same thermodynamics, though their thicknesses follow eq. (11); since
+the defect fraction cancels in D*_Cr / D*_O, their Figs. 6 and 7 are inconsistent
+with eqs. (11)-(12) whatever the thermodynamics. And oxygen carries 18 % of k here
+but about 10 % in their Fig. 11, a ratio fixed by eqs. (11)-(12) alone. The model assumes a compact,
+adherent scale on a planar front, with no voids, cracks or evaporation.
+
 ## Homogenization
 
 Each cell is in local equilibrium at its overall composition, so it has one set

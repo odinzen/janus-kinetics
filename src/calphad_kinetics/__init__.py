@@ -19,11 +19,12 @@ from .homogenization import (
     average_kinetic_factor,
     solve_homogenized,
 )
-from .datasets import campbell2002_fcc_ni, helander1999_bcc_alni, jonsson1995_bcc_crfeni
+from .datasets import campbell2002_fcc_ni, helander1999_bcc_alni, jonsson1995_bcc_crfeni, kjellqvist2008_cro
 from .errors import ConvergenceError, MissingParameterError, UnstableCompositionError, UnsupportedPhaseError
 from .mobility import MobilityModel
 from .ordered import B2Phase, ordering_energy
-from .oxides import JumpPath, OxideCationDiffusion
+from .oxide_scale import ScaleGrowth, metal_oxide_potential, parabolic_scale_growth
+from .oxides import AnionPath, GrainBoundaryMobility, JumpPath, OxideCationDiffusion
 from .moving_boundary import (
     FixedInterface,
     Layer,
@@ -53,6 +54,7 @@ from .thermo import GibbsEnergy, R, dmu_dx, reduced_hessian, thermodynamic_facto
 __version__ = "0.1.0"
 
 __all__ = [
+    "AnionPath",
     "B2Phase",
     "Boundary",
     "ConvergenceError",
@@ -61,13 +63,14 @@ __all__ = [
     "FisherBoundary",
     "FixedInterface",
     "GibbsEnergy",
+    "GrainBoundaryMobility",
     "InterstitialPhase",
     "JumpPath",
     "Kinetics",
     "Layer",
     "LineCompound",
-    "LocalEquilibriumTable",
     "LocalEquilibrium",
+    "LocalEquilibriumTable",
     "MissingParameterError",
     "MobilityModel",
     "MovingBoundaryResult",
@@ -78,6 +81,7 @@ __all__ = [
     "PrecipitationResult",
     "R",
     "ReactionResult",
+    "ScaleGrowth",
     "ShortCircuit",
     "SolutionPhase",
     "StackResult",
@@ -86,25 +90,28 @@ __all__ = [
     "UnstableCompositionError",
     "UnsupportedPhaseError",
     "average_kinetic_factor",
+    "boundary_product_from_slope",
     "campbell2002_fcc_ni",
     "conversion",
     "conversion_integral",
-    "boundary_product_from_slope",
     "dmu_dx",
     "growth_constant_from_conversion",
     "growth_rate",
     "helander1999_bcc_alni",
-    "interdiffusion_from_profile",
     "integrated_diffusivity",
+    "interdiffusion_from_profile",
     "intrinsic_from_profile",
     "intrinsic_matrix",
     "jonsson1995_bcc_crfeni",
+    "kjellqvist2008_cro",
     "lattice_velocity",
     "layer_thickness",
+    "metal_oxide_potential",
     "nucleation_rate",
     "number_fixed_matrix",
     "ordering_energy",
     "parabolic_growth",
+    "parabolic_scale_growth",
     "reduced_hessian",
     "solubility_from_pycalphad",
     "solve_fisher",
