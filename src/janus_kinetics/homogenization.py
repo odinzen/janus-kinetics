@@ -35,7 +35,7 @@ from .errors import ConvergenceError
 from .phase import SolutionPhase
 from .schedule import Temperature, temperature_at
 from .thermo import R
-from .solver import _EXPONENT, Boundary, DiffusionResult, Geometry, _output_schedule, cell_measures
+from .solver import _EXPONENT, Boundary, DiffusionResult, Geometry, _march, cell_measures
 
 Averaging = Literal["wiener_upper", "wiener_lower", "hashin_shtrikman_upper", "hashin_shtrikman_lower"]
 
@@ -393,6 +393,7 @@ def solve_homogenized(
     temperature: Temperature | None = None,
     ideal_flux: float = 0.0,
     geometry: Geometry = "planar",
+    tolerance: float | None = None,
 ) -> DiffusionResult:
     """Integrate multiphase diffusion with the homogenization model in a plate (default), a long
     cylinder or a sphere (``geometry``, radii and centre as for :func:`solve_planar`).
@@ -411,6 +412,9 @@ def solve_homogenized(
     it; this term does. They suggest 0.01-0.05, as small as removes oscillations,
     since it also adds numerical diffusion. It equals driving the flux with
     mu_k + epsilon RT ln u_k, which is how it enters here.
+
+    ``tolerance`` adapts the step as in :func:`solve_planar`, in mole fraction; a step that does
+    not converge, or leaves the table, is halved and redone.
     """
     if ideal_flux < 0:
         raise ValueError("ideal_flux (epsilon) must be non-negative")
@@ -525,13 +529,5 @@ def solve_homogenized(
                 return xk, it
         raise ConvergenceError(f"homogenization step did not converge (last change {np.max(np.abs(delta)):.3g}); reduce dt")
 
-    times, saved, iters, t = [0.0], [x.copy()], [], 0.0
-    for target, steps in _output_schedule(t_end, dt, save_times):
-        dt_step = (target - t) / steps
-        for i in range(steps):
-            x, k = step(x, dt_step, t + (i + 1) * dt_step)
-            iters.append(k)
-        t = target
-        times.append(t)
-        saved.append(x.copy())
+    times, saved, iters = _march(x, step, t_end, dt, save_times, tolerance)
     return DiffusionResult(np.array(times), z_faces, np.array(saved), iters, None, geometry)

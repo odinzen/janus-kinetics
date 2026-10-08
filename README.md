@@ -18,13 +18,15 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   with `UnstableCompositionError`.
 - **Interdiffusion matrices** in the number-fixed and volume-fixed frames, and
   intrinsic (lattice-frame) diffusivities.
-- **Plates, cylinders and spheres** for the diffusion and moving-interface solvers
+- **Plates, cylinders and spheres** for the diffusion, moving-interface and homogenization solvers
   (concentric shells, as in DICTRA), checked against series solutions and Zener's
   growth coefficients for each geometry.
 - **Planar diffusion solver**, implicit and conservative, with no-flux or
   fixed-composition boundaries and **Kirkendall marker** tracking (van Loo 1990),
   in the number-fixed frame or, with partial molar volumes, in the volume-fixed
   frame in concentrations, so the molar volume may change with composition.
+  Optional adaptive time steps (also in the homogenization solver) follow profiles
+  saved over decades of time and retry steps that fail to converge.
 - **Reading measured couples**: the interdiffusion coefficient from a binary
   penetration curve without a Matano plane, and the intrinsic diffusivities at
   the marker plane, both allowing a composition-dependent molar volume (van Loo
@@ -79,8 +81,10 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   the full CALPHAD Gibbs energies (Svoboda, Fischer, Fratzl and Kozeschnik 2004):
   classes that keep their nucleation composition, ordered precipitates such as
   gamma', compositions that evolve after nucleation, misfit energy, nucleation on
-  grain boundaries, edges and corners (Clemm and Fisher 1955), temperature
-  schedules, and several phases or nucleation sites competing for one matrix; checked against the LSW limit and against atom-probe kinetics of gamma'
+  grain boundaries, edges and corners (Clemm and Fisher 1955) with site counts from
+  the grain size (Cahn 1956) or the dislocation density, temperature schedules, and
+  several phases or nucleation sites competing for one matrix; checked against the
+  LSW limit, a three-phase equilibrium, and atom-probe kinetics of gamma'
   in two Ni-Al-Cr alloys (Sudbrack et al. 2006; Booth-Morrison et al. 2008).
 
 Three published mobility databases ship with the package:

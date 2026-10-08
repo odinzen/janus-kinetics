@@ -352,6 +352,11 @@ Arrhenius mobilities. Face fluxes use the difference of chemical potentials
 between cells, so transport across a phase boundary is driven by the actual
 potential jump.
 
+Steps adapt as in the planar solver when a tolerance is given, and a step whose
+Newton iteration fails or leaves the table is halved and redone. For an alpha/beta
+couple saved at 0.1 s to 200 s, tolerance 1e-4 takes 217 steps for a worst error of
+9e-4 against a 0.01 s-step run, where equal steps need about 800.
+
 ## Precipitation
 
 Perez, Dumont and Acevedo-Reyes 2008, with eqs. 4, 7 and note 3 as corrected in

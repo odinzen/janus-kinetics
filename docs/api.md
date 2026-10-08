@@ -253,7 +253,7 @@ Larsson and Hoglund (2009): Wiener upper and lower bounds, eqs. (6)-(7), and the
 Hashin-Shtrikman bounds of eqs. (8)-(11), where the reference phase alpha is the
 one with the lowest (lower bound) or highest (upper bound) Gamma_k present.
 
-### `def solve_homogenized(z_faces: 'np.ndarray', x0: 'np.ndarray', table: 'LocalEquilibriumTable | OnDemandEquilibriumTable | TemperatureTable', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, max_iter: 'int' = 60, temperature: 'Temperature | None' = None, ideal_flux: 'float' = 0.0, geometry: 'Geometry' = 'planar') -> 'DiffusionResult'`
+### `def solve_homogenized(z_faces: 'np.ndarray', x0: 'np.ndarray', table: 'LocalEquilibriumTable | OnDemandEquilibriumTable | TemperatureTable', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, max_iter: 'int' = 60, temperature: 'Temperature | None' = None, ideal_flux: 'float' = 0.0, geometry: 'Geometry' = 'planar', tolerance: 'float | None' = None) -> 'DiffusionResult'`
 
 Integrate multiphase diffusion with the homogenization model in a plate (default), a long
 cylinder or a sphere (``geometry``, radii and centre as for :func:`solve_planar`).
@@ -272,6 +272,9 @@ region a composition ripple need not change the potentials, so nothing damps
 it; this term does. They suggest 0.01-0.05, as small as removes oscillations,
 since it also adds numerical diffusion. It equals driving the flux with
 mu_k + epsilon RT ln u_k, which is how it enters here.
+
+``tolerance`` adapts the step as in :func:`solve_planar`, in mole fraction; a step that does
+not converge, or leaves the table, is halved and redone.
 
 ## `janus_kinetics.interstitial`
 

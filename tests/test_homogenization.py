@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from pycalphad import Database
 
-from janus_kinetics import Boundary, SolutionPhase, solve_moving_boundary, solve_planar, uniform_faces
+from janus_kinetics import Boundary, ConvergenceError, SolutionPhase, solve_moving_boundary, solve_planar, uniform_faces
 from janus_kinetics.homogenization import (
     LocalEquilibriumTable,
     OnDemandEquilibriumTable,
@@ -438,3 +438,43 @@ def test_curved_geometry_inputs_are_checked(binary):
         solve_homogenized(faces, x0, table, 1.0, 1.0, geometry="conical")
     with pytest.raises(ValueError, match="negative"):
         solve_homogenized(faces - 1e-4, x0, table, 1.0, 1.0, geometry="cylindrical")
+
+
+# --- adaptive steps ---------------------------------------------------------------------------------------
+
+COUPLE_SAVES = [0.1, 1.0, 10.0]
+
+
+@pytest.fixture(scope="module")
+def two_phase_couple(binary):
+    """The alpha/beta couple of alpha_layer_error on 200 cells, saved at 0.1 s to 200 s, with a 0.05 s-step run as
+    reference (within about 2e-4 of a 0.01 s-step one)."""
+    _, _, table = binary
+    faces = uniform_faces(8e-4, 200)
+    z = 0.5 * (faces[1:] + faces[:-1])
+    x0 = np.where(z < 4e-4, 0.8, 0.1)[:, None]
+    return table, faces, x0, solve_homogenized(faces, x0, table, 200.0, 0.05, save_times=COUPLE_SAVES)
+
+
+def test_adaptive_homogenization_follows_a_couple_over_decades(two_phase_couple):
+    """Tolerance 1e-4 takes about 217 steps for a worst error of 9e-4 over the saved times; 200 equal steps
+    leave 4e-3 (800 are needed for 1e-3)."""
+    table, faces, x0, ref = two_phase_couple
+    adaptive = solve_homogenized(faces, x0, table, 200.0, 50.0, save_times=COUPLE_SAVES, tolerance=1e-4)
+    fixed = solve_homogenized(faces, x0, table, 200.0, 1.0, save_times=COUPLE_SAVES)
+    np.testing.assert_array_equal(adaptive.times, ref.times)
+    err = np.abs(adaptive.x - ref.x).max()
+    assert err < 1.5e-3
+    assert len(adaptive.picard_iterations) < 300
+    assert np.abs(fixed.x - ref.x).max() > 3 * err
+    inv = adaptive.inventory()
+    assert np.abs(inv - inv[0]).max() < 1e-12 * inv[0, 0]
+
+
+def test_adaptive_homogenization_recovers_from_a_failed_step(two_phase_couple):
+    """With eight iterations allowed a single 200 s step does not converge; adaptive steps halve until they do."""
+    table, faces, x0, ref = two_phase_couple
+    with pytest.raises(ConvergenceError):
+        solve_homogenized(faces, x0, table, 200.0, 200.0, max_iter=8)
+    res = solve_homogenized(faces, x0, table, 200.0, 200.0, max_iter=8, tolerance=1e-4)
+    assert np.abs(res.x[-1] - ref.x[-1]).max() < 1.5e-3

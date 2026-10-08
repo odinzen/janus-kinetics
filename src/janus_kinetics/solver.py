@@ -271,6 +271,66 @@ def _output_schedule(t_end: float, dt: float, save_times) -> list[tuple[float, i
     return schedule
 
 
+def _march(x, advance, t_end: float, dt: float, save_times, tolerance: float | None, scale: float = 1.0,
+           on_step=None, on_save=None):
+    """Step ``x`` from t = 0 through the save times to ``t_end``; returns (times, saved states, iterations).
+
+    ``advance(x, step, t_new)`` returns the new state and its iteration count, or raises
+    ConvergenceError. Without a tolerance each interval between save times is cut into equal
+    steps no longer than ``dt``. With one, backward Euler's local error, about
+    (step^2 / 2) d^2x/dt^2, is estimated from the change in dx/dt between consecutive steps
+    (largest over the cells, divided by ``scale``); a step above ``tolerance``, or one that does
+    not converge, is halved and redone, and one under an eighth of it is followed by one twice
+    as long. Steps are dt / 2^k, starting at dt / 1024. ``on_step(x, t_old, t_new)`` runs after
+    each step and ``on_save()`` at each save time.
+    """
+    if tolerance is not None and tolerance <= 0:
+        raise ValueError("tolerance must be positive")
+    times, saved, iters = [0.0], [x.copy()], []
+    t = 0.0
+    h = dt / 1024  # the adaptive step, always dt / 2^k
+    previous = None  # (dx/dt, step) of the last accepted adaptive step
+    for target, steps in _output_schedule(t_end, dt, save_times):
+        if tolerance is None:
+            step = (target - t) / steps
+            for i in range(steps):
+                t_new = t + (i + 1) * step
+                x, k = advance(x, step, t_new)
+                iters.append(k)
+                if on_step:
+                    on_step(x, t_new - step, t_new)
+        while tolerance is not None and t < target:
+            step = min(h, target - t)
+            t_new = target if step == target - t else t + step
+            try:
+                x_new, k = advance(x, step, t_new)
+            except ConvergenceError:
+                x_new = None
+            error = 0.0
+            if x_new is not None and previous is not None:
+                error = (np.max(np.abs((x_new - x) / step - previous[0])) * step**2
+                         / (step + previous[1]) / scale)
+            if x_new is None or error > tolerance:
+                while h >= step:
+                    h /= 2
+                if h < dt * 2.0**-60:
+                    raise ConvergenceError(f"no step meets tolerance {tolerance:g} at t={t:g} s")
+                continue
+            previous = ((x_new - x) / step, step)
+            x, t = x_new, t_new
+            iters.append(k)
+            if on_step:
+                on_step(x, t - step, t)
+            if error < tolerance / 8:
+                h = min(2 * h, dt)
+        t = target
+        times.append(t)
+        saved.append(x.copy())
+        if on_save:
+            on_save()
+    return times, saved, iters
+
+
 def solve_planar(
     z_faces: np.ndarray,
     x0: np.ndarray,
@@ -409,53 +469,16 @@ def solve_planar(
             raise ValueError("tracking markers needs lattice_velocity")
         tracker = _MarkerTracker(np.atleast_1d(np.asarray(markers, dtype=float)), z_faces, with_time(lattice_velocity, 2))
 
-    if tolerance is not None and tolerance <= 0:
-        raise ValueError("tolerance must be positive")
-    times, saved, iters = [0.0], [x.copy()], []
     marker_track = [tracker.z.copy()] if tracker else None
-    t = 0.0
-    h = dt / 1024  # the adaptive step, always dt / 2^k
-    previous = None  # (dx/dt, step) of the last accepted adaptive step
-    for target, steps in _output_schedule(t_end, dt, save_times):
-        if tolerance is None:
-            step = (target - t) / steps
-            for i in range(steps):
-                t_new = t + (i + 1) * step
-                x, k = advance(x, step, t_new)
-                iters.append(k)
-                if tracker:
-                    tracker.advance(x, t_new - step, t_new)
-        while tolerance is not None and t < target:
-            step = min(h, target - t)
-            t_new = target if step == target - t else t + step
-            try:
-                x_new, k = advance(x, step, t_new)
-            except ConvergenceError:
-                x_new = None
-            error = 0.0
-            if x_new is not None and previous is not None:
-                error = (np.max(np.abs((x_new - x) / step - previous[0])) * step**2
-                         / (step + previous[1]) / scale)
-            if x_new is None or error > tolerance:
-                while h >= step:
-                    h /= 2
-                if h < dt * 2.0**-60:
-                    raise ConvergenceError(f"no step meets tolerance {tolerance:g} at t={t:g} s")
-                continue
-            previous = ((x_new - x) / step, step)
-            x, t = x_new, t_new
-            iters.append(k)
-            if tracker:
-                tracker.advance(x, t - step, t)
-            if error < tolerance / 8:
-                h = min(2 * h, dt)
-            if len(cache) > 64:  # shortened steps that land on save times each add a factorization
-                cache.clear()
-        t = target
-        times.append(t)
-        saved.append(x.copy())
+
+    def on_step(x_new, t_old, t_new):
         if tracker:
-            marker_track.append(tracker.z.copy())
+            tracker.advance(x_new, t_old, t_new)
+        if len(cache) > 64:  # adaptive steps shortened to land on save times each add a factorization
+            cache.clear()
+
+    times, saved, iters = _march(x, advance, t_end, dt, save_times, tolerance, scale, on_step,
+                                 (lambda: marker_track.append(tracker.z.copy())) if tracker else None)
     return DiffusionResult(np.array(times), z_faces, np.array(saved), iters,
                            np.array(marker_track) if tracker else None, geometry)
 
