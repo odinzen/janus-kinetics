@@ -94,9 +94,8 @@ Sundman 2008), serves the Cr2O3 scale model.
 The equations are collected in [docs/theory.md](docs/theory.md), the API in
 [docs/api.md](docs/api.md), and the references, checked against Crossref, in
 [docs/references.md](docs/references.md). What is not done yet is listed in
-[ROADMAP.md](ROADMAP.md); the main gaps are the ferromagnetic mobility factor,
-scales of several oxides or on alloys, and nucleation site densities from the
-microstructure.
+[ROADMAP.md](ROADMAP.md); the main gaps are the ferromagnetic mobility factor
+and scales of several oxides or on alloys.
 
 ## Install
 

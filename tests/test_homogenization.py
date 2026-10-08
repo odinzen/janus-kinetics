@@ -11,14 +11,14 @@ import numpy as np
 import pytest
 from pycalphad import Database
 
-from janus_kinetics import SolutionPhase, solve_moving_boundary, solve_planar, uniform_faces
+from janus_kinetics import Boundary, SolutionPhase, solve_moving_boundary, solve_planar, uniform_faces
 from janus_kinetics.homogenization import (
     LocalEquilibriumTable,
     OnDemandEquilibriumTable,
     average_kinetic_factor,
     solve_homogenized,
 )
-from janus_kinetics.moving_boundary import LocalEquilibrium
+from janus_kinetics.moving_boundary import Layer, LocalEquilibrium, solve_layers
 from test_moving_boundary import TWO_PHASE
 
 T = 1000.0
@@ -366,3 +366,75 @@ def test_ideal_flux_keeps_newton_convergence():
     plain = solve_homogenized(faces, x0, table, 100.0, 0.5)
     strong = solve_homogenized(faces, x0, table, 100.0, 0.5, ideal_flux=0.5)
     assert np.mean(strong.picard_iterations) <= 1.1 * np.mean(plain.picard_iterations)
+
+
+# --- cylinders and spheres ------------------------------------------------------------------------------
+
+@pytest.mark.parametrize("geometry", ["cylindrical", "spherical"])
+def test_single_phase_core_matches_phase1_solver_in_curved_geometry(binary, geometry):
+    """An alpha core richer than its shell, from the centre out: the homogenized run follows the phase-1
+    solver in the same geometry (1.7e-5 apart) and keeps the r^p-weighted inventory to round-off."""
+    alpha, _, table = binary
+    faces = uniform_faces(4e-4, 200)
+    z = 0.5 * (faces[1:] + faces[:-1])
+    x0 = np.where(z < 2e-4, 0.95, 0.65)[:, None]
+    homog = solve_homogenized(faces, x0, table, 200.0, 1.0, geometry=geometry)
+    ref = solve_planar(faces, x0, lambda x: alpha.interdiffusion_matrix(x, T), 200.0, 1.0, geometry=geometry)
+    assert np.max(np.abs(homog.x[-1] - ref.x[-1])) < 1e-4
+    inv = homog.inventory()
+    assert abs(inv[-1, 0] - inv[0, 0]) < 1e-12 * inv[0, 0]
+    planar = solve_homogenized(faces, x0, table, 200.0, 1.0)
+    assert np.max(np.abs(planar.x[-1] - homog.x[-1])) > 1e-3  # the geometry mattered
+
+
+
+@pytest.mark.parametrize("geometry", ["planar", "spherical"])
+def test_held_surface_matches_phase1_solver(binary, geometry):
+    """Material at x = 0.95 whose surface is held at 0.70 loses B through it as in the phase-1 solver: the
+    outer surface of a sphere, or a plate's face at z = 0, whose r^0 area must stay 1."""
+    alpha, _, table = binary
+    faces = uniform_faces(4e-4, 200)
+    x0 = np.full((200, 1), 0.95)
+    held = {"right": Boundary.fixed([0.70])} if geometry == "spherical" else {"left": Boundary.fixed([0.70])}
+    homog = solve_homogenized(faces, x0, table, 200.0, 1.0, geometry=geometry, **held)
+    ref = solve_planar(faces, x0, lambda x: alpha.interdiffusion_matrix(x, T), 200.0, 1.0, geometry=geometry,
+                       **held)
+    assert np.max(np.abs(homog.x[-1] - ref.x[-1])) < 1e-4
+    assert homog.inventory()[-1, 0] < 0.99 * homog.inventory()[0, 0]  # material left through the surface
+
+def alpha_core_error(binary, n_cells):
+    """|radius of the homogenized alpha core - sharp-interface radius| over the interface shift, for an
+    alpha sphere (x = 0.8, radius 0.4 mm) in a beta shell (x = 0.1) out to 0.8 mm."""
+    alpha, beta, table = binary
+    r_in, r_out, t1 = 4e-4, 8e-4, 200.0
+    faces = uniform_faces(r_out, n_cells)
+    z = 0.5 * (faces[1:] + faces[:-1])
+    homog = solve_homogenized(faces, np.where(z < r_in, 0.8, 0.1)[:, None], table, t1, t1 / 200, geometry="spherical")
+    volume = np.sum(table.phase_fractions(homog.x[-1])["ALPHA"] * homog.widths)  # per steradian, r^3 / 3
+    radius = (3 * volume) ** (1 / 3)
+    sharp = solve_layers([0.0, r_in, r_out],
+                         [Layer(np.full(n_cells // 2, 0.8), lambda x: alpha.interdiffusion_matrix(x, T)),
+                          Layer(np.full(n_cells // 2, 0.1), lambda x: beta.interdiffusion_matrix(x, T))],
+                         [LocalEquilibrium(alpha, beta, T, [0.56], [0.27])], t1, t1 / 200, geometry="spherical")
+    shift = sharp.interfaces[-1, 0] - r_in
+    assert shift > 5e-6
+    return abs(radius - sharp.interfaces[-1, 0]) / shift
+
+
+def test_two_phase_sphere_converges_to_sharp_interface(binary):
+    """As the planar couple does: 9.7 % of the shift at 400 cells, 3.6 % at 800."""
+    coarse, fine = alpha_core_error(binary, 400), alpha_core_error(binary, 800)
+    assert coarse < 0.12
+    assert fine < 0.6 * coarse
+
+
+def test_curved_geometry_inputs_are_checked(binary):
+    _, _, table = binary
+    faces = uniform_faces(4e-4, 20)
+    x0 = np.full((20, 1), 0.9)
+    with pytest.raises(ValueError, match="r = 0"):
+        solve_homogenized(faces, x0, table, 1.0, 1.0, left=Boundary.fixed([0.9]), geometry="spherical")
+    with pytest.raises(ValueError, match="geometry"):
+        solve_homogenized(faces, x0, table, 1.0, 1.0, geometry="conical")
+    with pytest.raises(ValueError, match="negative"):
+        solve_homogenized(faces - 1e-4, x0, table, 1.0, 1.0, geometry="cylindrical")

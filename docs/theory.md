@@ -101,9 +101,9 @@ meaning with the length of untouched material in the domain.
 
 ## Cylinders and spheres
 
-The planar solver and the layered moving-interface solver also run in a long
-cylinder or a sphere, the one-variable geometries of DICTRA (Borgenstam et al.
-2000): dx/dt = r^-p d/dr (r^p D dx/dr) with p = 1 or 2. Cells hold
+The planar solver, the layered moving-interface solver and the homogenization solver
+also run in a long cylinder or a sphere, the one-variable geometries of DICTRA
+(Borgenstam et al. 2000): dx/dt = r^-p d/dr (r^p D dx/dr) with p = 1 or 2. Cells hold
 (r_out^(p+1) - r_in^(p+1)) / (p+1) per unit angle and faces carry r^p; the axis or
 centre takes no flux. A face that moves sweeps the volume between its old and new
 radius, and its advective term uses that swept volume over the distance moved as its
@@ -465,6 +465,16 @@ as a computing slip. Only the barrier changes; the attachment rate and Zeldovich
 factor keep their homogeneous form, and a junction nucleus enters the classes as a
 sphere of the critical radius of curvature, larger in volume than the lens it stands
 for. These two choices are this package's.
+
+Site counts. Cahn (1956, eq. 1) gives the grain boundary area, edge length and corner
+count per volume of equal tetrakaidecahedral grains whose square faces lie D apart:
+3.35 / D, 8.5 / D^2 and 12.0 / D^3. The exact values of that solid, (3 + 6 sqrt 3) / 4D,
+6 sqrt 2 / D^2 and 12 / D^3, are used, and a test measures the same cell as the
+Voronoi cell of a bcc lattice. Part II (p. 162) counts the nucleation sites on
+dislocations as the atoms on the line; the same count is applied here to grain
+junctions, with the atomic distance w = (Omega / N_A)^(1/3): S / w^2 atoms in one
+boundary layer, L / w along the edges and one site per corner. That convention is this
+package's; neither paper fixes it for junctions.
 
 Temperature schedules. The temperature may follow a piecewise-linear schedule; steps
 then also move T by at most 1 K, and the class Gibbs energies and the nucleus are

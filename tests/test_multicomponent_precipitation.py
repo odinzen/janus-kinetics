@@ -24,8 +24,10 @@ from janus_kinetics.multicomponent_precipitation import (
     NucleationSettings,
     Population,
     PrecipitateThermo,
+    grain_structure,
     growth_rates,
     nucleation,
+    nucleation_sites,
     solve_competing_precipitation,
     solve_multicomponent_precipitation,
 )
@@ -829,3 +831,78 @@ def test_competing_inputs_are_checked():
         solve_competing_precipitation(matrix, [], BINARY_ALLOY, 433.15, 10.0, [1.0])
     with pytest.raises(ValueError, match="same elements"):
         solve_competing_precipitation(_matrix(), [Population(prec, s)], ALLOY, T, 10.0, [1.0])
+
+
+# --- nucleation sites from the microstructure (Cahn 1956 eq. 1; part II p. 162) ----------------------------
+
+def _bcc_voronoi_cell(d):
+    """Face area, edge length and corner count of one Voronoi cell of a bcc lattice of cube edge d, the
+    space-filling tetrakaidecahedron with square faces d apart, measured from scipy's construction."""
+    from itertools import product
+
+    from scipy.spatial import Voronoi
+
+    pts = np.array([p for p in product(range(-2, 3), repeat=3)], dtype=float)
+    pts = np.vstack([pts, pts + 0.5]) * d
+    vor = Voronoi(pts)
+    centre = int(np.argmin(np.linalg.norm(pts, axis=1)))
+    area, edges = 0.0, set()
+    for (p, q), rv in zip(vor.ridge_points, vor.ridge_vertices):
+        if centre not in (p, q):
+            continue
+        poly = vor.vertices[rv]
+        c = poly.mean(axis=0)
+        normal = pts[q if p == centre else p] - pts[centre]
+        u = (poly[0] - c) / np.linalg.norm(poly[0] - c)
+        w = np.cross(normal / np.linalg.norm(normal), u)
+        order = np.argsort(np.arctan2((poly - c) @ w, (poly - c) @ u))
+        poly, ring = poly[order], np.asarray(rv)[order]
+        area += 0.5 * np.linalg.norm(sum(np.cross(poly[i], poly[(i + 1) % len(poly)]) for i in range(len(poly))))
+        edges |= {tuple(sorted((ring[i], ring[(i + 1) % len(ring)]))) for i in range(len(ring))}
+    length = sum(np.linalg.norm(vor.vertices[a] - vor.vertices[b]) for a, b in edges)
+    return area, length, len(vor.regions[vor.point_region[centre]])
+
+
+def test_grain_structure_is_cahn_eq_1():
+    """Cahn's S = 3.35/D, L = 8.5/D^2, C = 12.0/D^3 to his printed digits, and the exact values against a
+    tetrakaidecahedron measured independently, as a bcc Voronoi cell (2/D^3 grains per volume; faces shared
+    by two grains, edges by three, corners by four)."""
+    d = 40e-6
+    s, l, c = grain_structure(d)
+    assert (round(s * d, 2), round(l * d**2, 1), round(c * d**3, 1)) == (3.35, 8.5, 12.0)
+    area, length, corners = _bcc_voronoi_cell(d)
+    grains = 2 / d**3
+    assert corners == 24
+    assert s == pytest.approx(area / 2 * grains, rel=1e-12)
+    assert l == pytest.approx(length / 3 * grains, rel=1e-12)
+    assert c == pytest.approx(corners / 4 * grains, rel=1e-12)
+
+
+def test_nucleation_sites_count_the_atoms_on_each_defect():
+    """The fraction of atoms on boundaries is the boundary area per volume times one atomic distance, and the
+    edge and corner counts fall as 1/D^2 and 1/D^3."""
+    vm = SETTINGS.molar_volume
+    w = (vm / N_A) ** (1 / 3)
+    bulk = nucleation_sites("bulk", vm)
+    assert bulk == pytest.approx(N_A / vm, rel=1e-14)
+    for d in (10e-6, 100e-6):
+        s, l, c = grain_structure(d)
+        assert nucleation_sites("boundary", vm, grain_size=d) / bulk == pytest.approx(s * w, rel=1e-12)
+        assert nucleation_sites("edge", vm, grain_size=d) / bulk == pytest.approx(l * w**2, rel=1e-12)
+        assert nucleation_sites("corner", vm, grain_size=d) == pytest.approx(12 / d**3, rel=1e-14)
+    ratios = [nucleation_sites(site, vm, grain_size=10e-6) / nucleation_sites(site, vm, grain_size=100e-6)
+              for site in ("boundary", "edge", "corner")]
+    np.testing.assert_allclose(ratios, [10, 100, 1000], rtol=1e-12)
+    assert nucleation_sites("dislocation", vm, dislocation_density=1e14) == pytest.approx(1e14 / w, rel=1e-14)
+
+
+def test_nucleation_site_inputs_are_checked():
+    vm = SETTINGS.molar_volume
+    with pytest.raises(ValueError, match="grain_size"):
+        nucleation_sites("edge", vm)
+    with pytest.raises(ValueError, match="dislocation_density"):
+        nucleation_sites("dislocation", vm)
+    with pytest.raises(ValueError, match="site must be"):
+        nucleation_sites("surface", vm, grain_size=1e-5)
+    with pytest.raises(ValueError, match="grain size"):
+        grain_structure(0.0)

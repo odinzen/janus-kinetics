@@ -81,8 +81,8 @@ and several elements (the DICTRA solidification case of Lippard et al. 1998, who
 AerMet100 data need commercial databases), and measured homogenization data.
 
 Cylindrical and spherical geometry: done for solve_planar and solve_layers
-(Zener 1949 eq. 12 with lambda = 2, 3; series solutions). Not yet in the
-homogenization and reaction-layer solvers.
+(Zener 1949 eq. 12 with lambda = 2, 3; series solutions), and for solve_homogenized
+(checked against both). Not yet in the reaction-layer solver.
 
 Left for later: graded grids next to a moving interface, layers that nucleate
 during a run (today a reaction layer must exist from the start), and an adaptive
@@ -118,8 +118,8 @@ Left for later, each needing a source to be opened first:
   compositions that evolve after nucleation (part I eqs. 27-39), misfit energy
   (Appendix A), nucleation on grain boundaries, edges and corners (Clemm and Fisher
   1955), temperature schedules and several phases or sites competing for one matrix
-  (part II section 3.5). Open there: site densities computed from grain size (needs
-  Cahn 1956, doi 10.1016/0001-6160(56)90041-4), and the Thermo-Calc curvatures of Sudbrack
+  (part II section 3.5). Site counts from grain size (Cahn 1956 eq. 1) and dislocation
+  density: done. Open there: the Thermo-Calc curvatures of Sudbrack
   et al. (2007) Table 4 (ours 10-30 % higher for the same database);
 - heterogeneous nucleation and non-isothermal treatments;
 - the mean-radius approach, whose coarsening fraction (eq. 17) is defined only

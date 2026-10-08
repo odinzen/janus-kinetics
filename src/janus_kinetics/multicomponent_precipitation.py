@@ -230,7 +230,9 @@ class NucleationSettings:
     ``site`` places the nuclei on grain boundaries ("boundary"), edges where three grains meet
     ("edge") or corners where four meet ("corner"), with ``boundary_ratio`` k = gamma_gb / (2 gamma)
     from the grain boundary energy; the barrier is then the fraction :func:`junction_barrier_factor`
-    of the homogeneous one. ``sites`` should then count the boundary, edge or corner sites per m^3.
+    of the homogeneous one. ``sites`` should then count the boundary, edge or corner sites per m^3,
+    which :func:`nucleation_sites` gives from the grain size. Nuclei on dislocations keep the bulk
+    barrier here, with ``sites`` from the dislocation density.
     """
 
     gamma: float
@@ -306,6 +308,45 @@ def junction_barrier_factor(site: str, k: float) -> float:
                          "nucleus; beyond it there is no nucleation barrier (Clemm and Fisher 1955, p. 72)")
     a, b, c = junction_factors(site, k)
     return (b - 2 * k * a) ** 3 / (36 * np.pi * c * c)
+
+
+def grain_structure(grain_size: float) -> tuple[float, float, float]:
+    """(grain boundary area in m^2, grain edge length in m, number of grain corners) per m^3 for equal
+    tetrakaidecahedral grains whose square faces lie ``grain_size`` D apart, Cahn, Acta Metall. 4 (1956)
+    449, eq. (1): S = 3.35 / D, L = 8.5 / D^2, C = 12.0 / D^3. The exact values of that solid are used
+    (edge D / (2 sqrt 2), 2 / D^3 grains per volume, faces shared by two grains, edges by three and
+    corners by four): (3 + 6 sqrt 3) / (4 D), 6 sqrt 2 / D^2 and 12 / D^3."""
+    if grain_size <= 0:
+        raise ValueError("the grain size must be positive")
+    d = grain_size
+    return (3 + 6 * np.sqrt(3)) / (4 * d), 6 * np.sqrt(2) / d**2, 12 / d**3
+
+
+def nucleation_sites(site: str, molar_volume: float, grain_size: float | None = None,
+                     dislocation_density: float | None = None) -> float:
+    """Nucleation sites per m^3 for :class:`NucleationSettings`: every atom for "bulk", and otherwise the
+    atoms on the defect, as part II (p. 162) counts the atoms on a dislocation line. With the atomic
+    distance w = (Omega / N_A)^(1/3), a boundary of area S holds S / w^2 atoms in one layer, an edge of
+    length L holds L / w, and a corner is taken as one site; the areas, lengths and corners per volume
+    come from ``grain_size`` through :func:`grain_structure`. "dislocation" counts
+    ``dislocation_density`` (m^-2) / w. Taking one atomic layer, column or site is this package's choice;
+    neither paper fixes it for grain junctions."""
+    if molar_volume <= 0:
+        raise ValueError("the molar volume must be positive")
+    atom = molar_volume / N_A
+    w = atom ** (1 / 3)
+    if site == "bulk":
+        return 1 / atom
+    if site == "dislocation":
+        if dislocation_density is None or dislocation_density <= 0:
+            raise ValueError("dislocation sites need a positive dislocation_density (m^-2)")
+        return dislocation_density / w
+    if site in ("boundary", "edge", "corner"):
+        if grain_size is None:
+            raise ValueError(f"{site} sites need a grain_size (m)")
+        area, length, corners = grain_structure(grain_size)
+        return {"boundary": area / w**2, "edge": length / w, "corner": corners}[site]
+    raise ValueError(f"site must be bulk, boundary, edge, corner or dislocation, got {site!r}")
 
 
 def misfit_energy(strain: float, youngs_modulus: float, poisson: float, yield_stress: float | None = None) -> float:

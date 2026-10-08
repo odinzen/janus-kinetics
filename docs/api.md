@@ -253,9 +253,10 @@ Larsson and Hoglund (2009): Wiener upper and lower bounds, eqs. (6)-(7), and the
 Hashin-Shtrikman bounds of eqs. (8)-(11), where the reference phase alpha is the
 one with the lowest (lower bound) or highest (upper bound) Gamma_k present.
 
-### `def solve_homogenized(z_faces: 'np.ndarray', x0: 'np.ndarray', table: 'LocalEquilibriumTable | OnDemandEquilibriumTable | TemperatureTable', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, max_iter: 'int' = 60, temperature: 'Temperature | None' = None, ideal_flux: 'float' = 0.0) -> 'DiffusionResult'`
+### `def solve_homogenized(z_faces: 'np.ndarray', x0: 'np.ndarray', table: 'LocalEquilibriumTable | OnDemandEquilibriumTable | TemperatureTable', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, max_iter: 'int' = 60, temperature: 'Temperature | None' = None, ideal_flux: 'float' = 0.0, geometry: 'Geometry' = 'planar') -> 'DiffusionResult'`
 
-Integrate planar multiphase diffusion with the homogenization model.
+Integrate multiphase diffusion with the homogenization model in a plate (default), a long
+cylinder or a sphere (``geometry``, radii and centre as for :func:`solve_planar`).
 
 Backward Euler on cell compositions. Each iteration linearizes the potentials
 in the composition change (Newton) and holds Gamma* and the frame correction
@@ -413,7 +414,9 @@ chemical driving force (see :func:`misfit_energy`).
 ``site`` places the nuclei on grain boundaries ("boundary"), edges where three grains meet
 ("edge") or corners where four meet ("corner"), with ``boundary_ratio`` k = gamma_gb / (2 gamma)
 from the grain boundary energy; the barrier is then the fraction :func:`junction_barrier_factor`
-of the homogeneous one. ``sites`` should then count the boundary, edge or corner sites per m^3.
+of the homogeneous one. ``sites`` should then count the boundary, edge or corner sites per m^3,
+which :func:`nucleation_sites` gives from the grain size. Nuclei on dislocations keep the bulk
+barrier here, with ``sites`` from the dislocation density.
 
 
 ### `class PhaseMinimizer(db: 'Database', phase: 'str', components: 'Sequence[str]')`
@@ -451,6 +454,14 @@ chosen stoichiometry); without it nuclei take the composition of largest driving
 - `nucleus(self, mu_matrix: 'np.ndarray', T: 'float') -> 'tuple[np.ndarray, float]'`: (composition, molar driving force in J/mol) of the precipitate with the largest driving force
 - `site_fractions(self, x: 'Sequence[float]', T: 'float') -> 'np.ndarray'`: Equilibrium site fractions of the phase at mole fractions ``x``, in pycalphad's order, from the
 
+### `def grain_structure(grain_size: 'float') -> 'tuple[float, float, float]'`
+
+(grain boundary area in m^2, grain edge length in m, number of grain corners) per m^3 for equal
+tetrakaidecahedral grains whose square faces lie ``grain_size`` D apart, Cahn, Acta Metall. 4 (1956)
+449, eq. (1): S = 3.35 / D, L = 8.5 / D^2, C = 12.0 / D^3. The exact values of that solid are used
+(edge D / (2 sqrt 2), 2 / D^3 grains per volume, faces shared by two grains, edges by three and
+corners by four): (3 + 6 sqrt 3) / (4 D), 6 sqrt 2 / D^2 and 12 / D^3.
+
 ### `def junction_barrier_factor(site: 'str', k: 'float') -> 'float'`
 
 Nucleation barrier at a grain junction over the homogeneous one. Clemm and Fisher's
@@ -467,6 +478,16 @@ both phases. With a yield stress the matrix around the particle may yield (Fisch
 as the appendix gives it): S = sigma_f (1 - nu) / (E eps0), eq. (A.2), and lambda = lambda0 f(S) with
 f(S) = 2 S (1 - ln S) - S^2 for S < 1, eq. (A.3), which exceeds 1 between S = 0.199 and 1 (plastic
 work added to the stored elastic energy).
+
+### `def nucleation_sites(site: 'str', molar_volume: 'float', grain_size: 'float | None' = None, dislocation_density: 'float | None' = None) -> 'float'`
+
+Nucleation sites per m^3 for :class:`NucleationSettings`: every atom for "bulk", and otherwise the
+atoms on the defect, as part II (p. 162) counts the atoms on a dislocation line. With the atomic
+distance w = (Omega / N_A)^(1/3), a boundary of area S holds S / w^2 atoms in one layer, an edge of
+length L holds L / w, and a corner is taken as one site; the areas, lengths and corners per volume
+come from ``grain_size`` through :func:`grain_structure`. "dislocation" counts
+``dislocation_density`` (m^-2) / w. Taking one atomic layer, column or site is this package's choice;
+neither paper fixes it for grain junctions.
 
 ### `def solve_competing_precipitation(matrix: 'SolutionPhase', populations: 'Sequence[Population]', alloy: 'Sequence[float]', T: 'Temperature', t_end: 'float', save_times: 'Sequence[float]', t_start: 'float' = 0.001, max_temperature_change: 'float' = 1.0, max_radius_change: 'float' = 0.02, max_matrix_change: 'float' = 0.0002, max_composition_change: 'float' = 0.001, max_classes: 'int' = 400, min_classes: 'int' = 100, smallest_radius: 'float' = 1e-10, nucleus_update: 'float' = 0.001, min_class_number: 'float' = 1e-06) -> 'list[MulticomponentResult]'`
 

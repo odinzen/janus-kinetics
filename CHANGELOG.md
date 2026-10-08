@@ -21,7 +21,7 @@ First version.
 - Conversion of plates, cylinders and spheres through a reaction layer (van Loo
   1990, eqs. 25-27), including anneal schedules and the inverse for k_p.
 - Homogenization model for multiphase diffusion (binaries and ternaries).
-- Cylindrical and spherical geometry for the diffusion and moving-interface solvers.
+- Cylindrical and spherical geometry for the diffusion, moving-interface and homogenization solvers.
 - Microsegregation: Scheil-Gulliver from pycalphad, closed-form limits, Kobayashi's exact
   solution, a back-diffusion solidification model, and segregation profiles for homogenization.
 - Multicomponent precipitation with CALPHAD driving forces and nucleus compositions
@@ -29,7 +29,8 @@ First version.
   in Ni-5.2Al-14.2Cr at 873 K (Sudbrack et al. 2006, 2007) and Ni-7.5Al-8.5Cr
   (Booth-Morrison et al. 2008), with precipitate compositions that evolve after nucleation,
   misfit energy, grain-junction nucleation (Clemm and Fisher 1955), temperature schedules,
-  and several phases or nucleation sites competing for one matrix.
+  several phases or nucleation sites competing for one matrix, and nucleation site counts
+  from the grain size (Cahn 1956) or the dislocation density.
 - Adaptive time steps in the planar solver, with recovery from failed Picard iterations.
 - Parabolic growth of a compact oxide scale from cation and anion transport with
   grain-boundary averaging, checked against the Cr2O3 thicknesses and figures of

@@ -35,7 +35,7 @@ from .errors import ConvergenceError
 from .phase import SolutionPhase
 from .schedule import Temperature, temperature_at
 from .thermo import R
-from .solver import Boundary, DiffusionResult, _output_schedule
+from .solver import _EXPONENT, Boundary, DiffusionResult, Geometry, _output_schedule, cell_measures
 
 Averaging = Literal["wiener_upper", "wiener_lower", "hashin_shtrikman_upper", "hashin_shtrikman_lower"]
 
@@ -392,8 +392,10 @@ def solve_homogenized(
     max_iter: int = 60,
     temperature: Temperature | None = None,
     ideal_flux: float = 0.0,
+    geometry: Geometry = "planar",
 ) -> DiffusionResult:
-    """Integrate planar multiphase diffusion with the homogenization model.
+    """Integrate multiphase diffusion with the homogenization model in a plate (default), a long
+    cylinder or a sphere (``geometry``, radii and centre as for :func:`solve_planar`).
 
     Backward Euler on cell compositions. Each iteration linearizes the potentials
     in the composition change (Newton) and holds Gamma* and the frame correction
@@ -423,14 +425,25 @@ def solve_homogenized(
         table_at = lambda t: table
         temperature_of = lambda t: table.T
     z_faces = np.asarray(z_faces, dtype=float)
+    if geometry not in _EXPONENT:
+        raise ValueError(f"geometry must be one of {sorted(_EXPONENT)}, got {geometry!r}")
+    if geometry != "planar":
+        if z_faces[0] < 0:
+            raise ValueError("radii cannot be negative")
+        if z_faces[0] == 0 and left.kind != "no_flux":
+            raise ValueError("nothing can be held at r = 0; the centre takes a no-flux boundary")
     x = np.asarray(x0, dtype=float)
     x = x[:, None] if x.ndim == 1 else x.copy()
     n_cells, m = x.shape
     n = m + 1
-    widths = np.diff(z_faces)
+    widths = cell_measures(z_faces, geometry)
     centers = 0.5 * (z_faces[1:] + z_faces[:-1])
-    h_inner = np.diff(centers)
-    h_end = {"left": centers[0] - z_faces[0], "right": z_faces[-1] - centers[-1]}
+    # a face of area r^p over a distance h conducts as a planar face over h / r^p
+    p = _EXPONENT[geometry]
+    h_inner = np.diff(centers) / z_faces[1:-1] ** p
+    area_left = z_faces[0] ** p  # 1 for a plate, whatever z_faces[0]; 0 at a centre, which passes no flux
+    h_end = {"left": (centers[0] - z_faces[0]) / area_left if area_left > 0 else np.inf,
+             "right": (z_faces[-1] - centers[-1]) / z_faces[-1] ** p}
     ends = {}
     for side, b in (("left", left), ("right", right)):
         if b.kind == "fixed":
@@ -521,4 +534,4 @@ def solve_homogenized(
         t = target
         times.append(t)
         saved.append(x.copy())
-    return DiffusionResult(np.array(times), z_faces, np.array(saved), iters)
+    return DiffusionResult(np.array(times), z_faces, np.array(saved), iters, None, geometry)
