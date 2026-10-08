@@ -21,6 +21,7 @@ First version.
 - Conversion of plates, cylinders and spheres through a reaction layer (van Loo
   1990, eqs. 25-27), including anneal schedules and the inverse for k_p.
 - Homogenization model for multiphase diffusion (binaries and ternaries).
+- Cylindrical and spherical geometry for the diffusion and moving-interface solvers.
 - Multicomponent precipitation with CALPHAD driving forces and nucleus compositions
   (Svoboda et al. 2004), checked against the LSW limit and against gamma' precipitation
   in Ni-5.2Al-14.2Cr at 873 K (Sudbrack et al. 2006, 2007) and Ni-7.5Al-8.5Cr

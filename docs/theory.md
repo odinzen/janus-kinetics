@@ -87,6 +87,23 @@ grid, with D at each face from the mean of the neighbouring cells and Picard
 iteration for its composition dependence. The face-flux form conserves the
 inventory of every element under no-flux boundaries, to floating-point round-off.
 
+## Cylinders and spheres
+
+The planar solver and the layered moving-interface solver also run in a long
+cylinder or a sphere, the one-variable geometries of DICTRA (Borgenstam et al.
+2000): dx/dt = r^-p d/dr (r^p D dx/dr) with p = 1 or 2. Cells hold
+(r_out^(p+1) - r_in^(p+1)) / (p+1) per unit angle and faces carry r^p; the axis or
+centre takes no flux. A face that moves sweeps the volume between its old and new
+radius, and its advective term uses that swept volume over the distance moved as its
+area, which keeps a uniform composition uniform on a stretching grid (the core of a
+growing particle stays exactly at its composition). End fluxes are returned per unit
+of that area, so the interface balance w (x_R - x_L) = J_R - J_L keeps its planar
+form and every element is conserved to round-off. Checks: series solutions for a
+sphere and a cylinder with the surface held (profiles within 0.03 % of the change,
+first order in time), and Zener's eq. 12 for cylinder (lambda = 2) and sphere
+(lambda = 3) growth, with his integrals in closed form; the particle radius at 100
+times the start time is within 0.24 % and 0.35 %, falling with the grid.
+
 ## Kirkendall markers
 
 The number-fixed and lattice frames are related by J_k = J'_k + c_k v (van Loo

@@ -1,12 +1,15 @@
-"""Implicit finite-volume solver for planar multicomponent interdiffusion.
+"""Implicit finite-volume solver for multicomponent interdiffusion in a plate, cylinder or sphere.
 
-Solves dx_k/dt = d/dz ( sum_j D_kj(x) dx_j/dz ) for the n-1 independent mole
+Solves dx_k/dt = r^-p d/dr ( r^p sum_j D_kj(x) dx_j/dr ) for the n-1 independent mole
 fractions in the number-fixed frame with constant molar volume (Andersson and
 Agren, J. Appl. Phys. 72 (1992) 1350). Time stepping is backward Euler; the
 composition dependence of D is handled by Picard iteration, with D evaluated at
 cell faces from the arithmetic mean of the neighbouring cells. The face-flux
 form conserves the discrete inventory sum_i w_i x_i under no-flux boundaries,
-whatever the Picard iterate, up to floating-point round-off.
+whatever the Picard iterate, up to floating-point round-off. The exponent p is 0 for a
+plate, 1 for a long cylinder and 2 for a sphere, the one-variable geometries DICTRA
+offers (Borgenstam et al., J. Phase Equilib. 21 (2000) 269); cells then hold volume
+(r_out^(p+1) - r_in^(p+1)) / (p+1) and faces carry area r^p, per unit angle.
 """
 
 from __future__ import annotations
@@ -25,6 +28,16 @@ from .schedule import temperature_at, with_time
 
 Diffusivity = Callable[[np.ndarray], np.ndarray] | np.ndarray
 LatticeVelocity = Callable[[np.ndarray, np.ndarray], np.ndarray]
+Geometry = Literal["planar", "cylindrical", "spherical"]
+_EXPONENT = {"planar": 0, "cylindrical": 1, "spherical": 2}
+
+
+def cell_measures(z_faces: np.ndarray, geometry: Geometry = "planar") -> np.ndarray:
+    """Cell volumes per unit area (plate), per radian and unit length (cylinder) or per steradian
+    (sphere): (r_out^(p+1) - r_in^(p+1)) / (p+1)."""
+    p = _EXPONENT[geometry]
+    z = np.asarray(z_faces, dtype=float)
+    return (z[1:] ** (p + 1) - z[:-1] ** (p + 1)) / (p + 1)
 
 
 @dataclass(frozen=True)
@@ -126,6 +139,7 @@ class DiffusionResult:
     x: np.ndarray
     picard_iterations: list[int] = field(default_factory=list)
     markers: np.ndarray | None = None  # marker positions [t_index, marker] when tracked
+    geometry: Geometry = "planar"
 
     @property
     def z(self) -> np.ndarray:
@@ -133,10 +147,11 @@ class DiffusionResult:
 
     @property
     def widths(self) -> np.ndarray:
-        return np.diff(self.z_faces)
+        """Cell measures: widths for a plate, volumes per unit angle for a cylinder or sphere."""
+        return cell_measures(self.z_faces, self.geometry)
 
     def inventory(self) -> np.ndarray:
-        """Integral of each mole fraction over the domain at every saved time, shape (n_t, n-1)."""
+        """Integral of each mole fraction over the domain (r^p dr) at every saved time, shape (n_t, n-1)."""
         return np.einsum("i,tik->tk", self.widths, self.x)
 
 
@@ -211,10 +226,13 @@ class _BlockTridiagonal:
 class _Assembler:
     """Builds the backward-Euler matrix for given face diffusivities."""
 
-    def __init__(self, z_faces: np.ndarray, m: int):
+    def __init__(self, z_faces: np.ndarray, m: int, geometry: Geometry = "planar"):
         self.m = m
         self.n_cells = len(z_faces) - 1
-        self.widths = np.diff(z_faces)
+        self.widths = cell_measures(z_faces, geometry)
+        p = _EXPONENT[geometry]
+        self.area_inner = z_faces[1:-1] ** p
+        self.area_left, self.area_right = z_faces[0] ** p, z_faces[-1] ** p
         centers = 0.5 * (z_faces[1:] + z_faces[:-1])
         self.h_inner = np.diff(centers)
         self.h_left = centers[0] - z_faces[0]
@@ -266,8 +284,9 @@ def solve_planar(
     max_picard: int = 50,
     markers=None,
     lattice_velocity: LatticeVelocity | None = None,
+    geometry: Geometry = "planar",
 ) -> DiffusionResult:
-    """Integrate planar interdiffusion from ``x0`` to ``t_end``.
+    """Integrate interdiffusion from ``x0`` to ``t_end`` in a plate (default), a long cylinder or a sphere.
 
     Parameters
     ----------
@@ -286,19 +305,31 @@ def solve_planar(
     lattice_velocity : callable (x, dx_dz) or (x, dx_dz, t) -> v giving the lattice
         velocity at the interior faces, such as ``lambda x, g: phase.lattice_velocity(x, g, T)``.
         Required with ``markers``.
+    geometry : "planar", "cylindrical" or "spherical"; for the curved ones ``z_faces`` are
+        radii, and a first face at r = 0 is the axis or centre, where no flux passes.
+        Markers are followed in the planar geometry only.
 
     Returns profiles at t=0 and at every save time (always including ``t_end``).
     """
     z_faces = np.asarray(z_faces, dtype=float)
     if np.any(np.diff(z_faces) <= 0):
         raise ValueError("z_faces must be strictly increasing")
+    if geometry not in _EXPONENT:
+        raise ValueError(f"geometry must be one of {sorted(_EXPONENT)}, got {geometry!r}")
+    if geometry != "planar":
+        if z_faces[0] < 0:
+            raise ValueError("radii cannot be negative")
+        if z_faces[0] == 0 and left.kind != "no_flux":
+            raise ValueError("nothing can be held at r = 0; the centre takes a no-flux boundary")
+        if markers is not None:
+            raise ValueError("markers are followed in the planar geometry only")
     x = np.asarray(x0, dtype=float)
     x = x[:, None] if x.ndim == 1 else x.copy()
     n_cells, m = x.shape
     if n_cells != len(z_faces) - 1:
         raise ValueError("x0 needs one row per cell")
     dfun, constant = _as_callable(diffusivity)
-    asm = _Assembler(z_faces, m)
+    asm = _Assembler(z_faces, m, geometry)
     scale = max(1.0, float(np.max(np.abs(x))))
 
     for b in (left, right):
@@ -323,9 +354,9 @@ def solve_planar(
 
     def step_matrix(xk: np.ndarray, step: float, t: float):
         faces = 0.5 * (xk[1:] + xk[:-1])
-        c_inner = dfun(faces, t) / asm.h_inner[:, None, None]
-        c_left, xl = boundary(left, asm.h_left, t, xk[0])
-        c_right, xr = boundary(right, asm.h_right, t, xk[-1])
+        c_inner = dfun(faces, t) * (asm.area_inner / asm.h_inner)[:, None, None]
+        c_left, xl = boundary(left, asm.h_left / asm.area_left if asm.area_left > 0 else np.inf, t, xk[0])
+        c_right, xr = boundary(right, asm.h_right / asm.area_right, t, xk[-1])
         rhs_bc = np.zeros_like(xk)
         if c_left is not None:
             rhs_bc[0] += c_left @ xl
@@ -387,7 +418,7 @@ def solve_planar(
         if tracker:
             marker_track.append(tracker.z.copy())
     return DiffusionResult(np.array(times), z_faces, np.array(saved), iters,
-                           np.array(marker_track) if tracker else None)
+                           np.array(marker_track) if tracker else None, geometry)
 
 
 class _MarkerTracker:

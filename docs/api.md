@@ -348,28 +348,29 @@ elements in the same order. ``temperature`` is a constant or a
 - `prepare(self, t: 'float') -> 'None'`: Set the temperature for the step ending at time t.
 - `tie_line(self, tol: 'float' = 1e-12, max_iter: 'int' = 50) -> 'tuple[np.ndarray, np.ndarray]'`: Solve the binary tie-line, where equal potentials alone fix both compositions.
 
-### `class MovingBoundaryResult(times: 'np.ndarray', interface: 'np.ndarray', z_left: 'np.ndarray', x_left: 'np.ndarray', z_right: 'np.ndarray', x_right: 'np.ndarray', interface_left: 'np.ndarray', interface_right: 'np.ndarray') -> None`
+### `class MovingBoundaryResult(times: 'np.ndarray', interface: 'np.ndarray', z_left: 'np.ndarray', x_left: 'np.ndarray', z_right: 'np.ndarray', x_right: 'np.ndarray', interface_left: 'np.ndarray', interface_right: 'np.ndarray', geometry: 'Geometry' = 'planar') -> None`
 
-MovingBoundaryResult(times: 'np.ndarray', interface: 'np.ndarray', z_left: 'np.ndarray', x_left: 'np.ndarray', z_right: 'np.ndarray', x_right: 'np.ndarray', interface_left: 'np.ndarray', interface_right: 'np.ndarray')
+MovingBoundaryResult(times: 'np.ndarray', interface: 'np.ndarray', z_left: 'np.ndarray', x_left: 'np.ndarray', z_right: 'np.ndarray', x_right: 'np.ndarray', interface_left: 'np.ndarray', interface_right: 'np.ndarray', geometry: 'Geometry' = 'planar')
 
-- `inventory(self) -> 'np.ndarray'`: Integral of each independent mole fraction over both phases, shape (n_t, m).
+- `inventory(self) -> 'np.ndarray'`: Integral of each independent mole fraction over both phases (r^p dr), shape (n_t, m).
 
 ### `class PhaseDissolvedError`
 
 The interface reached an outer boundary, so one phase has vanished.
 
 
-### `class StackResult(times: 'np.ndarray', interfaces: 'np.ndarray', faces: 'list', x: 'list', interface_left: 'np.ndarray', interface_right: 'np.ndarray', names: 'tuple' = ()) -> None`
+### `class StackResult(times: 'np.ndarray', interfaces: 'np.ndarray', faces: 'list', x: 'list', interface_left: 'np.ndarray', interface_right: 'np.ndarray', names: 'tuple' = (), geometry: 'Geometry' = 'planar') -> None`
 
 Saved state of a layered run; index [t] is a saved time, [j] a layer, [i] an interface.
 
-- `inventory(self) -> 'np.ndarray'`: Integral of each independent mole fraction over the whole stack, shape (n_t, m).
+- `inventory(self) -> 'np.ndarray'`: Integral of each independent mole fraction over the whole stack (r^p dr), shape (n_t, m).
 - `profile(self, index: 'int' = -1) -> 'tuple[np.ndarray, np.ndarray]'`: Cell centres (m) and compositions through the whole stack at one saved time.
 - `thickness(self) -> 'np.ndarray'`: Layer thicknesses [t, j] in m.
 
-### `def solve_layers(positions, layers: 'list[Layer]', conditions: 'list', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50) -> 'StackResult'`
+### `def solve_layers(positions, layers: 'list[Layer]', conditions: 'list', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50, geometry: 'Geometry' = 'planar') -> 'StackResult'`
 
-Integrate planar diffusion through a stack of phase layers with moving interfaces.
+Integrate diffusion through a stack of phase layers with moving interfaces, in a plate (default)
+or in concentric shells of a long cylinder or a sphere (``geometry``), positions then being radii.
 
 ``positions`` are the layer boundaries from 0 to the stack thickness (len(layers)
 + 1 values); the inner ones are the initial interfaces. ``conditions[i]`` holds
@@ -381,9 +382,10 @@ the start, if only a few nanometres thick. If a layer is consumed,
 :class:`PhaseDissolvedError` is raised; it and any :class:`ConvergenceError`
 carry the results up to the last saved time as ``.result``.
 
-### `def solve_moving_boundary(length: 'float', interface: 'float', x0_left, x0_right, d_left: 'Diffusivity', d_right: 'Diffusivity', condition: 'FixedInterface | LocalEquilibrium', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50) -> 'MovingBoundaryResult'`
+### `def solve_moving_boundary(length: 'float', interface: 'float', x0_left, x0_right, d_left: 'Diffusivity', d_right: 'Diffusivity', condition: 'FixedInterface | LocalEquilibrium', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50, geometry: 'Geometry' = 'planar') -> 'MovingBoundaryResult'`
 
-Integrate two-phase planar diffusion with a moving interface, as two layers of :func:`solve_layers`.
+Integrate two-phase diffusion with a moving interface, as two layers of :func:`solve_layers`; in a
+cylinder or sphere (``geometry``) the left phase is the core and the right one the surrounding shell.
 
 ``x0_left`` (N_L, n-1) and ``x0_right`` (N_R, n-1) are the initial profiles on
 uniform grids over [0, interface] and [interface, length]; a binary may pass
@@ -802,15 +804,16 @@ pass no flux through the face.
 - `no_flux() -> 'Boundary'`: Zero flux of every element through the face.
 - `potential(phase, potentials: 'dict', temperature) -> 'Boundary'`: Hold the chemical potentials of some components at the face, as a gas atmosphere does.
 
-### `class DiffusionResult(times: 'np.ndarray', z_faces: 'np.ndarray', x: 'np.ndarray', picard_iterations: 'list[int]' = <factory>, markers: 'np.ndarray | None' = None) -> None`
+### `class DiffusionResult(times: 'np.ndarray', z_faces: 'np.ndarray', x: 'np.ndarray', picard_iterations: 'list[int]' = <factory>, markers: 'np.ndarray | None' = None, geometry: 'Geometry' = 'planar') -> None`
 
 Saved profiles: ``x[t_index, cell, component]`` for the independent components.
 
-- `inventory(self) -> 'np.ndarray'`: Integral of each mole fraction over the domain at every saved time, shape (n_t, n-1).
+- `inventory(self) -> 'np.ndarray'`: Integral of each mole fraction over the domain (r^p dr) at every saved time, shape (n_t, n-1).
+- `widths` (property): Cell measures: widths for a plate, volumes per unit angle for a cylinder or sphere.
 
-### `def solve_planar(z_faces: 'np.ndarray', x0: 'np.ndarray', diffusivity: 'Diffusivity', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, picard_tol: 'float' = 1e-10, max_picard: 'int' = 50, markers=None, lattice_velocity: 'LatticeVelocity | None' = None) -> 'DiffusionResult'`
+### `def solve_planar(z_faces: 'np.ndarray', x0: 'np.ndarray', diffusivity: 'Diffusivity', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, picard_tol: 'float' = 1e-10, max_picard: 'int' = 50, markers=None, lattice_velocity: 'LatticeVelocity | None' = None, geometry: 'Geometry' = 'planar') -> 'DiffusionResult'`
 
-Integrate planar interdiffusion from ``x0`` to ``t_end``.
+Integrate interdiffusion from ``x0`` to ``t_end`` in a plate (default), a long cylinder or a sphere.
 
 Parameters
 ----------
@@ -829,6 +832,9 @@ markers : initial positions (m) of inert Kirkendall markers to follow.
 lattice_velocity : callable (x, dx_dz) or (x, dx_dz, t) -> v giving the lattice
     velocity at the interior faces, such as ``lambda x, g: phase.lattice_velocity(x, g, T)``.
     Required with ``markers``.
+geometry : "planar", "cylindrical" or "spherical"; for the curved ones ``z_faces`` are
+    radii, and a first face at r = 0 is the axis or centre, where no flux passes.
+    Markers are followed in the planar geometry only.
 
 Returns profiles at t=0 and at every save time (always including ``t_end``).
 

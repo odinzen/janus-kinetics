@@ -1,4 +1,4 @@
-"""Planar sharp-interface diffusion between two phases.
+"""Sharp-interface diffusion between phase layers in a plate, a long cylinder or a sphere.
 
 Phase L occupies 0 < z < S(t) and phase R occupies S(t) < z < length. Each phase
 has its own grid, stretched uniformly as the interface moves, and is solved with
@@ -14,6 +14,13 @@ With local equilibrium the interface compositions are not known in advance when
 there are three or more elements: the tie-line is the one whose compositions make
 the chemical potentials equal and the flux balances hold together, which gives
 2(n-1) + 1 equations for x_L^I, x_R^I and w.
+
+In a cylinder or sphere the positions are radii and the layers concentric shells,
+as in DICTRA (Borgenstam et al., J. Phase Equilib. 21 (2000) 269). Each moving face
+then sweeps the volume (r_new^(p+1) - r_old^(p+1)) / (p+1) per unit angle, and its
+advective term uses that swept volume divided by the distance moved as the face
+area, so a uniform composition stays uniform on a stretching grid. End fluxes are
+returned per unit of that area, and the interface balance keeps its planar form.
 """
 
 from __future__ import annotations
@@ -28,7 +35,7 @@ import scipy.sparse.linalg as spla
 from .errors import ConvergenceError
 from .phase import SolutionPhase
 from .schedule import Temperature, temperature_at
-from .solver import Boundary, Diffusivity, _as_callable, _Assembler, _output_schedule
+from .solver import _EXPONENT, Boundary, Diffusivity, Geometry, _as_callable, _Assembler, _output_schedule, cell_measures
 from .thermo import R, dmu_dx, reduced_hessian
 
 
@@ -57,7 +64,17 @@ class _End:
     velocity: float = 0.0
 
 
-def _region_step(region: _Region, z_old, z_new, dt, t, left: _End, right: _End, picard_tol, max_picard):
+def _swept_area(z_old, z_new, p: int):
+    """Volume swept per unit angle by faces moving from z_old to z_new, divided by the distance moved."""
+    z_old, z_new = np.asarray(z_old, dtype=float), np.asarray(z_new, dtype=float)
+    dz = z_new - z_old
+    with np.errstate(divide="ignore", invalid="ignore"):
+        swept = (z_new ** (p + 1) - z_old ** (p + 1)) / ((p + 1) * dz)
+    return np.where(np.abs(dz) > 1e-14 * np.maximum(np.abs(z_new), 1e-300), swept, z_new**p)
+
+
+def _region_step(region: _Region, z_old, z_new, dt, t, left: _End, right: _End, picard_tol, max_picard,
+                 geometry: Geometry = "planar"):
     """Advance one region by one step; return new compositions and the diffusive end fluxes.
 
     Cell balance (dz_new x_new - dz_old x_old)/dt + F_out - F_in = 0 with face flux
@@ -67,28 +84,31 @@ def _region_step(region: _Region, z_old, z_new, dt, t, left: _End, right: _End, 
     """
     x_old = region.x
     n, m = x_old.shape
-    asm = _Assembler(z_new, m)
+    p = _EXPONENT[geometry]
+    asm = _Assembler(z_new, m, geometry)
+    area = _swept_area(z_old, z_new, p)
     v_inner = ((z_new - z_old) / dt)[1:-1]
     # moving-face term -v x_up: from the right cell when the face moves right, else the left one
     eye = np.eye(m)
     right_up = (v_inner > 0)[:, None, None]
-    vb = v_inner[:, None, None] * eye
+    vb = (v_inner * area[1:-1])[:, None, None] * eye
     adv_diag = np.zeros((n, m, m))
     adv_diag[:-1] -= np.where(right_up, 0.0, vb)  # cell i loses -v x_i through its right face
     adv_diag[1:] += np.where(right_up, vb, 0.0)  # cell j gains -v x_j through its left face
     adv_upper = -np.where(right_up, vb, 0.0)
     adv_lower = np.where(right_up, 0.0, vb)
 
-    rhs = (np.diff(z_old) / dt)[:, None] * x_old
-    conductance, cells = {}, {"left": 0, "right": n - 1}
-    for side, end, h, sign in (("left", left, asm.h_left, -1.0), ("right", right, asm.h_right, 1.0)):
+    rhs = (cell_measures(z_old, geometry) / dt)[:, None] * x_old
+    conductance, cells, end_area = {}, {"left": 0, "right": n - 1}, {"left": area[0], "right": area[-1]}
+    for side, end, h, a_j, sign in (("left", left, asm.h_left, asm.area_left, -1.0),
+                                    ("right", right, asm.h_right, asm.area_right, 1.0)):
         if end.composition is None:
             conductance[side] = None
             continue
-        c = region.dfun(end.composition[None], t)[0] / h
+        c = region.dfun(end.composition[None], t)[0] * a_j / h
         conductance[side] = c
         # face flux F = -c (x_cell - x_b) - v x_b on the left end, -c (x_b - x_cell) - v x_b on the right
-        rhs[cells[side]] += c @ end.composition + sign * end.velocity * end.composition
+        rhs[cells[side]] += c @ end.composition + sign * end.velocity * end_area[side] * end.composition
 
     xk = x_old.copy()
     if max_picard == 0:  # a single linear solve with D at the old profile, for Jacobian estimates
@@ -96,7 +116,7 @@ def _region_step(region: _Region, z_old, z_new, dt, t, left: _End, right: _End, 
     else:
         linear = False
     for k in range(1, max_picard + 1):
-        c_inner = region.dfun(0.5 * (xk[1:] + xk[:-1]), t) / asm.h_inner[:, None, None]
+        c_inner = region.dfun(0.5 * (xk[1:] + xk[:-1]), t) * (asm.area_inner / asm.h_inner)[:, None, None]
         mat = asm.matrix(dt, c_inner, conductance["left"], conductance["right"])
         mat.diag += adv_diag
         mat.upper += adv_upper
@@ -109,11 +129,11 @@ def _region_step(region: _Region, z_old, z_new, dt, t, left: _End, right: _End, 
     else:
         raise ConvergenceError(f"Picard iteration in a phase region did not converge (last change {change:.3g})")
 
-    flux = {}
+    flux = {}  # per unit of the swept area, so the interface balance reads as in a plate
     if left.composition is not None:
-        flux["left"] = -conductance["left"] @ (xk[0] - left.composition)
+        flux["left"] = -conductance["left"] @ (xk[0] - left.composition) / end_area["left"]
     if right.composition is not None:
-        flux["right"] = -conductance["right"] @ (right.composition - xk[-1])
+        flux["right"] = -conductance["right"] @ (right.composition - xk[-1]) / end_area["right"]
     return xk, flux
 
 
@@ -234,14 +254,15 @@ class StackResult:
     interface_left: np.ndarray  # composition on the left side of each interface [t, i, m]
     interface_right: np.ndarray
     names: tuple = ()
+    geometry: Geometry = "planar"
 
     def thickness(self) -> np.ndarray:
         """Layer thicknesses [t, j] in m."""
         return np.stack([f[:, -1] - f[:, 0] for f in self.faces], axis=1)
 
     def inventory(self) -> np.ndarray:
-        """Integral of each independent mole fraction over the whole stack, shape (n_t, m)."""
-        return sum(np.einsum("ti,tik->tk", np.diff(f, axis=1), x) for f, x in zip(self.faces, self.x))
+        """Integral of each independent mole fraction over the whole stack (r^p dr), shape (n_t, m)."""
+        return sum(np.einsum("ti,tik->tk", cell_measures(f.T, self.geometry).T, x) for f, x in zip(self.faces, self.x))
 
     def profile(self, index: int = -1) -> tuple[np.ndarray, np.ndarray]:
         """Cell centres (m) and compositions through the whole stack at one saved time."""
@@ -262,8 +283,10 @@ def solve_layers(
     picard_tol: float = 1e-10,
     max_newton: int = 30,
     max_picard: int = 50,
+    geometry: Geometry = "planar",
 ) -> StackResult:
-    """Integrate planar diffusion through a stack of phase layers with moving interfaces.
+    """Integrate diffusion through a stack of phase layers with moving interfaces, in a plate (default)
+    or in concentric shells of a long cylinder or a sphere (``geometry``), positions then being radii.
 
     ``positions`` are the layer boundaries from 0 to the stack thickness (len(layers)
     + 1 values); the inner ones are the initial interfaces. ``conditions[i]`` holds
@@ -281,6 +304,10 @@ def solve_layers(
         raise ValueError("need len(layers) + 1 positions and len(layers) - 1 interface conditions")
     if np.any(np.diff(pos) <= 0) or pos[0] != 0.0:
         raise ValueError("positions must start at 0 and increase")
+    if geometry not in _EXPONENT:
+        raise ValueError(f"geometry must be one of {sorted(_EXPONENT)}, got {geometry!r}")
+    if geometry != "planar" and left.kind != "no_flux":
+        raise ValueError("nothing can be held at r = 0; the centre takes a no-flux boundary")
 
     regions = []
     for layer in layers:
@@ -315,7 +342,7 @@ def solve_layers(
         hi = end_l if j == n_layers - 1 else _End(np.atleast_1d(iface_x[j][0]), w[j])
         reg = regions[j]
         return _region_step(reg, reg.faces(b_old[j], b_old[j + 1]), reg.faces(b_new[j], b_new[j + 1]),
-                            step, t_new, lo, hi, picard_tol, 0 if linear else max_picard)
+                            step, t_new, lo, hi, picard_tol, 0 if linear else max_picard, geometry)
 
     saved_jacobian = [None]
 
@@ -434,7 +461,7 @@ def solve_layers(
             [np.array([v[2][j] for v in saved]) for j in range(n_layers)],
             np.array([v[3] for v in saved]).reshape(k, n_if, m),
             np.array([v[4] for v in saved]).reshape(k, n_if, m),
-            tuple(layer.name for layer in layers))
+            tuple(layer.name for layer in layers), geometry)
 
     initial = np.diff(pos)
     saved, times, t = [snapshot()], [0.0], 0.0
@@ -475,11 +502,12 @@ class MovingBoundaryResult:
     x_right: np.ndarray
     interface_left: np.ndarray  # interface compositions [t, m]
     interface_right: np.ndarray
+    geometry: Geometry = "planar"
 
     def inventory(self) -> np.ndarray:
-        """Integral of each independent mole fraction over both phases, shape (n_t, m)."""
-        left = np.einsum("ti,tik->tk", np.diff(self.z_left, axis=1), self.x_left)
-        right = np.einsum("ti,tik->tk", np.diff(self.z_right, axis=1), self.x_right)
+        """Integral of each independent mole fraction over both phases (r^p dr), shape (n_t, m)."""
+        left = np.einsum("ti,tik->tk", cell_measures(self.z_left.T, self.geometry).T, self.x_left)
+        right = np.einsum("ti,tik->tk", cell_measures(self.z_right.T, self.geometry).T, self.x_right)
         return left + right
 
 
@@ -500,8 +528,10 @@ def solve_moving_boundary(
     picard_tol: float = 1e-10,
     max_newton: int = 30,
     max_picard: int = 50,
+    geometry: Geometry = "planar",
 ) -> MovingBoundaryResult:
-    """Integrate two-phase planar diffusion with a moving interface, as two layers of :func:`solve_layers`.
+    """Integrate two-phase diffusion with a moving interface, as two layers of :func:`solve_layers`; in a
+    cylinder or sphere (``geometry``) the left phase is the core and the right one the surrounding shell.
 
     ``x0_left`` (N_L, n-1) and ``x0_right`` (N_R, n-1) are the initial profiles on
     uniform grids over [0, interface] and [interface, length]; a binary may pass
@@ -512,6 +542,6 @@ def solve_moving_boundary(
     if not 0.0 < interface < length:
         raise ValueError("the interface must lie inside (0, length)")
     res = solve_layers([0.0, interface, length], [Layer(x0_left, d_left), Layer(x0_right, d_right)], [condition],
-                       t_end, dt, left, right, save_times, tol, picard_tol, max_newton, max_picard)
+                       t_end, dt, left, right, save_times, tol, picard_tol, max_newton, max_picard, geometry)
     return MovingBoundaryResult(res.times, res.interfaces[:, 0], res.faces[0], res.x[0], res.faces[1], res.x[1],
-                                res.interface_left[:, 0], res.interface_right[:, 0])
+                                res.interface_left[:, 0], res.interface_right[:, 0], geometry)

@@ -73,6 +73,10 @@ Loo's eqs. 25-27, checked against an independent derivation and his Figs.
 2.20-2.21. Interface-reaction control (Dybkov, cited by van Loo) and first-phase
 selection by nucleation are not modelled.
 
+Cylindrical and spherical geometry: done for solve_planar and solve_layers
+(Zener 1949 eq. 12 with lambda = 2, 3; series solutions). Not yet in the
+homogenization and reaction-layer solvers.
+
 Left for later: graded grids next to a moving interface, layers that nucleate
 during a run (today a reaction layer must exist from the start), and an adaptive
 (on-demand) equilibrium table for four or more elements (done: OnDemandEquilibriumTable,

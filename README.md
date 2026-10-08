@@ -18,6 +18,9 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   with `UnstableCompositionError`.
 - **Interdiffusion matrices** in the number-fixed and volume-fixed frames, and
   intrinsic (lattice-frame) diffusivities.
+- **Plates, cylinders and spheres** for the diffusion and moving-interface solvers
+  (concentric shells, as in DICTRA), checked against series solutions and Zener's
+  growth coefficients for each geometry.
 - **Planar diffusion solver**, implicit and conservative, with no-flux or
   fixed-composition boundaries and **Kirkendall marker** tracking (van Loo 1990),
   in the number-fixed frame or, with partial molar volumes, in the volume-fixed
