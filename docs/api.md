@@ -821,7 +821,7 @@ up, divided by sqrt(t); ``marker`` is the Kirkendall plane position divided by
 sqrt(t) and ``marker_phase`` the phase it lies in.
 
 
-### `class ReactionResult(times: 'np.ndarray', thickness: 'dict[str, np.ndarray]', interfaces: 'list[np.ndarray]', markers: 'np.ndarray', consumed: 'list[tuple[float, str]]') -> None`
+### `class ReactionResult(times: 'np.ndarray', thickness: 'dict[str, np.ndarray]', interfaces: 'list[np.ndarray]', markers: 'np.ndarray', consumed: 'list[tuple[float, str]]', geometry: 'str' = 'planar') -> None`
 
 Layer thicknesses (m) of every phase at ``times``.
 
@@ -829,7 +829,8 @@ Layer thicknesses (m) of every phase at ``times``.
 used up. ``interfaces[i]`` holds the interface positions at ``times[i]`` in the
 anchored end member's frame, original interface at 0 for a fresh couple.
 ``markers`` has one column per marker. ``consumed`` lists (time, name) for
-every end member used up during the run.
+every end member used up during the run. In a cylinder or sphere the interfaces
+and markers are radii and the core's "thickness" is its radius.
 
 
 ### `def integrated_diffusivity(left: 'LineCompound', layer: 'LineCompound', right: 'LineCompound', T: 'float') -> 'float'`
@@ -845,7 +846,7 @@ every velocity scales as 1/sqrt(t), so delta_k = 2 (V_k - V_(k-1)) where V are
 the interface velocity coefficients computed with thicknesses delta. That
 nonlinear system is solved in log(delta).
 
-### `def solve_reaction_layers(phases: 'Sequence[LineCompound]', t_end: 'float', temperature: 'Temperature', thickness: 'Sequence[float] | None' = None, end_thickness: 'tuple[float | None, float | None]' = (None, None), markers: 'Sequence[float]' = (0.0,), save_times=None, anchor: 'str | None' = None, rtol: 'float' = 1e-09) -> 'ReactionResult'`
+### `def solve_reaction_layers(phases: 'Sequence[LineCompound]', t_end: 'float', temperature: 'Temperature', thickness: 'Sequence[float] | None' = None, end_thickness: 'tuple[float | None, float | None]' = (None, None), markers: 'Sequence[float]' = (0.0,), save_times=None, anchor: 'str | None' = None, rtol: 'float' = 1e-09, geometry: 'str' = 'planar') -> 'ReactionResult'`
 
 Grow the layers of a binary couple of line compounds over an anneal.
 
@@ -858,6 +859,13 @@ first compound and then into the next. Markers start at the given positions,
 measured from the original interface (the first interface for a pre-grown
 stack). The frame is the lattice of the semi-infinite end member, or of
 ``anchor`` ('left' or 'right') when given.
+
+With ``geometry`` "cylindrical" or "spherical" the first phase is a core of radius
+``end_thickness[0]`` (a wire or particle) and the layers grow as shells around it,
+the last phase being the surrounding matrix (or a shell of thickness
+``end_thickness[1]``). Positions are then radii, markers start at the given distance
+from the core's surface, and the frame is the core's lattice. Rigid shells are
+assumed, as in van Loo's conversion relations: no stress or voiding.
 
 ## `janus_kinetics.schedule`
 

@@ -51,7 +51,7 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   Kirkendall markers, finite films that are used up in turn, and anneal schedules.
   Plates, wires and powder particles reacting through such a layer follow van
   Loo's conversion relations, which also turn measured conversion into the
-  planar growth constant.
+  planar growth constant; several layers can grow around a wire or particle.
 - **Non-isothermal anneals** along piecewise-linear temperature schedules
   (ramps, holds, spikes) for the diffusion, layered-stack and (binary)
   homogenization solvers.

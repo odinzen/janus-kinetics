@@ -240,6 +240,35 @@ integral of k_p. Inverting them gives the planar k_p from powder or wire
 conversion data. Core and matrix are rigid; stresses and Kirkendall voids are
 not modelled.
 
+Several layers around a wire or particle. Van Loo treats one layer; for several
+the planar line-compound model is carried into concentric shells here. In a layer
+of fixed composition each element is conserved, so r^p (c_i w + J_i) is the same at
+every radius (p = 1 cylinder, 2 sphere). With the Darken fluxes J_A = x_A x_B M_A
+dS/dr / V and J_B = -x_A x_B M_B dS/dr / V of the planar model, the lattice velocity
+w and dS/dr both fall as r^-p, and integrating dS/dr across the layer gives
+
+    r^p J_i = (planar flux of the layer) with d replaced by the integral of r^-p dr:
+    ln(r_out / r_in) for a cylinder, 1/r_in - 1/r_out for a sphere.
+
+Multiplied by r^p, every interface balance c_R (v - w_R) - c_L (v - w_L) = J_R - J_L
+is the planar one in V = r^p v and W = r^p w, so the planar velocities apply as they
+stand. The core passes no flux and its lattice velocity W / r^p must stay finite at
+the centre, so the core's lattice is the frame. Its volume r^(p+1) is followed
+rather than its radius, whose rate diverges as it vanishes; it counts as used up at
+1e-4 of its radius, 2.4e-8 (sphere) and 1.4e-7 (cylinder) of the conversion time
+early. With one element diffusing the Kirkendall plane sits on an interface, and in a
+cylinder or sphere a marker a rounding error off it would drift away, since lattice
+speeds fall as r^-p; such a marker is held on the interface.
+
+Checks. One layer reproduces eqs. 25-26 within 1e-9 for both shapes and with A, B or
+both diffusing. Two layers in a sphere agree with the layered-stack solver whose
+phases have a composition range delta and D = D_int / delta: 0.64 and 1.9 nm at 200
+and 1000 s for delta = 0.02, half that for 0.01, against 130 and 400 nm of interface
+movement. A 1 m core grows its layers as a plate within 2e-7, and with a core and
+then the next layer used up inside a finite shell every atom is kept within 4e-8. A
+marker in the outer shell keeps the volume between it and the shell's outer surface,
+both riding the same lattice, to 1e-9.
+
 ## Ordered B2 phases
 
 Chemical order raises the activation energy of element k by (Helander and Agren

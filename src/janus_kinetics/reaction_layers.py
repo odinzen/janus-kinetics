@@ -33,6 +33,10 @@ lattice velocity w. Inert markers ride the lattice of the phase they sit in, whi
 gives the Kirkendall plane positions of van Loo's Table 2.1 and Fig. 2.9. Reaction
 control at an interface (van Loo pp. 56-57) and the nucleation of a phase (p. 61)
 are outside this model: every phase in the sequence grows from the start.
+
+The same layers grow as concentric shells around a cylindrical or spherical core.
+Van Loo (pp. 74-76, eqs. 25-27, after Carter) treats one layer; the several-layer
+form is derived here (see _solve_curved) and reduces to his eq. 26 for one layer.
 """
 
 from __future__ import annotations
@@ -264,7 +268,8 @@ class ReactionResult:
     used up. ``interfaces[i]`` holds the interface positions at ``times[i]`` in the
     anchored end member's frame, original interface at 0 for a fresh couple.
     ``markers`` has one column per marker. ``consumed`` lists (time, name) for
-    every end member used up during the run.
+    every end member used up during the run. In a cylinder or sphere the interfaces
+    and markers are radii and the core's "thickness" is its radius.
     """
 
     times: np.ndarray
@@ -272,6 +277,7 @@ class ReactionResult:
     interfaces: list[np.ndarray]
     markers: np.ndarray
     consumed: list[tuple[float, str]]
+    geometry: str = "planar"
 
 
 def solve_reaction_layers(
@@ -284,6 +290,7 @@ def solve_reaction_layers(
     save_times=None,
     anchor: str | None = None,
     rtol: float = 1e-9,
+    geometry: str = "planar",
 ) -> ReactionResult:
     """Grow the layers of a binary couple of line compounds over an anneal.
 
@@ -296,10 +303,18 @@ def solve_reaction_layers(
     measured from the original interface (the first interface for a pre-grown
     stack). The frame is the lattice of the semi-infinite end member, or of
     ``anchor`` ('left' or 'right') when given.
+
+    With ``geometry`` "cylindrical" or "spherical" the first phase is a core of radius
+    ``end_thickness[0]`` (a wire or particle) and the layers grow as shells around it,
+    the last phase being the surrounding matrix (or a shell of thickness
+    ``end_thickness[1]``). Positions are then radii, markers start at the given distance
+    from the core's surface, and the frame is the core's lattice. Rigid shells are
+    assumed, as in van Loo's conversion relations: no stress or voiding.
     """
     _check_sequence(phases)
     phases = list(phases)
     n = len(phases) - 2
+    requested_anchor = anchor
     if anchor is None:
         anchor = "right" if end_thickness[1] is None and end_thickness[0] is not None else "left"
     if anchor not in ("left", "right"):
@@ -311,6 +326,17 @@ def solve_reaction_layers(
     if np.any(save <= 0) or save[-1] > t_end:
         raise ValueError("save times must lie in (0, t_end]")
     markers = np.asarray(markers, dtype=float)
+    if geometry != "planar":
+        if geometry not in _EXPONENT:
+            raise ValueError(f"geometry must be 'planar', 'cylindrical' or 'spherical', got {geometry!r}")
+        if end_thickness[0] is None:
+            raise ValueError("a cylinder or sphere needs the core radius as end_thickness[0]")
+        if requested_anchor == "right":
+            raise ValueError("in a cylinder or sphere the frame is the core's lattice")
+        out_t, out_pos, out_mark, out_thick, consumed = _solve_curved(
+            phases, t_end, temperature, thickness, end_thickness, markers, save, rtol, _EXPONENT[geometry])
+        return ReactionResult(np.asarray(out_t), {k: np.asarray(v) for k, v in out_thick.items()}, out_pos,
+                              np.asarray(out_mark), consumed, geometry)
 
     if thickness is None:
         t0 = 1e-10 * t_end
@@ -428,3 +454,176 @@ def solve_reaction_layers(
         markers=np.asarray(out_mark),
         consumed=consumed,
     )
+
+
+_EXPONENT = {"cylindrical": 1, "spherical": 2}
+
+
+def _resistance(r_in: np.ndarray, d: np.ndarray, p: int) -> np.ndarray:
+    """Integral of r^-p dr across shells of inner radius r_in and thickness d: the length that takes the place
+    of the thickness in the flux of a curved layer (ln(r_out / r_in) for a cylinder, 1/r_in - 1/r_out for a
+    sphere), written to keep its precision for shells much thinner than their radius."""
+    with np.errstate(divide="ignore"):
+        return np.log1p(d / r_in) if p == 1 else d / (r_in * (r_in + d))
+
+
+def _solve_curved(phases, t_end, temperature, thickness, end_thickness, markers, save, rtol, p):
+    """Concentric shells around a core of the first phase; see solve_reaction_layers.
+
+    Inside a line-compound layer each element is conserved at constant concentration, so
+    r^p (c_i w + J_i) is the same at every radius, and with J_A = x_A x_B M_A / V dS/dr and
+    J_B = -x_A x_B M_B / V dS/dr both the lattice velocity w and dS/dr fall as r^-p. Integrating
+    dS/dr across the layer turns the planar fluxes into r^p J_i = (planar flux) with the
+    thickness d replaced by the integral of r^-p dr. The interface balances, multiplied by r^p,
+    are then the planar ones in V = r^p v and W = r^p w, so _velocities gives V and W directly.
+    The core passes no flux, and its lattice velocity W / r^p must stay finite at the centre, so
+    W = 0 there: the core's lattice is the frame. The core is followed by u = r_core^(p+1),
+    whose rate (p+1) V_0 stays finite as the core shrinks while dr_core/dt does not."""
+    names = [ph.name for ph in phases]
+    n = len(phases) - 2
+    radius = end_thickness[0]
+    outer_finite = end_thickness[1] is not None
+    if thickness is None:
+        t0 = 1e-10 * t_end
+        growth = parabolic_growth(phases, temperature_at(temperature, t0), "left")
+        root_t = np.sqrt(t0)
+        if np.any(markers != 0.0):
+            raise ValueError("in a fresh couple, markers can only start at the original interface (0)")
+        rel = growth.interfaces * root_t
+        marker_r = np.full(markers.size, growth.marker * root_t)
+        outer = end_thickness[1] + 2 * growth.lattice_velocity[-1] * root_t if outer_finite else rel[-1]
+        t_start = t0
+    else:
+        d0 = np.asarray(thickness, dtype=float)
+        if d0.shape != (n,) or np.any(d0 <= 0):
+            raise ValueError(f"give {n} positive layer thicknesses, or None for a fresh couple")
+        rel = np.concatenate([[0.0], np.cumsum(d0)])
+        marker_r = markers.copy()
+        outer = rel[-1] + end_thickness[1] if outer_finite else rel[-1]
+        t_start = 0.0
+
+    out_t, out_pos, out_mark = [], [], []
+    out_thick = {name: [] for name in names}
+    consumed: list[tuple[float, str]] = []
+
+    def record(t, r_core, d_layers, outer_offset, marker_offsets):
+        r_outer, mk = radius + outer_offset, radius + marker_offsets
+        interfaces = r_core + np.concatenate([[0.0], np.cumsum(d_layers)])
+        out_t.append(t)
+        out_pos.append(interfaces)
+        out_mark.append(mk.copy())
+        current = {ph.name: d_layers[k - 1] for k, ph in enumerate(phases) if 0 < k < len(phases) - 1}
+        current[phases[0].name] = r_core
+        current[phases[-1].name] = r_outer - interfaces[-1] if outer_finite else np.inf
+        for name in names:
+            out_thick[name].append(current.get(name, 0.0))
+
+    for ts in save[save < t_start]:
+        scale = np.sqrt(ts / t_start)
+        record(ts, radius + rel[0] * scale, np.diff(rel) * scale, outer, marker_r * scale)
+    save = save[save >= t_start]
+
+    y = np.concatenate([[(radius + rel[0]) ** (p + 1)], np.log(np.diff(rel)), [outer], marker_r])
+    t = t_start
+    while True:
+        n = len(phases) - 2
+        if n == 0:
+            for ts in save[save > t - 1e-15 * t_end]:
+                record(ts, y[0] ** (1 / (p + 1)), np.array([]), y[1], y[2:])
+            break
+
+        def kinematics(t, y, phases=phases, n=n):
+            """Interface radii and velocities, layer thicknesses and the W = r^p w of every lattice."""
+            r_core = max(y[0], 0.0) ** (1 / (p + 1))
+            d_layers = np.exp(y[1:1 + n])
+            r = r_core + np.concatenate([[0.0], np.cumsum(d_layers)])
+            big_v, big_w = _velocities(phases, _resistance(r[:-1], d_layers, p), temperature_at(temperature, t))
+            with np.errstate(divide="ignore", invalid="ignore"):
+                v = np.where(r > 0, big_v / r**p, 0.0)
+            return r, v, d_layers, big_v, big_w
+
+        def held(r, v, big_w, j):
+            """Whether a marker on interface j stays on it: the lattice inside moves outward at least as
+            fast as the interface and the one outside no faster (equality on one side when only one
+            element diffuses, which pins the Kirkendall plane to the interface)."""
+            if r[j] <= 0:
+                return False
+            inner, outside, here = big_w[j] / r[j] ** p, big_w[j + 1] / r[j] ** p, v[j]
+            slack = 1e-9 * max(abs(inner), abs(outside), abs(here), 1e-300)
+            return inner >= here - slack and outside <= here + slack
+
+        # A marker on such an interface moves with it. Followed through the lattices instead it
+        # would leave: in a cylinder or sphere lattice speeds fall as r^-p, so a marker a rounding
+        # error off the interface drifts away from it, which the planar model does not see.
+        r, v, _, _, big_w = kinematics(t, y)
+        size = max(np.exp(y[1:1 + n]).sum(), 1e-9)
+        on_interface = np.full(y.size - 2 - n, -1)
+        for i, m in enumerate(radius + y[2 + n:]):
+            near = np.flatnonzero(np.abs(r - m) <= 1e-6 * size)
+            if near.size and held(r, v, big_w, int(near[0])):
+                on_interface[i] = int(near[0])
+
+        def rhs(t, y, n=n, on_interface=on_interface):
+            r, v, d_layers, big_v, big_w = kinematics(t, y)
+            dy = np.empty_like(y)
+            dy[0] = (p + 1) * big_v[0]
+            dy[1:1 + n] = np.diff(v) / d_layers
+            # the outer surface rides the outer lattice; in an endless matrix it is only a lattice point
+            dy[1 + n] = big_w[-1] / (radius + y[1 + n]) ** p
+            mk = radius + y[2 + n:]
+            # the floor keeps r^p from underflowing for a marker carried to the centre by a vanishing core
+            speed = big_w[np.searchsorted(r, mk)] / np.maximum(mk, 1e-100) ** p
+            for i, j in enumerate(on_interface):
+                if j >= 0 and held(r, v, big_w, j):
+                    speed[i] = v[j]
+            dy[2 + n:] = speed
+            return dy
+
+        def markers_at(ts, ys, on_interface=on_interface):
+            offsets = ys[2 + n:].copy()
+            r = kinematics(ts, ys)[0]
+            attached = on_interface >= 0
+            offsets[attached] = r[on_interface[attached]] - radius
+            return offsets
+
+        # as the core vanishes its surface speed diverges (the integral of r^-p dr across the
+        # first layer does), so it counts as used up at 1e-4 of the radius it had when this
+        # stretch began; the run then ends 2.4e-8 (sphere) and 1.4e-7 (cylinder) of the conversion
+        # time early against van Loo's eq. 26
+        u_end = (1e-4 * max(y[0], 0.0) ** (1 / (p + 1))) ** (p + 1)
+        ev_core = lambda t, y, u_end=u_end: y[0] - u_end
+        ev_core.terminal, ev_core.direction = True, -1
+        events = [ev_core]
+        if outer_finite:
+            ev_outer = lambda t, y, n=n: radius + y[1 + n] - (max(y[0], 0.0) ** (1 / (p + 1))
+                                                             + np.exp(y[1:1 + n]).sum())
+            ev_outer.terminal, ev_outer.direction = True, -1
+            events.append(ev_outer)
+        atol = np.full(y.size, rtol * size)
+        # u = r^(p+1) to the accuracy wanted of r: du = (p+1) r^p dr
+        atol[0] = rtol * (p + 1) * max(y[0], 0.0) ** (p / (p + 1)) * size
+        atol[1:1 + n] = rtol
+        sol = solve_ivp(rhs, (t, t_end), y, method="Radau", rtol=rtol, atol=atol, events=events, dense_output=True)
+        if sol.status == -1:
+            raise ConvergenceError(f"layer growth integration failed: {sol.message}")
+        t_stop = sol.t[-1]
+        for ts in save[(save > t - 1e-15 * t_end) & (save <= t_stop)]:
+            ys = sol.sol(ts)
+            record(ts, max(ys[0], 0.0) ** (1 / (p + 1)), np.exp(ys[1:1 + n]), ys[1 + n], markers_at(ts, ys))
+        save = save[save > t_stop]
+        if sol.status == 0 or save.size == 0:
+            break
+
+        y_end = sol.y[:, -1].copy()
+        y_end[2 + n:] = markers_at(t_stop, y_end)
+        d_layers = np.exp(y_end[1:1 + n])
+        if sol.t_events[0].size:
+            consumed.append((t_stop, phases.pop(0).name))
+            r_new = max(y_end[0], 0.0) ** (1 / (p + 1)) + d_layers[0]
+            y = np.concatenate([[r_new ** (p + 1)], y_end[2:1 + n], [y_end[1 + n]], y_end[2 + n:]])
+        else:
+            consumed.append((t_stop, phases.pop().name))
+            r_last = max(y_end[0], 0.0) ** (1 / (p + 1)) + d_layers.sum()
+            y = np.concatenate([y_end[:1 + n - 1], [r_last - radius], y_end[2 + n:]])
+        t = t_stop
+    return out_t, out_pos, out_mark, out_thick, consumed

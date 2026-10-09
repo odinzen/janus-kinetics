@@ -22,7 +22,7 @@ passes. Every reference is checked against Crossref by tools/check_references.py
   volumes that vary with composition, and the other solvers, still use one V_m.
 - Adaptive time stepping: done for the planar, homogenization and moving-interface
   (solve_layers, solve_moving_boundary) solvers, tolerance=; the reaction-layer solver
-  still takes fixed steps.
+  integrates with an error-controlled ODE solver of its own.
 - Oxides: cation tracer and chemical diffusion done (OxideCationDiffusion,
   Hallstrom et al. 2011). Magnetite checked against their Figs. 3-4 (the Fig. 4
   level is 0.2 decades off their own eq. 7, a gap inside the paper). Open: their
@@ -83,7 +83,8 @@ AerMet100 data need commercial databases), and measured homogenization data.
 
 Cylindrical and spherical geometry: done for solve_planar and solve_layers
 (Zener 1949 eq. 12 with lambda = 2, 3; series solutions), and for solve_homogenized
-(checked against both). Not yet in the reaction-layer solver.
+(checked against both), and for the line-compound reaction layers (several layers,
+derived here; one layer reproduces van Loo's eqs. 25-26).
 
 Left for later: graded grids next to a moving interface, layers that nucleate
 during a run (today a reaction layer must exist from the start), and an adaptive

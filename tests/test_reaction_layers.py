@@ -309,3 +309,130 @@ def test_multilayer_growth_satisfies_wagner_eq_20(couple):
     widths = {name: res.thickness[name][-1] for name in expected}
     for name, value in wagner_eq20(phases, widths, t).items():
         assert value == pytest.approx(expected[name], rel=1e-5)
+
+
+# --- concentric shells around a wire or particle ----------------------------------------------------------
+
+def _particle(ratio):
+    return [LineCompound("A", 0.0, 1.0e-5), LineCompound("AB", 0.4, 1.3e-5, integrated_diffusivity=1e-16, tracer_ratio=ratio),
+            LineCompound("B", 1.0, 1.1e-5)]
+
+
+@pytest.mark.parametrize("ratio", [0.3, 0.0, np.inf])
+@pytest.mark.parametrize("geometry,shape,q", [("spherical", "sphere", 3), ("cylindrical", "cylinder", 2)])
+def test_one_curved_layer_follows_van_loo_eq_26(geometry, shape, q, ratio):
+    """One layer around a 1 um core: conversion and thickness as van Loo's eqs. 26 and 25 give them with k_p from
+    the planar couple and z = (V_AB / x_A,AB) / V_A, within about 1e-10 whichever element diffuses. The core counts
+    as used up at 1e-4 of its radius, 2.4e-8 (sphere) or 1.4e-7 (cylinder) of the conversion time before eq. 26
+    has it gone. With one element diffusing the Kirkendall plane rides an interface: the core's surface when only
+    A moves, the outer one when only B does."""
+    from janus_kinetics.particle_reaction import conversion, conversion_integral, layer_thickness
+
+    phases = _particle(ratio)
+    r0 = 1e-6
+    kp = parabolic_growth(phases, 1000.0).growth_constants["AB"]
+    z = (phases[1].molar_volume / 0.6) / phases[0].molar_volume
+    t_full = conversion_integral(1.0, z, shape) * r0**2 / (2 * kp)
+    times = t_full * np.array([0.01, 0.1, 0.3, 0.6, 0.9, 0.99])
+    res = solve_reaction_layers(phases, 1.5 * t_full, 1000.0, end_thickness=(r0, None), save_times=times,
+                                geometry=geometry)
+    alpha = 1 - (res.thickness["A"][:6] / r0) ** q
+    np.testing.assert_allclose(alpha, conversion(times, kp, r0, z, shape), rtol=0, atol=1e-9)
+    np.testing.assert_allclose(res.thickness["AB"][:6] / r0, layer_thickness(alpha, z, shape), rtol=0, atol=1e-9)
+    assert [name for _, name in res.consumed] == ["A"]
+    assert res.consumed[0][0] / t_full == pytest.approx(1.0, abs=3e-7)
+    marker, inner, outer = res.markers[:6, 0], np.array([i[0] for i in res.interfaces[:6]]), np.array([i[1] for i in res.interfaces[:6]])
+    if ratio == 0.0:
+        np.testing.assert_allclose(marker, inner, rtol=1e-12)
+    elif np.isinf(ratio):
+        np.testing.assert_allclose(marker, outer, rtol=1e-12)
+    else:
+        assert np.all((marker > inner) & (marker < outer))
+
+
+def test_two_curved_layers_agree_with_the_layered_stack_solver():
+    """Two line compounds (x = 0.3, 0.6; D_int 2e-17 and 1e-17 m^2/s; equal molar volumes) between a 1 um sphere of
+    x = 0.02 and a shell of x = 0.95, against solve_layers with each compound a phase of range delta and
+    D = D_int / delta. The interface radii differ by 0.64 and 1.9 nm at 200 and 1000 s for delta = 0.02 and by half
+    that for 0.01, against 130 and 400 nm of movement, so the narrow-range phases converge on the line compounds.
+    (At 2000 s, with tighter steps in solve_layers, delta = 0.01 and 0.005 give 3.9 and 2.4 nm against 700 nm.)"""
+    from janus_kinetics import FixedInterface
+    from janus_kinetics.moving_boundary import Layer, solve_layers
+
+    v, x, d_int = 1e-5, (0.02, 0.30, 0.60, 0.95), (2e-17, 1e-17)
+    r0, d0, saves = 1e-6, (60e-9, 40e-9), [200.0, 1000.0]
+    phases = [LineCompound("core", x[0], v), LineCompound("L1", x[1], v, integrated_diffusivity=d_int[0], tracer_ratio=1.0),
+              LineCompound("L2", x[2], v, integrated_diffusivity=d_int[1], tracer_ratio=1.0), LineCompound("out", x[3], v)]
+    line = solve_reaction_layers(phases, 1000.0, 1000.0, thickness=list(d0), end_thickness=(r0, None), save_times=saves,
+                                 geometry="spherical")
+    bounds = [0.0, r0, r0 + d0[0], r0 + d0[0] + d0[1], r0 + d0[0] + d0[1] + 4e-6]
+    gaps = []
+    for delta, cells in ((0.02, 30), (0.01, 60)):
+        lo1, hi1, lo2, hi2 = x[1] - delta / 2, x[1] + delta / 2, x[2] - delta / 2, x[2] + delta / 2
+        layers = [Layer(np.full(60, x[0]), 1e-14), Layer(np.linspace(lo1, hi1, cells), d_int[0] / delta),
+                  Layer(np.linspace(lo2, hi2, cells), d_int[1] / delta), Layer(np.full(200, x[3]), 1e-14)]
+        conds = [FixedInterface([x[0]], [lo1]), FixedInterface([hi1], [lo2]), FixedInterface([hi2], [x[3]])]
+        stack = solve_layers(bounds, layers, conds, 1000.0, 250.0, save_times=saves[:1], geometry="spherical",
+                             tolerance=1e-5)
+        gaps.append([np.max(np.abs(stack.interfaces[i + 1] - line.interfaces[i][:3])) for i in range(2)])
+    gaps = np.array(gaps)
+    moved = [np.max(np.abs(line.interfaces[i][:3] - np.array(bounds[1:4]))) for i in range(2)]
+    assert np.all(gaps[1] < 0.6 * gaps[0])
+    assert np.all(gaps[1] < 3e-3 * np.array(moved))
+
+
+@pytest.mark.parametrize("geometry,q", [("spherical", 3), ("cylindrical", 2)])
+def test_curved_layers_conserve_both_elements(geometry, q):
+    """A 0.5 um core inside a 2 um outer shell with two layers between: the core and then the first layer are used
+    up, and every A and B atom stays accounted for within 4e-8 (at rtol 1e-11 within 3e-10; the loss comes from
+    the fast last moments of each vanishing core)."""
+    phases = [LineCompound("core", 0.0, 1.0e-5), LineCompound("L1", 0.3, 1.2e-5, integrated_diffusivity=2e-17, tracer_ratio=0.5),
+              LineCompound("L2", 0.6, 1.4e-5, integrated_diffusivity=1e-17, tracer_ratio=3.0), LineCompound("out", 1.0, 1.1e-5)]
+    res = solve_reaction_layers(phases, 20000.0, 1000.0, end_thickness=(0.5e-6, 2e-6),
+                                save_times=np.linspace(100.0, 20000.0, 12), geometry=geometry)
+    assert [name for _, name in res.consumed] == ["core", "L1"]
+
+    def atoms(i):
+        alive = [p for p in phases if p.name == "out" or res.thickness[p.name][i] > 0]
+        edges = [0.0, *res.interfaces[i], res.interfaces[i][-1] + res.thickness["out"][i]]
+        vol = [(hi**q - lo**q) / q / p.molar_volume for p, lo, hi in zip(alive, edges[:-1], edges[1:])]
+        return np.array([sum(w * (1 - p.x) for w, p in zip(vol, alive)), sum(w * p.x for w, p in zip(vol, alive))])
+
+    total = np.array([atoms(i) for i in range(len(res.times))])
+    assert np.max(np.abs(total / total[0] - 1)) < 4e-8
+
+
+@pytest.mark.parametrize("geometry", ["spherical", "cylindrical"])
+def test_a_large_core_grows_its_layers_as_a_plate(geometry):
+    """Around a 1 m core, layers of a few hundred nm grow as in the planar couple within 2e-7 (about their
+    thickness over the radius)."""
+    phases = [LineCompound("core", 0.0, 1.0e-5), LineCompound("L1", 0.3, 1.2e-5, integrated_diffusivity=2e-17, tracer_ratio=0.5),
+              LineCompound("L2", 0.6, 1.4e-5, integrated_diffusivity=1e-17, tracer_ratio=3.0), LineCompound("out", 1.0, 1.1e-5)]
+    big = solve_reaction_layers(phases, 1000.0, 1000.0, end_thickness=(1.0, None), save_times=[100.0], geometry=geometry)
+    flat = solve_reaction_layers(phases, 1000.0, 1000.0, save_times=[100.0])
+    for name in ("L1", "L2"):
+        np.testing.assert_allclose(big.thickness[name], flat.thickness[name], rtol=2e-7)
+        assert big.thickness[name][-1] > 1e-7
+
+
+
+@pytest.mark.parametrize("geometry,q", [("spherical", 3), ("cylindrical", 2)])
+def test_matrix_markers_ride_the_matrix_lattice(geometry, q):
+    """A marker in the outer shell and the shell's outer surface both ride its lattice, and no atoms cross that
+    lattice, so the volume between them, R^q - m^q, stays fixed while the lattice itself moves."""
+    phases = _particle(0.3)
+    res = solve_reaction_layers(phases, 500.0, 1000.0, thickness=[20e-9], end_thickness=(1e-6, 3e-6),
+                                markers=[1.5e-6], save_times=[50.0, 200.0], geometry=geometry)
+    outer = np.array([i[-1] for i in res.interfaces]) + res.thickness["B"]
+    marker = res.markers[:, 0]
+    np.testing.assert_allclose(outer**q - marker**q, (outer**q - marker**q)[0], rtol=1e-9)
+    assert abs(marker[-1] - marker[0]) > 1e-3 * (marker[-1] - 1e-6)  # the lattice did move
+
+def test_curved_inputs_are_checked():
+    phases = _particle(1.0)
+    with pytest.raises(ValueError, match="geometry"):
+        solve_reaction_layers(phases, 10.0, 1000.0, end_thickness=(1e-6, None), geometry="conical")
+    with pytest.raises(ValueError, match="core radius"):
+        solve_reaction_layers(phases, 10.0, 1000.0, geometry="spherical")
+    with pytest.raises(ValueError, match="core's lattice"):
+        solve_reaction_layers(phases, 10.0, 1000.0, end_thickness=(1e-6, None), geometry="spherical", anchor="right")

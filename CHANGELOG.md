@@ -21,7 +21,8 @@ First version.
 - Conversion of plates, cylinders and spheres through a reaction layer (van Loo
   1990, eqs. 25-27), including anneal schedules and the inverse for k_p.
 - Homogenization model for multiphase diffusion (binaries and ternaries).
-- Cylindrical and spherical geometry for the diffusion, moving-interface and homogenization solvers.
+- Cylindrical and spherical geometry for the diffusion, moving-interface, homogenization and
+  reaction-layer solvers, the last with several layers growing around a wire or particle.
 - Microsegregation: Scheil-Gulliver from pycalphad, closed-form limits, Kobayashi's exact
   solution, a back-diffusion solidification model, and segregation profiles for homogenization.
 - Multicomponent precipitation with CALPHAD driving forces and nucleus compositions
