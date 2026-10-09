@@ -203,7 +203,8 @@ def test_ternary_homogenization_runs_near_the_table_hypotenuse():
 # --- stacks -------------------------------------------------------------------------------------
 
 def test_vanishing_layer_under_local_equilibrium_is_reported_as_consumed():
-    """Before, the interface Newton failed first and the run ended in a ConvergenceError without results."""
+    """Before, the interface Newton failed first and the run ended in a ConvergenceError without results. The
+    alpha layer really is used up, near 171 s with 0.1 s, 0.02 s and adaptive steps alike."""
     db = Database(TWO_PHASE)
     alpha = SolutionPhase(db, "ALPHA", ["A", "B"])
     beta = SolutionPhase(db, "BETA", ["A", "B"])

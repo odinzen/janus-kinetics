@@ -10,6 +10,8 @@ Exact references:
   argument Zener uses, and checked to reduce to his eq. (12) as D_L -> 0.
 """
 
+import re
+
 import numpy as np
 import pytest
 from pycalphad import Database, equilibrium, variables as v
@@ -253,10 +255,14 @@ def test_ternary_interface_moves_parabolically(ternary_couple):
 
 
 def test_dissolving_phase_is_reported():
-    """A thin left layer that the flux balance consumes must stop with a clear error."""
+    """A thin left layer that the flux balance consumes must stop with a clear error. The end is real, not a
+    step artifact: 10 s steps put it near 80 s and adaptive steps (tolerance 1e-4 and 1e-5) near 70.2 s."""
+    args = (1e-4, 2e-6, np.full(10, 0.6), np.full(200, 0.0), 1e-14, 1e-13, FixedInterface([0.6], [0.3]), 1e5)
     with pytest.raises(PhaseDissolvedError):
-        solve_moving_boundary(1e-4, 2e-6, np.full(10, 0.6), np.full(200, 0.0), 1e-14, 1e-13,
-                              FixedInterface([0.6], [0.3]), 1e5, 1e3)
+        solve_moving_boundary(*args, 1e3)
+    with pytest.raises(PhaseDissolvedError) as err:
+        solve_moving_boundary(*args, 1e4, tolerance=1e-4)
+    assert 69.0 < float(re.search(r"t = ([0-9.eE+-]+) s", str(err.value)).group(1)) < 72.0
 
 
 def test_fixed_interface_refuses_ternaries():
