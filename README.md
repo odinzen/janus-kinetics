@@ -67,6 +67,10 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   with local equilibrium at the metal/oxide interface. It reproduces their 24 h
   scale thicknesses at 625 and 700 C within 1.5 % and their late-time growth rates
   within 8 %.
+- **Electromigration in interconnect lines**: stress build-up along a confined line
+  (Korhonen et al. 1993) with blocked, void or pad ends, stress-dependent diffusion and
+  yielding, checked against their exact solutions and their fit to measured stresses, and
+  Blech's threshold current density-length product (Blech 1976).
 - **Microsegregation and homogenization**: Scheil-Gulliver paths from pycalphad for
   any number of elements (Bocklund et al. 2020), the closed-form segregation limits,
   Kobayashi's exact Brody-Flemings solution, a back-diffusion solidification model

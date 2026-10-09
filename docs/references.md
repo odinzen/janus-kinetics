@@ -4,6 +4,8 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 
 - Andersson J.O., Ågren J. (1992). Models for numerical treatment of multicomponent diffusion in simple phases. *Journal of Applied Physics* 72, 1350-1355. https://doi.org/10.1063/1.351745
 - Ansara I., Dupin N., Lukas H.L., Sundman B. (1997). Thermodynamic assessment of the Al-Ni system. *Journal of Alloys and Compounds* 247, 20-30. https://doi.org/10.1016/s0925-8388(96)02652-7
+- Blech I.A. (1976). Electromigration in thin aluminum films on titanium nitride. *Journal of Applied Physics* 47, 1203-1208. https://doi.org/10.1063/1.322842
+- Blech I.A. (1977). Erratum: Electromigration in thin aluminum films on titanium nitride. *Journal of Applied Physics* 48, 2648-2648. https://doi.org/10.1063/1.324308
 - Bocklund B., Bobbio L.D., Otis R.A., Beese A.M., Liu Z.K. (2020). Experimental validation of Scheil-Gulliver simulations for gradient path planning in additively manufactured functionally graded materials. *Materialia* 11, 100689. https://doi.org/10.1016/j.mtla.2020.100689
 - Booth-Morrison C., Weninger J., Sudbrack C.K., Mao Z., Noebe R.D., Seidman D.N. (2008). Effects of solute concentrations on kinetic pathways in Ni-Al-Cr alloys. *Acta Materialia* 56, 3422-3438. https://doi.org/10.1016/j.actamat.2008.03.016
 - Cahn J.W. (1956). The kinetics of grain boundary nucleated reactions. *Acta Metallurgica* 4, 449-459. https://doi.org/10.1016/0001-6160(56)90041-4
@@ -19,6 +21,7 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Jönsson B. (1995). Assessment of the Mobilities of Cr, Fe and Ni in bcc Cr-Fe-Ni Alloys. *ISIJ International* 35, 1415-1421. https://doi.org/10.2355/isijinternational.35.1415
 - Kjellqvist L., Selleby M., Sundman B. (2008). Thermodynamic modelling of the Cr-Fe-Ni-O system. *Calphad* 32, 577-592. https://doi.org/10.1016/j.calphad.2008.04.005
 - Kobayashi S. (1988). Solute redistribution during solidification with diffusion in solid phase: A theoretical analysis. *Journal of Crystal Growth* 88, 87-96. https://doi.org/10.1016/s0022-0248(98)90010-0
+- Korhonen M.A., Børgesen P., Tu K.N., Li C.Y. (1993). Stress evolution due to electromigration in confined metal lines. *Journal of Applied Physics* 73, 3790-3799. https://doi.org/10.1063/1.354073
 - Kozeschnik E., Svoboda J., Fratzl P., Fischer F. (2004). Modelling of kinetics in multi-component multi-phase systems with spherical precipitates. *Materials Science and Engineering: A* 385, 157-165. https://doi.org/10.1016/j.msea.2004.06.016
 - Larsson H., Höglund L. (2009). Multiphase diffusion simulations in 1D using the DICTRA homogenization model. *Calphad* 33, 495-501. https://doi.org/10.1016/j.calphad.2009.06.004
 - Otis R., Liu Z.K. (2017). pycalphad: CALPHAD-based Computational Thermodynamics in Python. *Journal of Open Research Software* 5, 1. https://doi.org/10.5334/jors.140

@@ -141,6 +141,74 @@ where dmu_i/dc_j follows from dx_k/dc_j = V_m [delta_kj - x_k (1 - V_j/V_n)].
 The fluxes then satisfy sum_k V_k J_k = 0 and J_k = -sum_j D^V_kj dc_j/dz.
 Equal partial volumes recover :func:`number_fixed_matrix`.
 
+## `janus_kinetics.electromigration`
+
+### `class LineEnd(kind: 'str' = 'blocked', width: 'float | None' = None, stress: 'float' = 0.0) -> None`
+
+Condition at an end of the line: ``blocked`` (no atomic flux), a ``void`` from which atoms flow
+as Korhonen et al.'s eq. (14) gives (``width`` w, the line width), or a ``reservoir`` held at
+``stress`` (a bond pad or a wide line, say).
+
+
+### `class StressResult(times: 'np.ndarray', x: 'np.ndarray', stress: 'np.ndarray', steps: 'int') -> None`
+
+StressResult(times: 'np.ndarray', x: 'np.ndarray', stress: 'np.ndarray', steps: 'int')
+
+
+### `def blech_product(stress_difference: 'float', effective_charge: 'float', resistivity: 'float', atomic_volume: 'float') -> 'float'`
+
+Threshold current density times length (A/m), Blech's eq. (6): (jL)_c = Omega Delta sigma /
+(|Z*| e rho), for the largest stress difference Delta sigma (Pa) the line sustains between its ends.
+
+### `def drift_velocity(current_density: 'float', length: 'float', diffusivity: 'float', temperature: 'float', effective_charge: 'float', resistivity: 'float', atomic_volume: 'float', stress_difference: 'float') -> 'float'`
+
+Net drift velocity (m/s) of a line of the given length, Blech's eqs. (1) and (3)-(4): the wind
+drives atoms at v = (D/kT) e |Z*| rho j and the stress difference between the ends drives them back
+at (D/kT) Omega Delta sigma / l; below the threshold of eq. (5) nothing moves.
+
+### `def finite_line_stress(x, t: 'float', length: 'float', kappa: 'float', gradient: 'float', terms: 'int' = 400)`
+
+Stress in a line blocked at both ends, Korhonen et al. eq. (13), summed over ``terms`` modes
+m_n = (2n + 1) pi.
+
+### `def semi_infinite_stress(x, t: 'float', kappa: 'float', gradient: 'float')`
+
+Stress in a semi-infinite line blocked at x = 0 from t = 0, Korhonen et al. eq. (9); at the
+block it is 2 G sqrt(kappa t / pi), eq. (10).
+
+### `def solve_line_stress(length: 'float', n_cells: 'int', gradient: 'float', kappa: 'float | Callable[[np.ndarray], np.ndarray]', t_end: 'float', dt: 'float', left: 'LineEnd' = LineEnd(kind='blocked', width=None, stress=0.0), right: 'LineEnd' = LineEnd(kind='blocked', width=None, stress=0.0), save_times: 'Sequence[float] | None' = None, initial: 'np.ndarray | float' = 0.0, yield_stress: 'float | None' = None, tolerance: 'float | None' = None, picard_tol: 'float' = 1e-10, max_picard: 'int' = 50) -> 'StressResult'`
+
+Integrate Korhonen et al.'s eq. (8) along a line of ``length`` (m) by backward Euler on ``n_cells``
+equal cells. ``kappa`` is constant or a function of the stress, such as their eq. (18) with the
+activation volumes neglected, kappa(sigma) = kappa_0 exp(Omega sigma / kT); then each step iterates
+until the stress changes by less than ``picard_tol`` times its largest value. ``tolerance`` (Pa) adapts the steps as in :func:`solve_planar`.
+
+``yield_stress`` caps |sigma| by ideal plasticity (their section III, eq. 11): a yielded zone holds
+the yield stress and exchanges no flux with the rest of the line, and grows as the stress beside it
+reaches yield. Loading is taken as monotonic: a yielded cell does not unload (after a current
+reversal, say).
+
+### `def steady_stress(x, length: 'float', gradient: 'float')`
+
+Blech's steady state of a line blocked at both ends, Korhonen et al. eq. (12).
+
+### `def stress_diffusivity(diffusivity: 'float', modulus: 'float', atomic_volume: 'float', temperature: 'float') -> 'float'`
+
+kappa = D_a B Omega / kT in m^2/s (Korhonen et al. eq. 8).
+
+### `def void_line_stress(x, t: 'float', length: 'float', kappa: 'float', gradient: 'float', width: 'float', terms: 'int' = 400)`
+
+Stress in a line with a void at x = 0 and a block at x = L, Korhonen et al. eqs. (15)-(16), with
+alpha = L / w and beta_n the roots of beta tan(beta) = alpha. At the void the flux follows their
+eq. (14), so d sigma/dx + G = sigma / w there. The leading term printed as -G xi is taken as -G L xi:
+it must carry a length, and only -G x vanishes with the series at t = 0 and remains as the steady
+state they describe (compressive except at the void, where the stress is zero).
+
+### `def wind_stress_gradient(resistivity: 'float', current_density: 'float', effective_charge: 'float', atomic_volume: 'float') -> 'float'`
+
+G = E q* / Omega = rho j |Z*| e / Omega in Pa/m (Korhonen et al. p. 3792), from rho in ohm m,
+j in A/m^2 and Omega in m^3.
+
 ## `janus_kinetics.errors`
 
 ### `class ConvergenceError`

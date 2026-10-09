@@ -358,6 +358,36 @@ with eqs. (11)-(12) whatever the thermodynamics. And oxygen carries 18 % of k he
 but about 10 % in their Fig. 11, a ratio fixed by eqs. (11)-(12) alone. The model assumes a compact,
 adherent scale on a planar front, with no voids, cracks or evaporation.
 
+## Electromigration stress
+
+In a metal line held by a rigid passivation the electron wind moves atoms along the
+line, and where that flux diverges it builds stress. With vacancies in equilibrium,
+Korhonen, Borgesen, Tu and Li (1993, eq. 8) reduce this to a diffusion equation for the
+stress,
+
+    d sigma/dt = d/dx [ kappa (d sigma/dx + G) ],   kappa = D_a B Omega / kT,   G = rho j |Z*| e / Omega,
+
+with x along the electron flow. It is solved by backward Euler on a uniform grid, with
+ends that are blocked (no flux), voids (their eq. 14, d sigma/dx + G = sigma / w, mirrored
+at a right end) or reservoirs at a fixed stress, kappa constant or a function of stress
+(eq. 18), and optionally ideal plasticity: a yielded zone holds the yield stress and
+exchanges no flux with the rest of the line, so its edge advances as the elastic stress
+beside it reaches yield (section III, eq. 11). The steady state of a line blocked at both
+ends, sigma = G L (1/2 - x/L) (eq. 12), has the end-to-end difference G L that Blech's
+threshold (1976, eq. 6) sets equal to the largest sustainable Delta sigma:
+(jL)_c = Omega Delta sigma / (|Z*| e rho). Blech's paper has an erratum (1977) not read here.
+
+Checks. The solver converges at first order in the step onto eq. 9 (semi-infinite line),
+eq. 13 (blocked at both ends) and eq. 15 (a void at one end, alpha = 5), and settles on
+eq. 12 to 1e-9. Eq. 15 prints its leading term as -G xi; only -G L xi starts the line
+stress-free and leaves the steady state the paper describes. Under yielding the front
+advances at G kappa / sigma_y within 0.3 % and the stress ahead of it follows eq. 11 within
+1 %. Their Fig. 9 fit (G = 16.5 MPa/um, kappa = 2.6 um^2/h, 270 h), digitized, matches eq. 9
+within 0.006 in log10 stress. The diffusivity they infer from that kappa, D_a = 3e-16 m^2/s,
+is 50 times what kappa = D_a B Omega / kT gives with their B = 50 GPa (6e-18 m^2/s); it
+follows from converting hours as if they were minutes. Blech's own numbers agree with his
+threshold: 1.1e5 A/cm^2 in a 115 um stripe is the 1260 A/cm he quotes.
+
 ## Homogenization
 
 Each cell is in local equilibrium at its overall composition, so it has one set

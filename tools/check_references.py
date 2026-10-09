@@ -38,6 +38,9 @@ REFERENCES = [
     ("10.1016/j.actamat.2008.03.016", "Booth-Morrison", 2008, "56", "3422"),
     ("10.1016/0001-6160(55)90014-6", "Clemm", 1955, "3", "70"),
     ("10.1016/0001-6160(56)90041-4", "Cahn", 1956, "4", "449"),
+    ("10.1063/1.354073", "Korhonen", 1993, "73", "3790"),
+    ("10.1063/1.322842", "Blech", 1976, "47", "1203"),
+    ("10.1063/1.324308", "Blech", 1977, "48", "2648"),
     ("10.1016/S0022-0248(98)90010-0", "Kobayashi", 1988, "88", "87"),
     ("10.1016/j.mtla.2020.100689", "Bocklund", 2020, "11", "100689"),
     ("10.1016/S1359-6454(01)00383-4", "Campbell", 2002, "50", "775"),
@@ -68,8 +71,13 @@ def fetch(doi: str) -> dict:
     raise RuntimeError(f"Crossref did not answer for {doi}")
 
 
+def family(a: dict) -> str:
+    # older AIP records spell a slashed o as "o/" (Borgesen as Bo/rgesen)
+    return a.get("family", "").replace("o/", "ø").replace("O/", "Ø")
+
+
 def entry(m: dict) -> str:
-    authors = ", ".join(f"{a.get('family', '')} {''.join(p[0] + '.' for p in a.get('given', '').replace('-', ' ').split())}".strip()
+    authors = ", ".join(f"{family(a)} {''.join(p[0] + '.' for p in a.get('given', '').replace('-', ' ').split())}".strip()
                         for a in m.get("author", []))
     year = m["issued"]["date-parts"][0][0]
     # house style keeps plain ASCII punctuation, so typographic dashes and quotes are folded

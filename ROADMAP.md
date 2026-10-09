@@ -127,6 +127,15 @@ Left for later, each needing a source to be opened first:
 - the mean-radius approach, whose coarsening fraction (eq. 17) is defined only
   for 0.99 R* < R_mean < 1.01 R* in the paper.
 
+## Thin films (in progress)
+
+- Electromigration stress in confined lines (Korhonen et al. 1993) with Blech's threshold
+  (1976): done; Blech's 1977 erratum not yet read.
+- Grain-boundary diffusion regimes (Harrison 1961, Suzuoka 1961, Le Claire 1963; Whipple
+  1954 requested), linear-parabolic oxidation (Deal and Grove 1965), and layer
+  suppression in thin-film couples (Gosele and Tu 1982; d'Heurle 1988 requested): papers
+  in hand, not built yet.
+
 ## Phase 4. Examples, documentation and release preparation (done)
 
 - Worked examples in examples/, each run at coarse resolution by tests/test_examples.py.
