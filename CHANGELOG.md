@@ -31,8 +31,8 @@ First version.
   misfit energy, grain-junction nucleation (Clemm and Fisher 1955), temperature schedules,
   several phases or nucleation sites competing for one matrix, and nucleation site counts
   from the grain size (Cahn 1956) or the dislocation density.
-- Adaptive time steps in the planar and homogenization solvers, with recovery from steps that
-  fail to converge.
+- Adaptive time steps in the planar, homogenization and layered-stack solvers, with recovery
+  from steps that fail to converge.
 - Parabolic growth of a compact oxide scale from cation and anion transport with
   grain-boundary averaging, checked against the Cr2O3 thicknesses and figures of
   Hallstrom et al. (2013), with the Cr-O description of Kjellqvist et al. (2008)

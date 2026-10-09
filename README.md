@@ -25,7 +25,7 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   fixed-composition boundaries and **Kirkendall marker** tracking (van Loo 1990),
   in the number-fixed frame or, with partial molar volumes, in the volume-fixed
   frame in concentrations, so the molar volume may change with composition.
-  Optional adaptive time steps (also in the homogenization solver) follow profiles
+  Optional adaptive time steps (also in the homogenization and layered-stack solvers) follow profiles
   saved over decades of time and retry steps that fail to converge.
 - **Reading measured couples**: the interdiffusion coefficient from a binary
   penetration curve without a Matano plane, and the intrinsic diffusivities at

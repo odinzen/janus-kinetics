@@ -132,6 +132,25 @@ def test_two_sided_couple_matches_similarity_solution():
     assert np.max(np.abs(inv - inv[0])) < 1e-12 * inv[0, 0]
 
 
+
+def test_two_sided_couple_with_adaptive_steps():
+    """The same couple with adaptive steps (largest t1/4, tolerance 1e-4) holds the fixed-step test's bounds:
+    0.36 % at t1/4 and 0.25 % at t1. At t1/100 the interface has moved 1.5 cells and the 1.1 % error there is
+    the grid's."""
+    dl, dr = 2e-15, 1e-14
+    xl_inf, xr_inf, xl_i, xr_i = 0.9, 0.1, 0.7, 0.4
+    k = two_sided_k(dl, dr, xl_inf, xr_inf, xl_i, xr_i)
+    t1 = 1e5
+    half = 10 * np.sqrt(dr * t1)
+    res = solve_moving_boundary(2 * half, half, np.full(400, xl_inf), np.full(800, xr_inf), dl, dr,
+                                FixedInterface([xl_i], [xr_i]), t1, t1 / 4, save_times=[t1 / 100, t1 / 4],
+                                tolerance=1e-4)
+    shift = res.interface - half
+    assert shift[2] == pytest.approx(k * np.sqrt(t1 / 4), rel=1e-2)
+    assert shift[3] == pytest.approx(k * np.sqrt(t1), rel=5e-3)
+    inv = res.inventory()
+    assert np.max(np.abs(inv - inv[0])) < 1e-12 * inv[0, 0]
+
 # --------------------------------------------- local equilibrium from pycalphad
 
 TWO_PHASE = HEADER + """

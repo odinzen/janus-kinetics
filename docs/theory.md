@@ -180,6 +180,16 @@ potential equal across the interface. That is n equations, so in a binary the
 tie-line is fixed and only dS/dt is solved for; with more elements the operating
 tie-line and dS/dt are solved together each step.
 
+Layered stacks take adaptive steps too. Compositions count in mole fraction and
+each interface position in thicknesses of the thinner layer beside it, so a
+nanometre reaction layer is followed as closely as a thick one. This matters: a
+200 nm beta layer (D = 1e-17 m^2/s) between faster alpha and gamma thins to 1.565 nm
+at 15 s and then grows again (0.1 s and 0.02 s steps agree), but steps of 0.5 s or
+more carry its interface past the next one and report it consumed. A layer that
+seems to vanish within an adaptive step while it still holds 2 % of its first
+thickness is retried with a shorter step; a real end, such as a 0.5 um film eaten
+by a growing layer (near 84 s with 0.2 s steps and adaptively), still stops the run.
+
 ## Stoichiometric reaction layers
 
 A line compound has no measurable gradient, so its flux is described by Wagner's

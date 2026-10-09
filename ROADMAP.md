@@ -20,8 +20,9 @@ passes. Every reference is checked against Crossref by tools/check_references.py
 - Volume-fixed frame in the solver, with a composition-dependent molar volume: done
   for constant partial molar volumes (planar solver, in concentrations). Partial
   volumes that vary with composition, and the other solvers, still use one V_m.
-- Adaptive time stepping: done for the planar and homogenization solvers (tolerance=);
-  the moving-interface and reaction-layer solvers still take fixed steps.
+- Adaptive time stepping: done for the planar, homogenization and moving-interface
+  (solve_layers, solve_moving_boundary) solvers, tolerance=; the reaction-layer solver
+  still takes fixed steps.
 - Oxides: cation tracer and chemical diffusion done (OxideCationDiffusion,
   Hallstrom et al. 2011). Magnetite checked against their Figs. 3-4 (the Fig. 4
   level is 0.2 decades off their own eq. 7, a gap inside the paper). Open: their

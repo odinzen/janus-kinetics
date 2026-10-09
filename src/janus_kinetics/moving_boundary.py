@@ -35,7 +35,7 @@ import scipy.sparse.linalg as spla
 from .errors import ConvergenceError
 from .phase import SolutionPhase
 from .schedule import Temperature, temperature_at
-from .solver import _EXPONENT, Boundary, Diffusivity, Geometry, _as_callable, _Assembler, _output_schedule, cell_measures
+from .solver import _EXPONENT, Boundary, Diffusivity, Geometry, _as_callable, _Assembler, _march, cell_measures
 from .thermo import R, dmu_dx, reduced_hessian
 
 
@@ -284,6 +284,7 @@ def solve_layers(
     max_newton: int = 30,
     max_picard: int = 50,
     geometry: Geometry = "planar",
+    tolerance: float | None = None,
 ) -> StackResult:
     """Integrate diffusion through a stack of phase layers with moving interfaces, in a plate (default)
     or in concentric shells of a long cylinder or a sphere (``geometry``), positions then being radii.
@@ -297,6 +298,12 @@ def solve_layers(
     the start, if only a few nanometres thick. If a layer is consumed,
     :class:`PhaseDissolvedError` is raised; it and any :class:`ConvergenceError`
     carry the results up to the last saved time as ``.result``.
+
+    ``tolerance`` adapts the step as in :func:`solve_planar`, counting compositions in mole
+    fraction and each interface position in thicknesses of the thinner layer beside it, so a
+    thin reaction layer is followed as closely as a thick one. A step that does not converge,
+    or in which a layer seems to vanish while it still holds 2 % of its first thickness, is
+    halved and redone.
     """
     pos = np.asarray(positions, dtype=float)
     n_layers = len(layers)
@@ -464,28 +471,52 @@ def solve_layers(
             tuple(layer.name for layer in layers), geometry)
 
     initial = np.diff(pos)
-    saved, times, t = [snapshot()], [0.0], 0.0
+    saved, times = [snapshot()], [0.0]
+    pending = []
+
+    def advance(state, step, t_new):
+        # state is the last accepted one, which s, the regions, u_ifaces and w_prev hold; nothing
+        # changes until on_step accepts the result, so a rejected step leaves no trace
+        left_frac = np.diff(bounds(s)) / initial
+        j = int(np.argmin(left_frac))
+        try:
+            result = solve_step(s, step, t_new)
+        except ConvergenceError as err:
+            # a layer a few cells from vanishing makes the interface Newton fail
+            # before any thickness reaches zero; report that as what it is
+            if left_frac[j] < 0.02:
+                raise PhaseDissolvedError(
+                    f"layer {j} ({layers[j].name or 'unnamed'}) was nearly consumed "
+                    f"({left_frac[j]:.2%} of its initial thickness) near t = {t_new:g} s") from err
+            raise
+        except PhaseDissolvedError as err:
+            # with adaptive steps an overlong step can carry an interface past its neighbour
+            if tolerance is not None and left_frac[j] >= 0.02:
+                raise ConvergenceError(str(err)) from err
+            raise
+        pending[:] = [result]
+        return np.concatenate([x.ravel() for x in result[3]] + [result[2]]), 1
+
+    def on_step(state, t_old, t_new):
+        nonlocal u_ifaces, w_prev, s
+        u_ifaces, w_prev, s, xs = pending[0]
+        for reg, xj in zip(regions, xs):
+            reg.x = xj
+
+    def on_save(t):
+        times.append(t)
+        saved.append(snapshot())
+
+    n_comp = sum(r.x.size for r in regions)
+
+    def norm(d):
+        thickness = np.diff(bounds(s))
+        thinner = np.minimum(thickness[:-1], thickness[1:])
+        return max(np.max(np.abs(d[:n_comp])), np.max(np.abs(d[n_comp:]) / thinner, initial=0.0))
+
+    start = np.concatenate([r.x.ravel() for r in regions] + [s])
     try:
-        for target, steps in _output_schedule(t_end, dt, save_times):
-            step = (target - t) / steps
-            for k in range(steps):
-                try:
-                    u_ifaces, w_prev, s, xs = solve_step(s, step, t + (k + 1) * step)
-                except ConvergenceError as err:
-                    # a layer a few cells from vanishing makes the interface Newton fail
-                    # before any thickness reaches zero; report that as what it is
-                    left_frac = np.diff(bounds(s)) / initial
-                    j = int(np.argmin(left_frac))
-                    if left_frac[j] < 0.02:
-                        raise PhaseDissolvedError(
-                            f"layer {j} ({layers[j].name or 'unnamed'}) was nearly consumed "
-                            f"({left_frac[j]:.2%} of its initial thickness) near t = {t + (k + 1) * step:g} s") from err
-                    raise
-                for reg, xj in zip(regions, xs):
-                    reg.x = xj
-            t = target
-            times.append(t)
-            saved.append(snapshot())
+        _march(start, advance, t_end, dt, save_times, tolerance, on_step=on_step, on_save=on_save, norm=norm)
     except (PhaseDissolvedError, ConvergenceError) as err:
         err.result = collect(saved, times)
         raise
@@ -529,6 +560,7 @@ def solve_moving_boundary(
     max_newton: int = 30,
     max_picard: int = 50,
     geometry: Geometry = "planar",
+    tolerance: float | None = None,
 ) -> MovingBoundaryResult:
     """Integrate two-phase diffusion with a moving interface, as two layers of :func:`solve_layers`; in a
     cylinder or sphere (``geometry``) the left phase is the core and the right one the surrounding shell.
@@ -537,11 +569,13 @@ def solve_moving_boundary(
     uniform grids over [0, interface] and [interface, length]; a binary may pass
     1D arrays. ``d_left``/``d_right`` are constant matrices or callables like those
     of :func:`solve_planar`, for example ``lambda x: alpha.interdiffusion_matrix(x, T)``.
-    ``left``/``right`` are the conditions at z = 0 and z = length.
+    ``left``/``right`` are the conditions at z = 0 and z = length. ``tolerance`` adapts the step as in
+    :func:`solve_layers`.
     """
     if not 0.0 < interface < length:
         raise ValueError("the interface must lie inside (0, length)")
     res = solve_layers([0.0, interface, length], [Layer(x0_left, d_left), Layer(x0_right, d_right)], [condition],
-                       t_end, dt, left, right, save_times, tol, picard_tol, max_newton, max_picard, geometry)
+                       t_end, dt, left, right, save_times, tol, picard_tol, max_newton, max_picard, geometry,
+                       tolerance)
     return MovingBoundaryResult(res.times, res.interfaces[:, 0], res.faces[0], res.x[0], res.faces[1], res.x[1],
                                 res.interface_left[:, 0], res.interface_right[:, 0], geometry)

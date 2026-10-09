@@ -272,7 +272,7 @@ def _output_schedule(t_end: float, dt: float, save_times) -> list[tuple[float, i
 
 
 def _march(x, advance, t_end: float, dt: float, save_times, tolerance: float | None, scale: float = 1.0,
-           on_step=None, on_save=None):
+           on_step=None, on_save=None, norm=None):
     """Step ``x`` from t = 0 through the save times to ``t_end``; returns (times, saved states, iterations).
 
     ``advance(x, step, t_new)`` returns the new state and its iteration count, or raises
@@ -282,7 +282,8 @@ def _march(x, advance, t_end: float, dt: float, save_times, tolerance: float | N
     (largest over the cells, divided by ``scale``); a step above ``tolerance``, or one that does
     not converge, is halved and redone, and one under an eighth of it is followed by one twice
     as long. Steps are dt / 2^k, starting at dt / 1024. ``on_step(x, t_old, t_new)`` runs after
-    each step and ``on_save()`` at each save time.
+    each step and ``on_save(t)`` at each save time. ``norm(d)``, if given, replaces the largest
+    |d| / scale as the size of a change d in the state.
     """
     if tolerance is not None and tolerance <= 0:
         raise ValueError("tolerance must be positive")
@@ -307,9 +308,11 @@ def _march(x, advance, t_end: float, dt: float, save_times, tolerance: float | N
             except ConvergenceError:
                 x_new = None
             error = 0.0
-            if x_new is not None and previous is not None:
+            if x_new is not None and previous is not None and norm is None:
                 error = (np.max(np.abs((x_new - x) / step - previous[0])) * step**2
                          / (step + previous[1]) / scale)
+            elif x_new is not None and previous is not None:
+                error = norm(((x_new - x) / step - previous[0]) * step**2 / (step + previous[1]))
             if x_new is None or error > tolerance:
                 while h >= step:
                     h /= 2
@@ -327,7 +330,7 @@ def _march(x, advance, t_end: float, dt: float, save_times, tolerance: float | N
         times.append(t)
         saved.append(x.copy())
         if on_save:
-            on_save()
+            on_save(t)
     return times, saved, iters
 
 
@@ -478,7 +481,7 @@ def solve_planar(
             cache.clear()
 
     times, saved, iters = _march(x, advance, t_end, dt, save_times, tolerance, scale, on_step,
-                                 (lambda: marker_track.append(tracker.z.copy())) if tracker else None)
+                                 (lambda t: marker_track.append(tracker.z.copy())) if tracker else None)
     return DiffusionResult(np.array(times), z_faces, np.array(saved), iters,
                            np.array(marker_track) if tracker else None, geometry)
 

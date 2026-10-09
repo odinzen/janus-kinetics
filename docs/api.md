@@ -371,7 +371,7 @@ Saved state of a layered run; index [t] is a saved time, [j] a layer, [i] an int
 - `profile(self, index: 'int' = -1) -> 'tuple[np.ndarray, np.ndarray]'`: Cell centres (m) and compositions through the whole stack at one saved time.
 - `thickness(self) -> 'np.ndarray'`: Layer thicknesses [t, j] in m.
 
-### `def solve_layers(positions, layers: 'list[Layer]', conditions: 'list', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50, geometry: 'Geometry' = 'planar') -> 'StackResult'`
+### `def solve_layers(positions, layers: 'list[Layer]', conditions: 'list', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50, geometry: 'Geometry' = 'planar', tolerance: 'float | None' = None) -> 'StackResult'`
 
 Integrate diffusion through a stack of phase layers with moving interfaces, in a plate (default)
 or in concentric shells of a long cylinder or a sphere (``geometry``), positions then being radii.
@@ -386,7 +386,13 @@ the start, if only a few nanometres thick. If a layer is consumed,
 :class:`PhaseDissolvedError` is raised; it and any :class:`ConvergenceError`
 carry the results up to the last saved time as ``.result``.
 
-### `def solve_moving_boundary(length: 'float', interface: 'float', x0_left, x0_right, d_left: 'Diffusivity', d_right: 'Diffusivity', condition: 'FixedInterface | LocalEquilibrium', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50, geometry: 'Geometry' = 'planar') -> 'MovingBoundaryResult'`
+``tolerance`` adapts the step as in :func:`solve_planar`, counting compositions in mole
+fraction and each interface position in thicknesses of the thinner layer beside it, so a
+thin reaction layer is followed as closely as a thick one. A step that does not converge,
+or in which a layer seems to vanish while it still holds 2 % of its first thickness, is
+halved and redone.
+
+### `def solve_moving_boundary(length: 'float', interface: 'float', x0_left, x0_right, d_left: 'Diffusivity', d_right: 'Diffusivity', condition: 'FixedInterface | LocalEquilibrium', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50, geometry: 'Geometry' = 'planar', tolerance: 'float | None' = None) -> 'MovingBoundaryResult'`
 
 Integrate two-phase diffusion with a moving interface, as two layers of :func:`solve_layers`; in a
 cylinder or sphere (``geometry``) the left phase is the core and the right one the surrounding shell.
@@ -395,7 +401,8 @@ cylinder or sphere (``geometry``) the left phase is the core and the right one t
 uniform grids over [0, interface] and [interface, length]; a binary may pass
 1D arrays. ``d_left``/``d_right`` are constant matrices or callables like those
 of :func:`solve_planar`, for example ``lambda x: alpha.interdiffusion_matrix(x, T)``.
-``left``/``right`` are the conditions at z = 0 and z = length.
+``left``/``right`` are the conditions at z = 0 and z = length. ``tolerance`` adapts the step as in
+:func:`solve_layers`.
 
 ## `janus_kinetics.multicomponent_precipitation`
 
