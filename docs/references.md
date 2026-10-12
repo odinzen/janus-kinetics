@@ -10,6 +10,7 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Booth-Morrison C., Weninger J., Sudbrack C.K., Mao Z., Noebe R.D., Seidman D.N. (2008). Effects of solute concentrations on kinetic pathways in Ni-Al-Cr alloys. *Acta Materialia* 56, 3422-3438. https://doi.org/10.1016/j.actamat.2008.03.016
 - Cahn J.W. (1956). The kinetics of grain boundary nucleated reactions. *Acta Metallurgica* 4, 449-459. https://doi.org/10.1016/0001-6160(56)90041-4
 - Campbell C., Boettinger W., Kattner U. (2002). Development of a diffusion mobility database for Ni-base superalloys. *Acta Materialia* 50, 775-792. https://doi.org/10.1016/s1359-6454(01)00383-4
+- Claire A.D.L. (1963). The analysis of grain boundary diffusion measurements. *British Journal of Applied Physics* 14, 351-356. https://doi.org/10.1088/0508-3443/14/6/317
 - Clemm P., Fisher J. (1955). The influence of grain boundaries on the nucleation of secondary phases. *Acta Metallurgica* 3, 70-73. https://doi.org/10.1016/0001-6160(55)90014-6
 - Deal B.E., Grove A.S. (1965). General Relationship for the Thermal Oxidation of Silicon. *Journal of Applied Physics* 36, 3770-3778. https://doi.org/10.1063/1.1713945
 - Dupin N., Ansara I., Sundman B. (2001). Thermodynamic re-assessment of the ternary system Al-Cr-Ni. *Calphad* 25, 279-298. https://doi.org/10.1016/s0364-5916(01)00049-9
@@ -34,5 +35,6 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Sundman B. (1991). An assessment of the Fe-O system. *Journal of Phase Equilibria* 12, 127-140. https://doi.org/10.1007/bf02645709
 - Svoboda J., Fischer F., Fratzl P., Kozeschnik E. (2004). Modelling of kinetics in multi-component multi-phase systems with spherical precipitates. *Materials Science and Engineering: A* 385, 166-174. https://doi.org/10.1016/j.msea.2004.06.018
 - Wagner C. (1969). The evaluation of data obtained with diffusion couples of binary single-phase and multiphase systems. *Acta Metallurgica* 17, 99-107. https://doi.org/10.1016/0001-6160(69)90131-x
+- Whipple R. (1954). CXXXVIII. Concentration contours in grain boundary diffusion. *The London, Edinburgh, and Dublin Philosophical Magazine and Journal of Science* 45, 1225-1236. https://doi.org/10.1080/14786441208561131
 - Zener C. (1949). Theory of Growth of Spherical Precipitates from Solid Solution. *Journal of Applied Physics* 20, 950-953. https://doi.org/10.1063/1.1698258
 - van Loo F. (1990). Multiphase diffusion in binary and ternary solid-state systems. *Progress in Solid State Chemistry* 20, 47-99. https://doi.org/10.1016/0079-6786(90)90007-3

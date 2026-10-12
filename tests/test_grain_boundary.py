@@ -1,10 +1,19 @@
-"""Grain-boundary diffusion from a surface source, Fisher, J. Appl. Phys. 22 (1951) 74."""
+"""Grain-boundary diffusion from a surface source, Fisher, J. Appl. Phys. 22 (1951) 74, and Whipple's solution as
+Le Claire, Brit. J. Appl. Phys. 14 (1963) 351, gives and analyses it."""
 
 import numpy as np
 import pytest
 from scipy.special import erfc
 
-from janus_kinetics.grain_boundary import FisherBoundary, boundary_product_from_slope, solve_fisher
+from janus_kinetics.grain_boundary import (
+    FisherBoundary,
+    boundary_product_from_slope,
+    le_claire_boundary_product,
+    solve_fisher,
+    whipple_beta,
+    whipple_concentration,
+    whipple_layer_integral,
+)
 
 # Fig. 3 (p. 75) at t1 = 100: (y1, x1) -> eq. (8) value in units of C_surface / 1000 (lower numbers)
 FIG3_EQ8 = {(0, 16): 258, (0, 32): 24, (0, 48): 1, (4, 0): 261, (4, 16): 67, (4, 32): 6, (8, 0): 68,
@@ -87,3 +96,70 @@ def test_inputs_are_checked():
         FisherBoundary(1e-11, 1e-17, 5e-10)
     with pytest.raises(ValueError, match="negative"):
         boundary_product_from_slope(0.1, 1e-17, 100.0)
+
+
+# --- Whipple's solution as Le Claire, Brit. J. Appl. Phys. 14 (1963) 351, writes and uses it --------------------
+
+def test_boundary_concentration_depends_on_eta_over_root_beta_alone_at_large_beta():
+    """Le Claire's Fig. 5 and p. 353: above beta of about 10 the concentration at the boundary is a function of
+    eta beta^(-1/2) only, and curves for beta above 100 cannot be told apart; at beta = 1 it is not (1.45 times the
+    large-beta value at eta beta^(-1/2) = 1, rising to 4.8 at 8)."""
+    z = np.array([1.0, 2.0, 4.0, 6.0, 8.0])
+    c = {b: np.array([whipple_concentration(zz * np.sqrt(b), 0.0, b) for zz in z]) for b in (1.0, 10.0, 100.0, 1e3)}
+    np.testing.assert_allclose(c[100.0], c[1e3], rtol=0.02)
+    np.testing.assert_allclose(c[10.0], c[1e3], rtol=0.2)
+    ratio = c[1.0] / c[1e3]
+    assert np.all(ratio > 1.4) and np.all(np.diff(ratio) > 0) and ratio[-1] > 4.5
+
+
+def test_exact_fisher_equations_are_the_large_beta_limit_of_whipple():
+    """Fisher's equations drop the y-diffusion in the grains and the D'/D that sets beta; their exact solution
+    approaches Whipple's at large beta as t1 grows, at the boundary at eta beta^(-1/2) = 3.58 within 9.5, 4.8 and
+    2.3 % for t1 = 100, 400 and 1600."""
+    z = np.sqrt(2) * 8 / 100**0.25
+    whipple = whipple_concentration(z * 100.0, 0.0, 1e4)
+    gaps = []
+    for t1 in (100.0, 400.0, 1600.0):
+        y1 = z * t1**0.25 / np.sqrt(2)
+        sol = solve_fisher(t1, dx=0.025 * np.sqrt(t1), dy=0.079 * t1**0.25, steps=800)
+        gaps.append(abs(sol.at(0.0, y1) / whipple - 1))
+    assert gaps[0] > gaps[1] > gaps[2]
+    assert gaps[2] < 0.03
+
+
+def test_layer_average_slope_meets_eq_14_and_the_six_fifths_law():
+    """The log slope of eq. (13) approaches Le Claire's asymptotic eq. (14) with depth (0.02 apart at eta beta^(-1/2)
+    = 12 for beta = 100), and against (eta beta^(-1/2))^(6/5) it stays within 0.75-0.81 over 2-12, the near-constant
+    0.78 of p. 356 behind eq. (15)."""
+    beta = 100.0
+    z = np.linspace(1.5, 12.0, 43)
+    log_c = np.log([whipple_layer_integral(zz * np.sqrt(beta), beta) for zz in z])
+    slope = -np.gradient(log_c, z)
+    eq14 = 4 / 3 / z + 0.6307 * z ** (1 / 3) - 0.264 * z ** (-1 / 3) / beta
+    gap = np.abs(slope - eq14)
+    assert gap[-1] < 0.025 and gap[-1] < gap[20] < gap[5]
+    six_fifths = -np.gradient(log_c, z**1.2)
+    inside = (z >= 2) & (z <= 12)
+    assert np.all((six_fifths[inside] > 0.75) & (six_fifths[inside] < 0.81))
+
+
+def test_le_claire_reads_back_the_boundary_product_and_fisher_does_not():
+    """A sectioning profile from Whipple's eq. (13) for D = 1e-17 m^2/s, D' delta = 2e-21 m^3/s and t = 1e5 s (beta =
+    100), fitted over eta beta^(-1/2) = 2-10: eq. (15) returns D' delta 3.4 % high, the profile's own coefficient being
+    0.765 against the rounded 0.78. Fisher's straight line in ln c_bar against y, read with his eq. (14), returns a
+    third of the true value: Le Claire's 'about three times too small' (p. 355)."""
+    d, product, t = 1e-17, 2e-21, 1e5
+    beta = product / (2 * d * np.sqrt(d * t))
+    assert beta == pytest.approx(100.0, rel=1e-12)
+    assert whipple_beta(d, product / 5e-10, 5e-10, t) == pytest.approx(beta, rel=1e-12)
+    y = np.linspace(2.0, 10.0, 33) * np.sqrt(beta) * np.sqrt(d * t)
+    log_c = np.log([whipple_layer_integral(yy / np.sqrt(d * t), beta) for yy in y])
+    slope_65 = np.polyfit(y**1.2, log_c, 1)[0]
+    assert le_claire_boundary_product(slope_65, d, t) == pytest.approx(product, rel=0.04)
+    fisher = boundary_product_from_slope(np.polyfit(y, log_c / np.log(10), 1)[0], d, t)
+    assert product / fisher == pytest.approx(3.0, rel=0.05)
+
+
+def test_le_claire_inputs_are_checked():
+    with pytest.raises(ValueError, match="negative"):
+        le_claire_boundary_product(0.1, 1e-17, 1e5)

@@ -36,7 +36,9 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   mobilities), and **diffusion down isolated grain boundaries** from a surface
   (Fisher 1951), with the penetration-curve slope used to read D'delta from
   sectioning data. Fisher's closed form overestimates deep penetration; the
-  package also solves his equations exactly.
+  package also solves his equations exactly, and evaluates Whipple's exact solution
+  with Le Claire's (1963) y^6/5 reading of sectioning data, which corrects Fisher's
+  threefold underestimate of D'delta.
 - **Interstitial elements** (C, N, O, H on a vacancy-bearing sublattice) in
   u-fractions (Andersson and Agren 1992, eqs. 62-65), and **surfaces held at a
   chemical potential**, as a carburizing or oxidizing atmosphere imposes, with the

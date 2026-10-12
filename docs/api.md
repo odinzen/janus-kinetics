@@ -256,6 +256,14 @@ D' delta (m^3/s) from a measured penetration slope d log10(a)/dy (1/m), invertin
 The classic reading of a radiotracer sectioning experiment; Fisher's eq. (15)
 gives D / (D' delta) = 21.3 cm^-1 for silver at 478 C this way.
 
+### `def le_claire_boundary_product(slope: 'float', d_lattice: 'float', t: 'float', coefficient: 'float' = 0.78) -> 'float'`
+
+D' delta (m^3/s) from the slope d ln(c_bar) / d y^(6/5) (m^-6/5) of a sectioning profile, Le Claire's
+eq. (15): D' delta = (4 D / t)^(1/2) (coefficient / |slope|)^(5/3), the coefficient being
+-d ln(c_bar) / d (eta beta^(-1/2))^(6/5), 'for practical purposes constant at 0.78 if beta is large'
+(p. 356; Whipple's solution, beta above about 10). This is the familiar 1.322 (D/t)^(1/2) form. For
+Suzuoka's thin-source condition Le Claire gives 0.72 beta^0.008 (eq. 16).
+
 ### `def solve_fisher(t1: 'float', x_max: 'float | None' = None, y_max: 'float | None' = None, dx: 'float' = 0.5, dy: 'float' = 0.25, steps: 'int' = 400) -> 'FisherSolution'`
 
 Solve the scaled eqs. (3a)-(4a) of Fisher (1951) without his approximation.
@@ -263,6 +271,23 @@ Solve the scaled eqs. (3a)-(4a) of Fisher (1951) without his approximation.
 Backward Euler in t1 on a uniform grid; the slab takes (dC/dx1)_0 from the
 second-order one-sided difference his eq. (3b) uses, and each grain row only
 diffuses in x1, as eq. (4a) states. The surface row of the slab is held at 1.
+
+### `def whipple_beta(d_lattice: 'float', d_boundary: 'float', delta: 'float', t: 'float') -> 'float'`
+
+beta = (D'/D) (delta/2) / (D t)^(1/2), Le Claire, Brit. J. Appl. Phys. 14 (1963) 351, eq. (5).
+
+### `def whipple_concentration(eta: 'float', xi: 'float', beta: 'float') -> 'float'`
+
+c / c_0 of Whipple's exact solution (Phil. Mag. 45 (1954) 1225) as Le Claire writes it, his eq. (7),
+for D'/D large enough that the integral may run to infinity: at reduced depth eta = y / (D t)^(1/2) and
+distance from the slab xi = (x - delta/2) / (D t)^(1/2), from a surface held at c_0. The first term is
+direct lattice diffusion, the second the supply down the boundary.
+
+### `def whipple_layer_integral(eta: 'float', beta: 'float') -> 'float'`
+
+The boundary contribution to the layer-averaged concentration of a sectioning experiment, Le Claire's
+eq. (13) without its constant factor: eta int_1^inf exp(-eta^2 / 4 s) (exp(-V^2) / pi^(1/2) - V erfc V)
+s^(-3/2) ds, V = (s - 1) / (2 beta). Only its logarithmic slope with depth is used.
 
 ## `janus_kinetics.homogenization`
 

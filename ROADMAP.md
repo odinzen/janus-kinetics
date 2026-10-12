@@ -131,8 +131,9 @@ Left for later, each needing a source to be opened first:
 
 - Electromigration stress in confined lines (Korhonen et al. 1993) with Blech's threshold
   (1976): done; Blech's 1977 erratum not yet read.
-- Grain-boundary diffusion regimes (Harrison 1961, Suzuoka 1961, Le Claire 1963; Whipple
-  1954 requested): papers in hand, not built yet.
+- Grain-boundary diffusion: Whipple's solution and Le Claire's (1963) analysis of sectioning
+  data, done (Whipple 1954 itself requested). Harrison's (1961) regimes and Suzuoka's (1961)
+  thin-source solution: papers in hand, not built yet.
 - Layer suppression by interfacial barriers in thin-film couples (Gosele and Tu 1982): done
   for two compounds; d'Heurle 1988 (first-phase nucleation) requested.
 - Linear-parabolic oxidation (Deal and Grove 1965): done.

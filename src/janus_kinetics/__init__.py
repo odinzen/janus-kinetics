@@ -24,7 +24,15 @@ from .electromigration import (
     wind_stress_gradient,
 )
 from .interstitial import InterstitialPhase
-from .grain_boundary import FisherBoundary, boundary_product_from_slope, solve_fisher
+from .grain_boundary import (
+    FisherBoundary,
+    boundary_product_from_slope,
+    le_claire_boundary_product,
+    solve_fisher,
+    whipple_beta,
+    whipple_concentration,
+    whipple_layer_integral,
+)
 from .homogenization import (
     LocalEquilibriumTable,
     OnDemandEquilibriumTable,
@@ -179,6 +187,7 @@ __all__ = [
     "kobayashi",
     "lattice_velocity",
     "layer_thickness",
+    "le_claire_boundary_product",
     "metal_oxide_potential",
     "misfit_energy",
     "nucleation_rate",
@@ -216,5 +225,8 @@ __all__ = [
     "void_line_stress",
     "volume_fixed_lattice_velocity",
     "volume_fixed_matrix",
+    "whipple_beta",
+    "whipple_concentration",
+    "whipple_layer_integral",
     "wind_stress_gradient",
 ]

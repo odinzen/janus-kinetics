@@ -19,6 +19,13 @@ C = 0.028 at the boundary where eq. (8) gives 0.068. :func:`solve_fisher` solves
 those equations numerically and is the one to use for numbers. This is the regime of isolated boundaries, where each
 boundary's diffusion field does not reach the next; it suits fine-grained films
 when the grain size exceeds sqrt(D t).
+
+Fisher's equations drop diffusion along y in the grains. Whipple (1954) solved the
+problem with it kept; Le Claire (1963) writes that solution as a single integral
+(:func:`whipple_concentration`) and derives from it the reading of sectioning data,
+ln(c_bar) falling linearly in y^(6/5) with D' delta = 1.322 (D/t)^(1/2) times the
+-5/3 power of that slope (:func:`le_claire_boundary_product`). Fisher's equations are
+the large-beta limit of Whipple's, beta = (D'/D)(delta/2)/(D t)^(1/2).
 """
 
 from __future__ import annotations
@@ -28,7 +35,8 @@ from dataclasses import dataclass
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
-from scipy.special import erfc
+from scipy.integrate import quad
+from scipy.special import erfc, erfcx
 
 
 @dataclass(frozen=True)
@@ -153,3 +161,52 @@ def solve_fisher(t1: float, x_max: float | None = None, y_max: float | None = No
     grid[0, 1:] = erfc(x1[1:] / (2 * np.sqrt(t1)))  # surface row of the grains, fed by the surface itself
     grid[1:, :nx] = c.reshape(ny, nx)
     return FisherSolution(t1, x1, y1, grid)
+
+
+# --- Whipple's exact solution and Le Claire's analysis ---------------------------------------------------------
+
+def whipple_beta(d_lattice: float, d_boundary: float, delta: float, t: float) -> float:
+    """beta = (D'/D) (delta/2) / (D t)^(1/2), Le Claire, Brit. J. Appl. Phys. 14 (1963) 351, eq. (5)."""
+    return d_boundary / d_lattice * 0.5 * delta / np.sqrt(d_lattice * t)
+
+
+def _tail_integral(integrand, eta: float) -> float:
+    """Integral of ``integrand`` from 1 to infinity, split where the factor exp(-eta^2 / 4 s) has risen,
+    so the quadrature resolves both the rise and the long tail."""
+    split = max(10.0, eta * eta)
+    head = quad(integrand, 1.0, split, limit=400, epsabs=0.0, epsrel=1e-10)[0]
+    return head + quad(integrand, split, np.inf, limit=400, epsabs=0.0, epsrel=1e-10)[0]
+
+
+def whipple_concentration(eta: float, xi: float, beta: float) -> float:
+    """c / c_0 of Whipple's exact solution (Phil. Mag. 45 (1954) 1225) as Le Claire writes it, his eq. (7),
+    for D'/D large enough that the integral may run to infinity: at reduced depth eta = y / (D t)^(1/2) and
+    distance from the slab xi = (x - delta/2) / (D t)^(1/2), from a surface held at c_0. The first term is
+    direct lattice diffusion, the second the supply down the boundary."""
+    def integrand(s):
+        return s ** -1.5 * np.exp(-eta * eta / (4 * s)) * erfc(0.5 * ((s - 1) / beta + xi))
+
+    return float(erfc(eta / 2) + eta / (2 * np.sqrt(np.pi)) * _tail_integral(integrand, eta))
+
+
+def whipple_layer_integral(eta: float, beta: float) -> float:
+    """The boundary contribution to the layer-averaged concentration of a sectioning experiment, Le Claire's
+    eq. (13) without its constant factor: eta int_1^inf exp(-eta^2 / 4 s) (exp(-V^2) / pi^(1/2) - V erfc V)
+    s^(-3/2) ds, V = (s - 1) / (2 beta). Only its logarithmic slope with depth is used."""
+    def integrand(s):
+        v = (s - 1) / (2 * beta)
+        # exp(-V^2) (1/sqrt(pi) - V erfcx(V)) is exp(-V^2)/sqrt(pi) - V erfc(V) without the cancellation
+        return s ** -1.5 * np.exp(-eta * eta / (4 * s) - v * v) * (1 / np.sqrt(np.pi) - v * erfcx(v))
+
+    return float(eta * _tail_integral(integrand, eta))
+
+
+def le_claire_boundary_product(slope: float, d_lattice: float, t: float, coefficient: float = 0.78) -> float:
+    """D' delta (m^3/s) from the slope d ln(c_bar) / d y^(6/5) (m^-6/5) of a sectioning profile, Le Claire's
+    eq. (15): D' delta = (4 D / t)^(1/2) (coefficient / |slope|)^(5/3), the coefficient being
+    -d ln(c_bar) / d (eta beta^(-1/2))^(6/5), 'for practical purposes constant at 0.78 if beta is large'
+    (p. 356; Whipple's solution, beta above about 10). This is the familiar 1.322 (D/t)^(1/2) form. For
+    Suzuoka's thin-source condition Le Claire gives 0.72 beta^0.008 (eq. 16)."""
+    if slope >= 0:
+        raise ValueError("ln(c_bar) must fall with y^(6/5): the slope must be negative")
+    return np.sqrt(4 * d_lattice / t) * (coefficient / -slope) ** (5 / 3)

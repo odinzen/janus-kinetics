@@ -150,6 +150,22 @@ also solves eqs. 3a-4a numerically; that solution agrees with the exact Laplace
 transform solution, C~ = exp(-y1 (s + 2 s^1/2)^1/2 - x1 s^1/2) / s, and shows eq. 8
 overestimating penetration at depth.
 
+Fisher's equations drop diffusion along the boundary direction inside the grains.
+Whipple (1954) solved the problem with it kept; it is used here as Le Claire (1963)
+writes it, a single integral for c/c_0 in eta = y/(Dt)^1/2, xi and beta = (D'/D)(delta/2)/
+(Dt)^1/2 (his eq. 7), and the layer average of a sectioning experiment (eq. 13). Le
+Claire's reading of such data is ln c_bar linear in y^6/5 with D' delta = (4D/t)^1/2
+(0.78 / |slope|)^5/3 = 1.322 (D/t)^1/2 |slope|^-5/3 (eq. 15), valid for beta above about 10.
+Whipple's own paper has not been read; his solution is taken from Le Claire.
+
+Checks. Above beta of 10 the boundary concentration depends on eta beta^-1/2 alone, as
+Le Claire's Fig. 5 shows; the exact solution of Fisher's equations approaches it with
+growing t1 (2.3 % apart at t1 = 1600), being its large-beta limit; the slope of eq. 13
+approaches the asymptotic eq. 14 with depth and its 6/5 slope stays within 0.75-0.81.
+Read with eq. 15, an exact Whipple profile at beta = 100 returns D' delta 3.4 % high
+(its own coefficient being 0.765), while Fisher's linear reading returns a third of it,
+the 'about three times too small' Le Claire reports.
+
 ## Interstitial elements
 
 Andersson and Agren 1992, sections II.B and VI.A. With u_k = x_k / sum_{j in S} x_j
