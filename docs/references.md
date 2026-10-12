@@ -11,8 +11,10 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Cahn J.W. (1956). The kinetics of grain boundary nucleated reactions. *Acta Metallurgica* 4, 449-459. https://doi.org/10.1016/0001-6160(56)90041-4
 - Campbell C., Boettinger W., Kattner U. (2002). Development of a diffusion mobility database for Ni-base superalloys. *Acta Materialia* 50, 775-792. https://doi.org/10.1016/s1359-6454(01)00383-4
 - Clemm P., Fisher J. (1955). The influence of grain boundaries on the nucleation of secondary phases. *Acta Metallurgica* 3, 70-73. https://doi.org/10.1016/0001-6160(55)90014-6
+- Deal B.E., Grove A.S. (1965). General Relationship for the Thermal Oxidation of Silicon. *Journal of Applied Physics* 36, 3770-3778. https://doi.org/10.1063/1.1713945
 - Dupin N., Ansara I., Sundman B. (2001). Thermodynamic re-assessment of the ternary system Al-Cr-Ni. *Calphad* 25, 279-298. https://doi.org/10.1016/s0364-5916(01)00049-9
 - Fisher J.C. (1951). Calculation of Diffusion Penetration Curves for Surface and Grain Boundary Diffusion. *Journal of Applied Physics* 22, 74-77. https://doi.org/10.1063/1.1699825
+- Gösele U., Tu K.N. (1982). Growth kinetics of planar binary diffusion couples: ''Thin-film case'' versus ''bulk cases''. *Journal of Applied Physics* 53, 3252-3260. https://doi.org/10.1063/1.331028
 - Hallström S., Halvarsson M., Höglund L., Jonsson T., Ågren J. (2013). High temperature oxidation of chromium: Kinetic modeling and microstructural investigation. *Solid State Ionics* 240, 41-50. https://doi.org/10.1016/j.ssi.2013.02.017
 - Hallström S., Höglund L., Ågren J. (2011). Modeling of iron diffusion in the iron oxides magnetite and hematite with variable stoichiometry. *Acta Materialia* 59, 53-60. https://doi.org/10.1016/j.actamat.2010.08.032
 - Hart E. (1957). On the role of dislocations in bulk diffusion. *Acta Metallurgica* 5, 597. https://doi.org/10.1016/0001-6160(57)90127-x

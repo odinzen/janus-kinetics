@@ -358,6 +358,48 @@ with eqs. (11)-(12) whatever the thermodynamics. And oxygen carries 18 % of k he
 but about 10 % in their Fig. 11, a ratio fixed by eqs. (11)-(12) alone. The model assumes a compact,
 adherent scale on a planar front, with no voids, cracks or evaporation.
 
+## Linear-parabolic oxidation
+
+Deal and Grove (1965) take the oxidant across the gas boundary layer, through the
+oxide by diffusion and into reaction at the oxide/silicon interface, with equal fluxes
+in steady state. The thickness then grows as eq. 9, dx/dt = B / (A + 2x), with
+A = 2 D_eff (1/k + 1/h) and B = 2 D_eff C*/N_1 (eqs. 12a-b), so x^2 + A x = B (t + tau)
+with tau = (x_i^2 + A x_i)/B for an initial oxide x_i (eqs. 11-13). Eq. 13 is evaluated
+as 2 B s / (A + sqrt(A^2 + 4 B s)), s = t + tau, which keeps its precision for thin
+oxides; eq. 9 itself is integrated along temperature schedules. A and B are fitted as
+the paper does, x_0 against (t + tau)/x_0 (slope B, intercept -A).
+
+Checks. The B/A columns of Tables I and II are B over A. Arrhenius fits of the tables
+give 29.7 and 16.3 kcal/mol for B and 46.6 and 44.6 for B/A (dry and wet) against the
+28.5, 16.3, 46.0 and 45.3 of Figs. 9 and 11. The lines of Fig. 4, fitted to their own
+pixels, reproduce Table I within 4 % in B and 0.005 um in A at 1100, 1000 and 920 C.
+Table II's tau differs from eq. 12c with its own A and B by up to 27 %; the text says
+tau was estimated graphically, and the package uses eq. 12c. Their oxide Debye
+lengths (about 150 and 6 A) follow from their C* values.
+
+## Competing compound layers in thin films
+
+Gosele and Tu (1982) explain why thin-film couples often grow one compound where the
+phase diagram has several. Each compound layer's A flux is limited by diffusion and by
+the reactions at its interfaces, j = Delta C kappa_eff / (1 + x kappa_eff / D) with
+1/kappa_eff = 1/kappa_1 + 1/kappa_2 (eqs. 6-7), so a layer grows linearly below its
+changeover thickness x* = D/kappa_eff and parabolically above it (eqs. 11-13), which is
+Deal and Grove's law with A = 2D/kappa and B = 2 G Delta C D. Two layers between saturated
+phases gain from their own flux and lose to their neighbour's (eqs. 15-16, composition
+factors eqs. 19-21), and both grow only while j_beta/j_gamma lies between r_1 and r_2
+(eqs. 24-29). A layer of zero thickness that would shrink stays absent, so the second
+compound appears only once the first passes a critical thickness (eq. 34). Eq. 34 takes
+the first layer as diffusion controlled; with the second at zero thickness the exact
+onset is x_crit - x*_gamma, which is what the solver finds. (Eq. 33 prints a stray T
+before D_gamma that eq. 34, derived from it, does not carry.)
+
+Checks. r_1 and r_2 equal the ratios of the composition factors (2/3 and 4/3 for AB and
+A2B between pure A and B). One layer follows Deal and Grove's law to 1e-6; the second
+layer appears between first-layer thicknesses bracketing x_crit - x*_gamma; thick layers
+settle on the diffusion-controlled thickness ratio within 0.6 %, of order x*/x; and
+interface-controlled layers grow linearly at the rates of eq. 32, or one shrinks away
+when the flux ratio leaves the window.
+
 ## Electromigration stress
 
 In a metal line held by a rigid passivation the electron wind moves atoms along the

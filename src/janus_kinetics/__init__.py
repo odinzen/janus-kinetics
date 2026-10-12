@@ -32,6 +32,14 @@ from .homogenization import (
     average_kinetic_factor,
     solve_homogenized,
 )
+from .layer_competition import (
+    CompetitionResult,
+    CompoundLayer,
+    composition_factors,
+    critical_thickness,
+    growth_window,
+    solve_two_layers,
+)
 from .datasets import campbell2002_fcc_ni, helander1999_bcc_alni, jonsson1995_bcc_crfeni, kjellqvist2008_cro
 from .errors import ConvergenceError, MissingParameterError, UnstableCompositionError, UnsupportedPhaseError
 from .mobility import MobilityModel
@@ -49,6 +57,13 @@ from .multicomponent_precipitation import (
     solve_multicomponent_precipitation,
 )
 from .ordered import B2Phase, ordering_energy
+from .oxidation import (
+    deal_grove_constants,
+    fit_linear_parabolic,
+    grow_oxide,
+    oxidation_time,
+    oxide_thickness,
+)
 from .oxide_scale import ScaleGrowth, metal_oxide_potential, parabolic_scale_growth
 from .oxides import AnionPath, GrainBoundaryMobility, JumpPath, OxideCationDiffusion
 from .moving_boundary import (
@@ -93,6 +108,8 @@ __all__ = [
     "B2Phase",
     "BackDiffusionResult",
     "Boundary",
+    "CompetitionResult",
+    "CompoundLayer",
     "ConvergenceError",
     "DiffusionResult",
     "DiluteSolution",
@@ -137,14 +154,20 @@ __all__ = [
     "blech_product",
     "boundary_product_from_slope",
     "campbell2002_fcc_ni",
+    "composition_factors",
     "conversion",
     "conversion_integral",
+    "critical_thickness",
+    "deal_grove_constants",
     "dmu_dx",
     "drift_velocity",
     "finite_line_stress",
+    "fit_linear_parabolic",
     "grain_structure",
+    "grow_oxide",
     "growth_constant_from_conversion",
     "growth_rate",
+    "growth_window",
     "helander1999_bcc_alni",
     "integrated_diffusivity",
     "interdiffusion_from_profile",
@@ -162,6 +185,8 @@ __all__ = [
     "nucleation_sites",
     "number_fixed_matrix",
     "ordering_energy",
+    "oxidation_time",
+    "oxide_thickness",
     "parabolic_growth",
     "parabolic_scale_growth",
     "reduced_hessian",
@@ -181,6 +206,7 @@ __all__ = [
     "solve_multicomponent_precipitation",
     "solve_planar",
     "solve_reaction_layers",
+    "solve_two_layers",
     "steady_stress",
     "stress_diffusivity",
     "thermodynamic_factor",

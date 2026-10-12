@@ -67,6 +67,13 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   with local equilibrium at the metal/oxide interface. It reproduces their 24 h
   scale thicknesses at 625 and 700 C within 1.5 % and their late-time growth rates
   within 8 %.
+- **Competing compound layers in thin films**: why a thin-film couple grows one
+  compound where the phase diagram has several (Gosele and Tu 1982): interfacial
+  reaction barriers, linear-to-parabolic changeover, and the critical thickness at which
+  a second compound can appear.
+- **Thermal oxidation**: Deal and Grove's linear-parabolic law (1965), from the
+  physical constants or fitted as they fit it, along temperature schedules, checked
+  against their tables and figures.
 - **Electromigration in interconnect lines**: stress build-up along a confined line
   (Korhonen et al. 1993) with blocked, void or pad ends, stress-dependent diffusion and
   yielding, checked against their exact solutions and their fit to measured stresses, and

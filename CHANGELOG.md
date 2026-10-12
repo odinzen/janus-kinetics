@@ -32,6 +32,8 @@ First version.
   misfit energy, grain-junction nucleation (Clemm and Fisher 1955), temperature schedules,
   several phases or nucleation sites competing for one matrix, and nucleation site counts
   from the grain size (Cahn 1956) or the dislocation density.
+- Linear-parabolic thermal oxidation (Deal and Grove 1965).
+- Two compound layers with interfacial reaction barriers in thin-film couples (Gosele and Tu 1982).
 - Electromigration stress in confined metal lines (Korhonen et al. 1993): blocked, void and
   reservoir ends, stress-dependent diffusivity, ideal plasticity, and Blech's threshold.
 - Adaptive time steps in the planar, homogenization and layered-stack solvers, with recovery

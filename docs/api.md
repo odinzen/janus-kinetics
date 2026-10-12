@@ -362,6 +362,43 @@ all of them in the order of :attr:`components`.
 - `mobility(self, u, T) -> 'np.ndarray'`: Omega_k = exp((MF + MQ)/RT)/RT for every component, shape (..., n), m^2 mol/(J s).
 - `u_from_x(self, x) -> 'np.ndarray'`: Independent u-fractions from mole fractions given in the order of :attr:`components`.
 
+## `janus_kinetics.layer_competition`
+
+### `class CompetitionResult(times: 'np.ndarray', beta: 'np.ndarray', gamma: 'np.ndarray') -> None`
+
+CompetitionResult(times: 'np.ndarray', beta: 'np.ndarray', gamma: 'np.ndarray')
+
+
+### `class CompoundLayer(ratio: 'float', delta_c: 'float', diffusivity: 'float', barriers: 'tuple[float, float]') -> None`
+
+A compound layer: ``ratio`` A atoms per B atom, equilibrium A concentration drop ``delta_c`` across it
+(atoms per m^3), interdiffusivity ``diffusivity`` (m^2/s) and the reaction barriers of its two interfaces
+(m/s), combined by eq. (7).
+
+- `barrier` (property): kappa_eff, eq. (7).
+- `changeover` (property): x* = D / kappa_eff, eq. (11).
+- `flux(self, thickness)`: A flux across the layer (atoms m^-2 s^-1), eqs. (6), (17)-(18).
+
+### `def composition_factors(alpha: 'float', beta: 'float', gamma: 'float', delta: 'float', atomic_volume: 'float')`
+
+(G_beta, G_gamma, G_beta,gamma, G_gamma,beta), eqs. (10) and (19)-(21); alpha may be infinite and delta
+zero, the pure components of section IV.
+
+### `def critical_thickness(beta_layer: 'CompoundLayer', gamma_layer: 'CompoundLayer', alpha: 'float', delta: 'float') -> 'float'`
+
+Thickness the gamma layer must reach before an interface-controlled beta layer can grow beside it, eq. (34):
+x_crit = r_1 Delta C_gamma D_gamma / (Delta C_beta kappa_beta). Eq. (34) takes the gamma layer as diffusion
+controlled; for a beta layer of zero thickness the exact onset is x_crit - x*_gamma.
+
+### `def growth_window(alpha: 'float', beta: 'float', gamma: 'float', delta: 'float') -> 'tuple[float, float]'`
+
+(r_1, r_2): both layers grow when r_1 < j_beta / j_gamma < r_2, eqs. (27)-(28).
+
+### `def solve_two_layers(beta_layer: 'CompoundLayer', gamma_layer: 'CompoundLayer', alpha: 'float', delta: 'float', atomic_volume: 'float', t_end: 'float', initial: 'tuple[float, float]' = (0.0, 0.0), save_times: 'Sequence[float] | None' = None, rtol: 'float' = 1e-10) -> 'CompetitionResult'`
+
+Integrate eqs. (15)-(18) from layer thicknesses ``initial`` (m). A layer of zero thickness whose rate would
+be negative stays at zero (the phase is kinetically suppressed); a shrinking layer stops at zero.
+
 ## `janus_kinetics.mobility`
 
 ### `class MobilityModel(db: 'Database', lattice: 'SubstitutionalLattice')`
@@ -640,6 +677,35 @@ Eq. 12: dQ^ord (J/mol) of ``element`` for site fractions y_a, y_b over ``constit
 
 ``terms`` maps (k, i, j) to dQ^order_kij, with i and j in either order. The two
 sublattices must have equal site numbers, as in B2, so x_i = (y_i^a + y_i^b) / 2.
+
+## `janus_kinetics.oxidation`
+
+### `def deal_grove_constants(diffusivity: 'float', surface_rate: 'float', gas_transport: 'float', solubility: 'float', sites: 'float') -> 'tuple[float, float]'`
+
+(A in m, B in m^2/s) from D_eff (m^2/s), the interface reaction constant k and gas-phase
+transport coefficient h (m/s), the oxidant solubility C* and the oxidant molecules per volume of
+oxide N_1 (any one unit for both), eqs. (12a)-(12b).
+
+### `def fit_linear_parabolic(times: 'Sequence[float]', thickness: 'Sequence[float]', shift: 'float' = 0.0) -> 'tuple[float, float]'`
+
+(A, B) from measured thickness against time as Deal and Grove extract them (their Figs. 4 and 7): eq.
+(12) rearranged as x_0 = B (t + tau) / x_0 - A is a straight line in (t + tau)/x_0, of slope B and
+intercept -A, fitted by least squares.
+
+### `def grow_oxide(t_end: 'float', a: 'Value', b: 'Value', temperature: 'Temperature' = 0.0, initial: 'float' = 0.0, save_times: 'Sequence[float] | None' = None, rtol: 'float' = 1e-10) -> 'tuple[np.ndarray, np.ndarray]'`
+
+(times, thickness) of an oxide growing by eq. (9), dx/dt = B / (A + 2 x), with A and B constants or
+functions of T along ``temperature`` (a constant or a schedule), from ``initial`` at t = 0. Eq. (9) is
+the instantaneous law, so it carries over to an anneal; at constant T it reproduces eq. (13).
+
+### `def oxidation_time(thickness, a: 'float', b: 'float', initial: 'float' = 0.0)`
+
+Time to grow from ``initial`` to ``thickness``, eq. (12) solved for t.
+
+### `def oxide_thickness(t, a: 'float', b: 'float', initial: 'float' = 0.0)`
+
+Oxide thickness at time t, eq. (13), from x_0^2 + A x_0 = B (t + tau). Written as
+2 B s / (A + sqrt(A^2 + 4 B s)), s = t + tau, which keeps its precision when A^2 >> B s.
 
 ## `janus_kinetics.oxide_scale`
 
