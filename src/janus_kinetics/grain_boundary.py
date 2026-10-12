@@ -228,3 +228,25 @@ def harrison_regime(d_lattice: float, grain_radius: float, boundary_width: float
     if np.sqrt(d_lattice * t) * margin < boundary_width:
         return "C"
     return "B"
+
+
+def suzuoka_layer_integral(eta: float, beta: float) -> float:
+    """The boundary contribution to the layer average for Suzuoka's thin-source condition (Trans. Jap. Inst. Met.
+    2 (1961) 25: a deposit of fixed amount, its surface flux free), without its constant factor. Le Claire (p. 356)
+    obtains it from Whipple's eq. (13) by the operation d/d eta, so it is -d/d eta of
+    :func:`whipple_layer_integral`: int_1^inf (eta^2 / 2s - 1) exp(-eta^2 / 4s) (exp(-V^2) / pi^(1/2) - V erfc V)
+    s^(-3/2) ds. Near the surface it is negative, the boundary drawing material from the lattice (Suzuoka p. 27):
+    below eta beta^(-1/2) of about 1.7 at beta = 1 and 0.7 at beta = 10. At beta = 1 it then still rises to a peak
+    near 3, inside the usual fitting range of 2-10."""
+    def integrand(s):
+        v = (s - 1) / (2 * beta)
+        return ((eta * eta / (2 * s) - 1) * s ** -1.5 * np.exp(-eta * eta / (4 * s) - v * v)
+                * (1 / np.sqrt(np.pi) - v * erfcx(v)))
+
+    return float(_tail_integral(integrand, eta))
+
+
+def suzuoka_coefficient(beta: float) -> float:
+    """-d ln(c_bar) / d (eta beta^(-1/2))^(6/5) for Suzuoka's condition, 0.72 beta^0.008 (Le Claire eq. 16), to use in
+    :func:`le_claire_boundary_product` when the diffusant was deposited as a thin layer."""
+    return 0.72 * beta**0.008

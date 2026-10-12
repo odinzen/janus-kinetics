@@ -166,6 +166,13 @@ Read with eq. 15, an exact Whipple profile at beta = 100 returns D' delta 3.4 % 
 (its own coefficient being 0.765), while Fisher's linear reading returns a third of it,
 the 'about three times too small' Le Claire reports.
 
+For a diffusant deposited as a thin layer (Suzuoka 1961) the layer average is Whipple's
+differentiated in eta (Le Claire p. 356). Its 6/5 slope, fitted over eta beta^-1/2 = 2-10,
+is 0.738 and 0.744 at beta = 10 and 100, against Le Claire's 0.72 beta^0.008 (eq. 16), and
+read with that coefficient eq. 15 returns D' delta within 2 %. Near the surface the
+boundary term is negative, the boundary drawing material from the lattice, as Suzuoka
+notes; at beta = 1 the profile still rises at the start of the usual fitting range.
+
 Which picture applies follows Harrison (1961): type A once lattice diffusion crosses a
 grain within the anneal, a_g^2 / D << t (his eq. 1), when the solid diffuses as a whole
 with Hart's average; type C while lattice diffusion stays within the boundary layer,

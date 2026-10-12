@@ -11,6 +11,8 @@ from janus_kinetics.grain_boundary import (
     harrison_regime,
     le_claire_boundary_product,
     solve_fisher,
+    suzuoka_coefficient,
+    suzuoka_layer_integral,
     whipple_beta,
     whipple_concentration,
     whipple_layer_integral,
@@ -179,3 +181,28 @@ def test_harrison_regimes_follow_his_conditions():
     assert harrison_regime(d, a_g, delta, 2e6, margin=100.0) == "B"
     with pytest.raises(ValueError, match="positive"):
         harrison_regime(d, a_g, delta, -1.0)
+
+
+def test_suzuoka_profile_is_the_depth_derivative_of_whipples():
+    """Le Claire (p. 356): the thin-source layer average is Whipple's eq. (13) differentiated in eta."""
+    for eta, beta in ((5.0, 10.0), (30.0, 100.0)):
+        h = 1e-4 * eta
+        derivative = -(whipple_layer_integral(eta + h, beta) - whipple_layer_integral(eta - h, beta)) / (2 * h)
+        assert suzuoka_layer_integral(eta, beta) == pytest.approx(derivative, rel=1e-6)
+
+
+@pytest.mark.parametrize("beta", [10.0, 100.0])
+def test_suzuoka_six_fifths_slope_is_le_claires_eq_16(beta):
+    """Fitted over eta beta^(-1/2) = 2-10 the thin-source 6/5 slope is 0.738 at beta = 10 and 0.744 at 100, against
+    0.72 beta^0.008 = 0.733 and 0.747; read with that coefficient, eq. (15) returns D' delta within 2 %. (At beta = 1
+    the boundary term is negative near the surface and still rising at eta beta^(-1/2) = 2, peaking near 3, so a
+    straight-line fit over 2-10 is not meaningful there.)"""
+    d, t = 1e-17, 1e5
+    product = beta * 2 * d * np.sqrt(d * t)
+    y = np.linspace(2.0, 10.0, 33) * np.sqrt(beta * d * t)
+    log_c = np.log([suzuoka_layer_integral(yy / np.sqrt(d * t), beta) for yy in y])
+    slope = np.polyfit((y / np.sqrt(beta * d * t)) ** 1.2, log_c, 1)[0]
+    assert -slope == pytest.approx(suzuoka_coefficient(beta), rel=0.01)
+    read = le_claire_boundary_product(np.polyfit(y**1.2, log_c, 1)[0], d, t, suzuoka_coefficient(beta))
+    assert read == pytest.approx(product, rel=0.02)
+    assert suzuoka_layer_integral(0.5, 1.0) < 0 < suzuoka_layer_integral(2.0, 1.0) < suzuoka_layer_integral(3.0, 1.0)

@@ -282,6 +282,21 @@ Backward Euler in t1 on a uniform grid; the slab takes (dC/dx1)_0 from the
 second-order one-sided difference his eq. (3b) uses, and each grain row only
 diffuses in x1, as eq. (4a) states. The surface row of the slab is held at 1.
 
+### `def suzuoka_coefficient(beta: 'float') -> 'float'`
+
+-d ln(c_bar) / d (eta beta^(-1/2))^(6/5) for Suzuoka's condition, 0.72 beta^0.008 (Le Claire eq. 16), to use in
+:func:`le_claire_boundary_product` when the diffusant was deposited as a thin layer.
+
+### `def suzuoka_layer_integral(eta: 'float', beta: 'float') -> 'float'`
+
+The boundary contribution to the layer average for Suzuoka's thin-source condition (Trans. Jap. Inst. Met.
+2 (1961) 25: a deposit of fixed amount, its surface flux free), without its constant factor. Le Claire (p. 356)
+obtains it from Whipple's eq. (13) by the operation d/d eta, so it is -d/d eta of
+:func:`whipple_layer_integral`: int_1^inf (eta^2 / 2s - 1) exp(-eta^2 / 4s) (exp(-V^2) / pi^(1/2) - V erfc V)
+s^(-3/2) ds. Near the surface it is negative, the boundary drawing material from the lattice (Suzuoka p. 27):
+below eta beta^(-1/2) of about 1.7 at beta = 1 and 0.7 at beta = 10. At beta = 1 it then still rises to a peak
+near 3, inside the usual fitting range of 2-10.
+
 ### `def whipple_beta(d_lattice: 'float', d_boundary: 'float', delta: 'float', t: 'float') -> 'float'`
 
 beta = (D'/D) (delta/2) / (D t)^(1/2), Le Claire, Brit. J. Appl. Phys. 14 (1963) 351, eq. (5).

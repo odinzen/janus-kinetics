@@ -33,7 +33,7 @@ First version.
   several phases or nucleation sites competing for one matrix, and nucleation site counts
   from the grain size (Cahn 1956) or the dislocation density.
 - Whipple's grain-boundary solution and Le Claire's y^6/5 analysis of sectioning data (Le Claire 1963),
-  and Harrison's (1961) A/B/C regimes.
+  Suzuoka's (1961) thin-source case, and Harrison's (1961) A/B/C regimes.
 - Worked example: electromigration stress in a passivated aluminium line.
 - Linear-parabolic thermal oxidation (Deal and Grove 1965).
 - Two compound layers with interfacial reaction barriers in thin-film couples (Gosele and Tu 1982).

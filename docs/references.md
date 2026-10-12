@@ -34,6 +34,7 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - SUDBRACK C., NOEBE R., SEIDMAN D. (2007). Compositional pathways and capillary effects during isothermal precipitation in a nondilute Ni-Al-Cr alloy. *Acta Materialia* 55, 119-130. https://doi.org/10.1016/j.actamat.2006.08.009
 - SUDBRACK C., YOON K., NOEBE R., SEIDMAN D. (2006). Temporal evolution of the nanostructure and phase compositions in a model Ni-Al-Cr alloy. *Acta Materialia* 54, 3199-3210. https://doi.org/10.1016/j.actamat.2006.03.015
 - Sundman B. (1991). An assessment of the Fe-O system. *Journal of Phase Equilibria* 12, 127-140. https://doi.org/10.1007/bf02645709
+- Suzuoka T. (1961). Lattice and Grain Boundary Diffusion in Polycrystals. *Transactions of the Japan Institute of Metals* 2, 25-32. https://doi.org/10.2320/matertrans1960.2.25
 - Svoboda J., Fischer F., Fratzl P., Kozeschnik E. (2004). Modelling of kinetics in multi-component multi-phase systems with spherical precipitates. *Materials Science and Engineering: A* 385, 166-174. https://doi.org/10.1016/j.msea.2004.06.018
 - Wagner C. (1969). The evaluation of data obtained with diffusion couples of binary single-phase and multiphase systems. *Acta Metallurgica* 17, 99-107. https://doi.org/10.1016/0001-6160(69)90131-x
 - Whipple R. (1954). CXXXVIII. Concentration contours in grain boundary diffusion. *The London, Edinburgh, and Dublin Philosophical Magazine and Journal of Science* 45, 1225-1236. https://doi.org/10.1080/14786441208561131
