@@ -1,5 +1,12 @@
 """Multicomponent diffusion kinetics built on pycalphad."""
 
+from .coarsening import (
+    coarsening_rate_constant,
+    critical_radius,
+    matrix_supersaturation,
+    number_density,
+    precipitate_composition_shift,
+)
 from .couple_analysis import interdiffusion_from_profile, intrinsic_from_profile
 from .diffusivity import (
     intrinsic_matrix,
@@ -23,6 +30,7 @@ from .electromigration import (
     void_line_stress,
     wind_stress_gradient,
 )
+from .interfacial_energy import broken_bond_energy, broken_bond_factor, effective_coordination, solution_enthalpy
 from .interstitial import InterstitialPhase
 from .grain_boundary import (
     FisherBoundary,
@@ -164,14 +172,19 @@ __all__ = [
     "average_kinetic_factor",
     "blech_product",
     "boundary_product_from_slope",
+    "broken_bond_energy",
+    "broken_bond_factor",
     "campbell2002_fcc_ni",
+    "coarsening_rate_constant",
     "composition_factors",
     "conversion",
     "conversion_integral",
+    "critical_radius",
     "critical_thickness",
     "deal_grove_constants",
     "dmu_dx",
     "drift_velocity",
+    "effective_coordination",
     "finite_line_stress",
     "fit_linear_parabolic",
     "grain_structure",
@@ -192,22 +205,26 @@ __all__ = [
     "lattice_velocity",
     "layer_thickness",
     "le_claire_boundary_product",
+    "matrix_supersaturation",
     "metal_oxide_potential",
     "misfit_energy",
     "nucleation_rate",
     "nucleation_sites",
+    "number_density",
     "number_fixed_matrix",
     "ordering_energy",
     "oxidation_time",
     "oxide_thickness",
     "parabolic_growth",
     "parabolic_scale_growth",
+    "precipitate_composition_shift",
     "reduced_hessian",
     "scheil_gulliver",
     "segregation_index",
     "segregation_profile",
     "semi_infinite_stress",
     "solubility_from_pycalphad",
+    "solution_enthalpy",
     "solve_back_diffusion",
     "solve_competing_precipitation",
     "solve_fisher",

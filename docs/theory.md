@@ -650,6 +650,79 @@ between 0.72 and 1.09. A step is now halved whenever the matrix rate reverses be
 steps by more than a thousandth of the step limit (smaller reversals are rounding noise
 at the fixed point).
 
+## Late-stage coarsening in closed form
+
+Philippe and Voorhees (2013) linearize local equilibrium about the tie-line dC = C^beta - C^alpha
+and find a particle's growth rate (eq. 28)
+
+    dR/dt = [dC^T G dC^inf - 2 sigma V_m / R] / (R dC^T M^-1 dC)
+
+with G the Hessian of the matrix Gibbs energy and M the mobility matrix, D = M G. Its long-time
+solution is the LSW one with new amplitudes: <R>^3 = K t, K = 8 sigma V_m / (9 dC^T M^-1 dC)
+(eq. 42); a matrix supersaturation along the tie-line, decaying as t^(-1/3) with the amplitude of
+eq. (43); N_v = 0.21 phi_eq / (K t) (eq. 44; the factor is 3 / (4 pi <u^3>) of the LSW distribution,
+0.2113); and a precipitate composition that drifts off the tie-line by G_beta^-1 G_alpha (eq. 45). The
+functions take dC, M, G and the precipitate's Hessian over the independent components.
+
+Checks. In the binary limit eq. (42) is Perez et al.'s LSW constant exactly. Eq. (45) is rebuilt from
+eqs. (35), (41) and (43): the mean particle has the critical radius, so its matrix interface sits at
+the far-field composition, and eq. (35) carries that to the precipitate side. The precipitation solver
+follows these laws in an ideal ternary with a line-compound precipitate, two solutes diffusing five
+times apart and particles seeded at the equilibrium composition: SFFK's dissipation sum over all
+components, sum_i dx_i^2 RT / (x_i D_i), is dC^T M^-1 dC for a matrix M^-1 with a solvent term in every
+entry. From 1e7 s on, d<R>^3/dt averages K within 2 %, d(1/N_v)/dt averages K / (0.2113 phi) within 2 %,
+the supersaturation stays on the tie-line, its critical radius closes on <R> (0.935 to 0.997), and its
+size is eq. (43)'s within 2 % from 3e8 s. With the two solutes equally mobile K would be 2.6 times
+larger, and keeping only the slow one (eq. 48) would overstate it by 31 %.
+
+## Interfacial energy from broken bonds
+
+Sonderegger and Kozeschnik (2009) estimate the energy of a coherent interface from the
+enthalpy of solution, extending the nearest-neighbour broken-bond count of Becker and
+Turnbull to every neighbour shell and to any number of components. A bond to the k-th
+shell weighs f = (r_k / r_1)^-m (eq. 4), and
+
+    gamma = n_S z_S,eff / (N z_L,eff) Delta E_sol,   n_S = n_V^(2/3)          (eqs. 9-10)
+
+with z_L,eff the weighted coordination (eq. 7) and z_S,eff the weighted bonds cut per
+interface atom (eqs. 8, 11). Shells past the k-th are smeared into a continuum (Appendix
+II), adding 4 pi n_V r_1^m r_k^(3-m) / (m - 3) and pi n_V^(4/3) r_1^m r_k^(4-m) / (m - 4);
+both diverge for m <= 4, as the paper notes.
+
+The paper counts bonds in periodic volume elements; here they are lattice sums. In a
+Bravais lattice every lattice vector v projects onto the interface normal n as a whole
+number of interplanar spacings, so the bonds of type v cut per unit area are exactly
+n_V |v . n| / 2, and z_S,eff = n_V^(1/3) / 2 sum_v |v . n| f. Averaged over orientations
+|v . n| becomes |v| / 2, which gives the mean in closed form (it agrees with an average
+over 4000 random orientations to 0.03 %).
+
+Checks. With 100 shells all 132 entries of Table II (22 orientations, fcc and bcc,
+m = 6 to 8) are reproduced within 0.1 % except one: [4,4,3] bcc at r^-8, printed 0.3297
+against our 0.2969. Every other row falls from r^-7 to r^-8, and the printed value
+would rise above its own r^-7 entry, so it is taken as a misprint. The first-neighbour
+limits 0.2291 (fcc [111]) and 0.2227 (bcc [110]) of p. 506 are Turnbull's count exactly,
+and first neighbours alone underestimate z_L,eff by 20 % and 53 % (p. 504). Among
+orientations with indices up to 10 the fcc extremes are those of Table III ([111],
+0.2871, and [10,5,1], 0.3398); in bcc the minimum ([110]) and the 17.6 % anisotropy
+agree, but the largest value is at [6,1,1], 0.3418, 0.1 % above the [10,2,1] the paper
+names. Two quoted numbers are slightly off the converged sums: z_L,eff = 14.442 (fcc)
+and 12.234 (bcc) on p. 503, against 14.4539 and 12.2537 here, and the r^-7 and r^-8
+orientation means of Table II, which differ from the closed form by up to 0.7 % with
+alternating sign; the r^-6 means of Table III agree within 0.2 %.
+
+Enthalpy of solution. Appendix I derives the multicomponent bond energy from dissolving
+one mole of precipitate in an infinite matrix, so Delta E_sol = sum_j x_j^P H_j^M - H^P
+with H_j^M the partial molar enthalpies of the matrix. It is computed from
+Delta G = sum_j x_j^P mu_j^M - G^P by Gibbs-Helmholtz at fixed compositions, each phase
+held homogeneous with its ordering relaxed (the precipitation module's phase
+minimiser). Holding it homogeneous matters: at the gamma solvus pycalphad's equilibrium
+at fixed composition splits an ordered L1_2 description of the matrix into
+gamma + gamma' half a kelvin below T, and the derivative would follow the tie-line.
+A regular solution with temperature-dependent parameters gives the exact partial
+enthalpy to 1e-5. For gamma' in binary Ni-Al between 773 and 973 K, Dupin et al.'s
+description gives 40-45 mJ/m^2 with the r^-6 mean factor, inside the 14-80 mJ/m^2
+measured range of Table VI; the paper's own 36.2 used a commercial database.
+
 ## Microsegregation and homogenization
 
 For a constant partition ratio k the closed forms are taken as Kobayashi (1988)

@@ -123,6 +123,11 @@ Left for later, each needing a source to be opened first:
   (part II section 3.5). Site counts from grain size (Cahn 1956 eq. 1) and dislocation
   density: done. Open there: the Thermo-Calc curvatures of Sudbrack
   et al. (2007) Table 4 (ours 10-30 % higher for the same database);
+- interfacial energy from the enthalpy of solution: done for coherent interfaces (Sonderegger and
+  Kozeschnik 2009, generalized broken bonds); their size and diffuse-interface corrections are later
+  papers, not yet read;
+- late-stage multicomponent coarsening in closed form: done (Philippe and Voorhees 2013, eqs. 28-45),
+  with the precipitation solver checked against it in a ternary;
 - heterogeneous nucleation and non-isothermal treatments;
 - the mean-radius approach, whose coarsening fraction (eq. 17) is defined only
   for 0.99 R* < R_mean < 1.01 R* in the paper.

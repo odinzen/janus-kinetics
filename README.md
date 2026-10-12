@@ -99,6 +99,14 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   several phases or nucleation sites competing for one matrix; checked against the
   LSW limit, a three-phase equilibrium, and atom-probe kinetics of gamma'
   in two Ni-Al-Cr alloys (Sudbrack et al. 2006; Booth-Morrison et al. 2008).
+- **Interfacial energy estimates** for coherent precipitates from the enthalpy of
+  solution (the generalized broken-bond model of Sonderegger and Kozeschnik 2009),
+  for any fcc or bcc interface orientation or the orientation average, with the
+  enthalpy of solution taken from a pycalphad database.
+- **Late-stage coarsening in multicomponent alloys**: Philippe and Voorhees' (2013)
+  rate constant, matrix supersaturation, number density and precipitate-composition
+  drift, with the full mobility matrix; the precipitation solver reproduces them in a
+  ternary whose solutes diffuse at different rates.
 
 Three published mobility databases ship with the package:
 `jonsson1995_bcc_crfeni()` (bcc Cr-Fe-Ni, Jonsson 1995), `campbell2002_fcc_ni()`

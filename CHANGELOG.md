@@ -34,6 +34,10 @@ First version.
   from the grain size (Cahn 1956) or the dislocation density.
 - Whipple's grain-boundary solution and Le Claire's y^6/5 analysis of sectioning data (Le Claire 1963),
   Suzuoka's (1961) thin-source case, and Harrison's (1961) A/B/C regimes.
+- Coherent interfacial energy from the enthalpy of solution by the generalized broken-bond model
+  (Sonderegger and Kozeschnik 2009), with the enthalpy of solution from pycalphad.
+- Closed forms for late-stage multicomponent coarsening (Philippe and Voorhees 2013), checked
+  against the precipitation solver in a ternary.
 - Worked example: electromigration stress in a passivated aluminium line.
 - Worked example: thermal oxidation of silicon with Deal and Grove's constants, including a two-step run.
 - Linear-parabolic thermal oxidation (Deal and Grove 1965).

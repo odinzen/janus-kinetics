@@ -8,6 +8,32 @@ Generated from the docstrings by `tools/gen_api.py`; do not edit by hand.
 
 Constant, value `8.3145`.
 
+## `janus_kinetics.coarsening`
+
+### `def coarsening_rate_constant(dc: 'Sequence[float]', mobility, molar_volume: 'float', gamma: 'float') -> 'float'`
+
+K in <R>^3 = K t (m^3/s), eq. (42). ``dc`` is C^beta - C^alpha over the independent components, ``mobility``
+the matrix M with D = M G (m^2 mol / (J s)), ``molar_volume`` V_m of the precipitate (m^3/mol) and ``gamma`` the
+interfacial energy (J/m^2). For a diagonal M this is eq. (47).
+
+### `def critical_radius(dc: 'Sequence[float]', hessian, supersaturation: 'Sequence[float]', molar_volume: 'float', gamma: 'float') -> 'float'`
+
+R_c = 2 sigma V_m / (dC^T G dC^inf), eq. (29): the radius that neither grows nor shrinks.
+
+### `def matrix_supersaturation(t, dc: 'Sequence[float]', mobility, hessian, molar_volume: 'float', gamma: 'float') -> 'np.ndarray'`
+
+C^inf - C^alpha at times ``t`` (s), eq. (43); one row per time.
+
+### `def number_density(t, rate_constant: 'float', volume_fraction: 'float')`
+
+Particles per volume at time ``t``, eq. (44), with the LSW factor 0.2113 the paper rounds to 0.21.
+
+### `def precipitate_composition_shift(t, dc: 'Sequence[float]', mobility, hessian, precipitate_hessian, molar_volume: 'float', gamma: 'float', partial_volume_difference: 'Sequence[float] | None' = None) -> 'np.ndarray'`
+
+<C^beta> - C^beta_eq of the average particle at times ``t``, eq. (45), one row per time. The term in
+``precipitate_hessian`` turns the shift off the tie-line unless the two Hessians agree;
+``partial_volume_difference`` is V_i^beta - V_1^beta for i = 2..N (zero when omitted).
+
 ## `janus_kinetics.couple_analysis`
 
 ### `def interdiffusion_from_profile(z, x, t: 'float', molar_volume=None) -> 'np.ndarray'`
@@ -393,6 +419,35 @@ mu_k + epsilon RT ln u_k, which is how it enters here.
 
 ``tolerance`` adapts the step as in :func:`solve_planar`, in mole fraction; a step that does
 not converge, or leaves the table, is halved and redone.
+
+## `janus_kinetics.interfacial_energy`
+
+### `def broken_bond_energy(solution_enthalpy: 'float', molar_volume: 'float', structure: 'Structure' = 'fcc', normal: 'Sequence[float] | None' = None, exponent: 'float' = 6.0, factor: 'float | None' = None) -> 'float'`
+
+Interfacial energy in J/m^2, eqs. (9)-(10), from the enthalpy of solution of the precipitate in the matrix
+(J per mole of atoms, positive when dissolving absorbs heat) and the matrix molar volume (m^3/mol). The
+structural factor is :func:`broken_bond_factor` unless ``factor`` is given.
+
+### `def broken_bond_factor(structure: 'Structure', normal: 'Sequence[float] | None' = None, exponent: 'float' = 6.0, shells: 'int' = 100) -> 'float'`
+
+The structural factor z_S,eff / z_L,eff of eq. (9) for an interface with Miller-index ``normal``, or its
+average over all orientations when ``normal`` is None. Sonderegger and Kozeschnik tabulate it for m = 6-8
+(Table II) and give 0.3291 (fcc) and 0.3280 (bcc) as the r^-6 mean (Table III).
+
+### `def effective_coordination(structure: 'Structure', exponent: 'float' = 6.0, shells: 'int' = 100) -> 'float'`
+
+z_L,eff, the shell-weighted number of bonds per atom, eq. (7) with the continuum tail of eq. (31).
+
+### `def solution_enthalpy(db: 'Database', components: 'Sequence[str]', matrix_phase: 'str', matrix_x: 'Sequence[float]', precipitate_phase: 'str', precipitate_x: 'Sequence[float]', T: 'float', dT: 'float' = 0.5) -> 'float'`
+
+Enthalpy of dissolving one mole of atoms of precipitate in an infinite matrix, J/mol: the thought
+experiment of Sonderegger and Kozeschnik's Appendix I (eqs. 19-20), sum_j x_j^P H_j^M - H^P, with H_j^M the
+partial molar enthalpies of the matrix. It is taken from the Gibbs energy of solution
+Delta G = sum_j x_j^P mu_j^M - G^P by Gibbs-Helmholtz, Delta H = -T^2 d(Delta G / T)/dT at fixed compositions.
+
+Each phase is held as one homogeneous state with its internal degrees of freedom (ordering) relaxed, by
+:class:`PhaseMinimizer` started from pycalphad's equilibrium at T. A phase at its solvus composition would
+otherwise split into two composition sets on one side of T, and the derivative would follow the tie-line.
 
 ## `janus_kinetics.interstitial`
 
