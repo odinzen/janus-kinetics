@@ -35,6 +35,7 @@ First version.
 - Whipple's grain-boundary solution and Le Claire's y^6/5 analysis of sectioning data (Le Claire 1963),
   Suzuoka's (1961) thin-source case, and Harrison's (1961) A/B/C regimes.
 - Worked example: electromigration stress in a passivated aluminium line.
+- Worked example: thermal oxidation of silicon with Deal and Grove's constants, including a two-step run.
 - Linear-parabolic thermal oxidation (Deal and Grove 1965).
 - Two compound layers with interfacial reaction barriers in thin-film couples (Gosele and Tu 1982).
 - Electromigration stress in confined metal lines (Korhonen et al. 1993): blocked, void and

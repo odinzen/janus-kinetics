@@ -167,8 +167,9 @@ interfaces following the tie-lines as the temperature ramps, holds and cools,
 oxygen dissolving into a metal film from an atmosphere during an anneal, a metal
 film reacting into two line compounds, van Loo's Ni-Sn Kirkendall analysis, a
 Cr2O3 scale growing on chromium, solidification segregation in a Ni-Al-Cr alloy
-and its removal by an anneal, and electromigration stress building up in a
-passivated aluminium line.
+and its removal by an anneal, electromigration stress building up in a
+passivated aluminium line, and Deal and Grove's thermal oxidation of silicon,
+including a dry-then-wet two-step oxidation.
 
 Conventions worth knowing:
 

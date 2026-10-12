@@ -15,6 +15,7 @@ import film_reaction  # noqa: E402
 import ni_sn_kirkendall  # noqa: E402
 import oxygen_uptake  # noqa: E402
 import precipitation_table1  # noqa: E402
+import silicon_oxidation  # noqa: E402
 import solidify_and_homogenize  # noqa: E402
 import surface_depletion  # noqa: E402
 import thin_film_anneal  # noqa: E402
@@ -145,3 +146,25 @@ def test_interconnect_electromigration_reaches_blechs_steady_state():
     ex = interconnect_electromigration
     assert res.stress[2][0] == pytest.approx(finite_line_stress(res.x[0], 50 * 3600, ex.LENGTH, ex.KAPPA, ex.G), rel=0.02)
     np.testing.assert_allclose(res.stress[-1], steady_stress(res.x, ex.LENGTH, ex.G), rtol=0, atol=0.01 * ex.G * ex.LENGTH)
+
+
+def test_silicon_oxidation_uses_deal_and_groves_constants():
+    """Every curve satisfies x^2 + A x = B (t + tau) with its table's constants, and the second oxidation step starts
+    from the oxide the first left (0.090 um after 30 min of dry oxygen at 1100 C)."""
+    ex = silicon_oxidation
+    out = ex.run(coarse=True)
+    t = out["t"]
+    for temp in ex.WET:
+        a, b = ex.constants(ex.WET, temp)
+        x = out["wet"][temp]
+        np.testing.assert_allclose(x * x + a * x, b * t, rtol=1e-10, atol=1e-24)
+    a, b = ex.constants(ex.DRY, 1100)
+    xi = ex.X_I * ex.UM
+    tau = (xi * xi + a * xi) / b
+    x = out["dry"][1100]
+    np.testing.assert_allclose(x * x + a * x, b * (t + tau), rtol=1e-10)
+    switch = ex.two_step(np.array([0.5 * ex.HOUR]))[0]
+    assert switch == pytest.approx(0.0896e-6, rel=1e-3)
+    aw, bw = ex.constants(ex.WET, 1000)
+    end = out["two_step"][-1]
+    assert end * end + aw * end == pytest.approx(switch * switch + aw * switch + bw * 2 * ex.HOUR, rel=1e-10)
