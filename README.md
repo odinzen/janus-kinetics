@@ -107,6 +107,9 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   rate constant, matrix supersaturation, number density and precipitate-composition
   drift, with the full mobility matrix; the precipitation solver reproduces them in a
   ternary whose solutes diffuse at different rates.
+- **Precipitation along heat treatments** in dilute alloys (Myhr and Grong 2000):
+  nucleation, growth, dissolution and coarsening of a size distribution through
+  ageing, up-quenching and heating ramps, reproducing their AA 6082 figures.
 
 Three published mobility databases ship with the package:
 `jonsson1995_bcc_crfeni()` (bcc Cr-Fe-Ni, Jonsson 1995), `campbell2002_fcc_ni()`
@@ -176,8 +179,9 @@ oxygen dissolving into a metal film from an atmosphere during an anneal, a metal
 film reacting into two line compounds, van Loo's Ni-Sn Kirkendall analysis, a
 Cr2O3 scale growing on chromium, solidification segregation in a Ni-Al-Cr alloy
 and its removal by an anneal, electromigration stress building up in a
-passivated aluminium line, and Deal and Grove's thermal oxidation of silicon,
-including a dry-then-wet two-step oxidation.
+passivated aluminium line, Deal and Grove's thermal oxidation of silicon,
+including a dry-then-wet two-step oxidation, and the ageing and reheating of an
+AA 6082 aluminium alloy.
 
 Conventions worth knowing:
 

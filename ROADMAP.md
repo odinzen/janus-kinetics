@@ -128,7 +128,9 @@ Left for later, each needing a source to be opened first:
   papers, not yet read;
 - late-stage multicomponent coarsening in closed form: done (Philippe and Voorhees 2013, eqs. 28-45),
   with the precipitation solver checked against it in a ternary;
-- heterogeneous nucleation and non-isothermal treatments;
+- non-isothermal treatments: done for dilute alloys with an empirical nucleation law (Myhr and Grong
+  2000: ageing, up-quenching and heating ramps, AA 6082); the CALPHAD-driven solvers take temperature
+  schedules too. Open: heterogeneous nucleation beyond grain junctions;
 - the mean-radius approach, whose coarsening fraction (eq. 17) is defined only
   for 0.99 R* < R_mean < 1.01 R* in the paper.
 

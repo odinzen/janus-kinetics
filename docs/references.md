@@ -28,6 +28,7 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Korhonen M.A., Børgesen P., Tu K.N., Li C.Y. (1993). Stress evolution due to electromigration in confined metal lines. *Journal of Applied Physics* 73, 3790-3799. https://doi.org/10.1063/1.354073
 - Kozeschnik E., Svoboda J., Fratzl P., Fischer F. (2004). Modelling of kinetics in multi-component multi-phase systems with spherical precipitates. *Materials Science and Engineering: A* 385, 157-165. https://doi.org/10.1016/j.msea.2004.06.016
 - Larsson H., Höglund L. (2009). Multiphase diffusion simulations in 1D using the DICTRA homogenization model. *Calphad* 33, 495-501. https://doi.org/10.1016/j.calphad.2009.06.004
+- Myhr O., Grong Ø. (2000). Modelling of non-isothermal transformations in alloys containing a particle distribution. *Acta Materialia* 48, 1605-1615. https://doi.org/10.1016/s1359-6454(99)00435-8
 - Otis R., Liu Z.K. (2017). pycalphad: CALPHAD-based Computational Thermodynamics in Python. *Journal of Open Research Software* 5, 1. https://doi.org/10.5334/jors.140
 - Perez M., Dumont M., Acevedo-Reyes D. (2008). Implementation of classical nucleation and growth theories for precipitation. *Acta Materialia* 56, 2119-2132. https://doi.org/10.1016/j.actamat.2007.12.050
 - Perez M., Dumont M., Acevedo-Reyes D. (2009). Corrigendum to "Implementation of classical nucleation and growth theories for precipitation" [Acta Materialia 56 (2008) 2119-2132]. *Acta Materialia* 57, 1318. https://doi.org/10.1016/j.actamat.2008.11.020

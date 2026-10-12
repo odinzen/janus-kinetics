@@ -650,6 +650,42 @@ between 0.72 and 1.09. A step is now halved whenever the matrix rate reverses be
 steps by more than a thousandth of the step limit (smaller reversals are rounding noise
 at the fixed point).
 
+## Precipitation along heat treatments
+
+Myhr and Grong (2000) follow a size distribution through ageing, up-quenching and heating
+ramps with deliberately simple physics: an empirical nucleation rate
+j = j0 exp[-(A0/RT)^3 / ln(C/C_e)^2] exp(-Q_d/RT) (eq. 3), the dilute growth law
+dr/dt = (C - C_i) / (C_p - C_i) D / r with C_i = C_e exp(2 sigma V_m / rRT) (eqs. 4-5), an Arrhenius
+solvus (eq. 17) and the solute balance (eq. 11). The distribution moves through fixed classes
+by their implicit upwind control-volume scheme (eqs. 12-16, Table 1), with wall velocities from
+the previous step's matrix content and nuclei entering at 1.05 r*. Their Table 2 holds every
+input for an AA 6082 alloy (`aa6082()`).
+
+Two points the paper leaves open are this package's. Eq. (4) changes sign once C_i passes C_p,
+below 2 sigma V_m / (RT ln(C_p/C_e)) (0.43 nm at 180 C), so such particles dissolve at once. And
+the time step: the paper only says it must keep C from changing much; here it is also kept
+below one class width of travel for growing classes, since the implicit scheme, stable at any
+step, otherwise smears the distribution over many classes (89 steps to 1e4 s at 180 C spread the
+particles to twice their size). Shrinking classes are left out of that limit: they move fastest
+just above the size where eq. (4) fails and would set the step for the whole run, and leaving
+them out changes the results by 0.3 % at most.
+
+Checks against all five simulation figures. At the start of ageing Table 2 gives a barrier of
+2.97 kT ('about 3'), j = 5.2e18 (Fig. 3a: 4.9e18) and r* = 0.81 nm. Ageing at 180 C follows Fig. 3
+within 3 % in mean radius and 5 % in number density to 3e6 s (the last number density, at
+8.5e6 s, moves -3 to +3 % with the class width); f = 0.008 at 1e4 s, the paper's peak-aged state.
+An up-quench to 380 C follows Fig. 5 within 1.5 % in f and 2 % in radius, dissolution ending at
+0.32 s where the paper draws it (0.317 s). The distributions of Fig. 6 are built from the text
+(mean 38 A, f = 0.008): their heights match the drawing within 4 %, but every drawn curve sits
+about 10 % lower in radius, so the drawing, not the runs of Fig. 7 (which start at 38 A), is taken
+to be off. At 480 C (Fig. 7) the LSW and b = 0.4 starts dissolve, the broader ones regrow to the
+equilibrium fraction with 1.38e-7 m particles at 1000 s, and the b = 0.6 number density levels at
+1.5e17 against 1.65e17. Heating at 1 C/s (Fig. 8) reproduces the three tempers' starting radii,
+their meeting near 300 C and the 3.65e-8 m maximum near 488 C. With the interfacial energy changed
+for the heating (Fig. 9) every sigma = 0.05 marker is matched within 0.0003 in f and the readable
+sigma = 0.8 ones within 0.00012; only the regrowth after the sigma = 0.8 dip runs about 8 C behind
+the figure, unchanged by refining steps or classes.
+
 ## Late-stage coarsening in closed form
 
 Philippe and Voorhees (2013) linearize local equilibrium about the tie-line dC = C^beta - C^alpha

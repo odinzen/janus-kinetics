@@ -16,6 +16,7 @@ import ni_sn_kirkendall  # noqa: E402
 import oxygen_uptake  # noqa: E402
 import precipitation_table1  # noqa: E402
 import silicon_oxidation  # noqa: E402
+import aluminium_heat_treatment  # noqa: E402
 import solidify_and_homogenize  # noqa: E402
 import surface_depletion  # noqa: E402
 import thin_film_anneal  # noqa: E402
@@ -168,3 +169,20 @@ def test_silicon_oxidation_uses_deal_and_groves_constants():
     aw, bw = ex.constants(ex.WET, 1000)
     end = out["two_step"][-1]
     assert end * end + aw * end == pytest.approx(switch * switch + aw * switch + bw * 2 * ex.HOUR, rel=1e-10)
+
+
+def test_aluminium_heat_treatment_ages_and_reheats():
+    """Coarse run of the AA 6082 example: about 0.008 of Mg2Si after 1e4 s at 180 C, as Myhr and Grong state; the
+    three tempers start apart (under below peak below over-aged), meet within 0.0002 by 300 C, never exceed the
+    equilibrium fraction by more than the capillary margin, and are gone at the 500 C solvus."""
+    out = aluminium_heat_treatment.run(coarse=True)
+    ageing = out["ageing"]
+    k = np.argmin(np.abs(np.log(ageing.times / 1e4)))
+    assert ageing.volume_fraction[k] == pytest.approx(0.008, rel=0.03)
+    f = out["heating"]
+    assert f["under-aged"][0] < f["peak-aged"][0] < f["over-aged"][0]
+    at300 = [v[out["temps"] == 300][0] for v in f.values()]
+    assert max(at300) - min(at300) < 0.0002
+    for v in f.values():
+        assert np.all(v <= out["equilibrium"] + 1e-4)
+        assert v[out["temps"] >= 505].max() < 1e-6

@@ -340,6 +340,60 @@ The boundary contribution to the layer-averaged concentration of a sectioning ex
 eq. (13) without its constant factor: eta int_1^inf exp(-eta^2 / 4 s) (exp(-V^2) / pi^(1/2) - V erfc V)
 s^(-3/2) ds, V = (s - 1) / (2 beta). Only its logarithmic slope with depth is used.
 
+## `janus_kinetics.heat_treatment`
+
+### `class HeatTreatableAlloy(c0: 'float', cp: 'float', cs: 'float', qs: 'float', d0: 'float', qd: 'float', j0: 'float', a0: 'float', gamma: 'float', molar_volume: 'float', growth_margin: 'float' = 0.05) -> None`
+
+The inputs of Myhr and Grong's Table 2: solute content of alloy ``c0`` and precipitate ``cp``, solvus
+prefactor ``cs`` and enthalpy ``qs`` (J/mol, eq. 17), diffusivity prefactor ``d0`` (m^2/s) and activation
+energy ``qd`` (J/mol), nucleation prefactor ``j0`` (1/m^3 s) and barrier parameter ``a0`` (J/mol, eq. 2),
+interfacial energy ``gamma`` (J/m^2) and precipitate molar volume ``molar_volume`` (m^3/mol).
+
+- `critical_radius(self, c: 'float', T: 'float') -> 'float'`: r* of eq. (6); infinite when the matrix is not supersaturated.
+- `equilibrium_fraction(self, T)`: Lever-rule volume fraction (C_0 - C_e) / (C_p - C_e), zero above the solvus.
+- `growth_rate(self, radius, c: 'float', T: 'float')`: dr/dt of eqs. (4)-(5). A particle so small that C_i reaches C_p, below
+- `interface_content(self, radius, T)`: C_i of eq. (5).
+- `nucleation_rate(self, c: 'float', T: 'float') -> 'float'`: j of eq. (3), zero when the matrix is not supersaturated.
+- `solubility(self, T)`: C_e, eq. (17).
+
+### `class HeatTreatmentResult(radii: 'np.ndarray', widths: 'np.ndarray', times: 'np.ndarray', temperature: 'np.ndarray', distribution: 'np.ndarray', matrix_content: 'np.ndarray', nucleation: 'np.ndarray', critical_radius: 'np.ndarray', steps: 'int') -> None`
+
+``distribution[k]`` is N (1/m^4) at ``times[k]`` on the class radii ``radii`` with widths ``widths``.
+
+- `state(self, k: 'int' = -1) -> 'np.ndarray'`: The distribution at save ``k``, to start another treatment from.
+
+### `def aa6082(gamma: 'float' = 0.2) -> 'HeatTreatableAlloy'`
+
+Myhr and Grong's Table 2: Mg in an AA 6082 alloy precipitating as Mg2Si, in wt% Mg.
+
+### `def log_normal_distribution(radii, mean_radius: 'float', volume_fraction: 'float', spread: 'float') -> 'np.ndarray'`
+
+Myhr and Grong's eq. (18), normal in ln r^2 with standard deviation ``spread`` (their b), placed so that the
+number-mean radius is ``mean_radius`` (median exp(-b^2 / 8) below it) and scaled to ``volume_fraction``.
+
+### `def lsw_distribution(radii, mean_radius: 'float', volume_fraction: 'float') -> 'np.ndarray'`
+
+The Lifshitz-Slyozov-Wagner distribution N (1/m^4) with the given mean radius, on the class radii, scaled
+to ``volume_fraction``.
+
+### `def solve_heat_treatment(alloy: 'HeatTreatableAlloy', temperature: 'Temperature', t_end: 'float', radii=None, save_times=None, initial=None, dt: 'float' = 0.001, tolerance: 'float' = 0.02, courant: 'float' = 1.0, max_steps: 'int' = 2000000) -> 'HeatTreatmentResult'`
+
+Run the Myhr-Grong model from t = 0 to ``t_end`` (s) along ``temperature`` (K, constant, schedule or
+callable). ``radii`` are the class radii (default :func:`uniform_radii` up to 20 nm); ``initial`` a starting
+distribution N on them (1/m^4), for instance :meth:`HeatTreatmentResult.state` of an earlier treatment.
+Steps are also kept below ``courant`` class widths of travel for growing classes: the implicit upwind
+scheme is stable at any step, but longer steps smear the distribution over many classes.
+Raises RuntimeError if particles reach the largest class.
+
+### `def stretched_radii(step: 'float', uniform_until: 'float', ratio: 'float', r_max: 'float') -> 'np.ndarray'`
+
+Radii ``step`` apart up to ``uniform_until``, then each ``ratio`` times the last up to ``r_max``: fine
+classes where particles nucleate and dissolve, few where they have coarsened.
+
+### `def uniform_radii(r_max: 'float', classes: 'int' = 1000) -> 'np.ndarray'`
+
+Class radii i dr, i = 1..classes, as in the paper (first wall at dr / 2).
+
 ## `janus_kinetics.homogenization`
 
 ### `class LocalEquilibriumTable(db: 'Database', phases: 'dict[str, SolutionPhase]', T: 'float', averaging: 'Averaging' = 'hashin_shtrikman_lower', spacing: 'float | None' = None, pressure: 'float' = 101325.0)`

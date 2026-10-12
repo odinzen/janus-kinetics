@@ -38,6 +38,9 @@ First version.
   (Sonderegger and Kozeschnik 2009), with the enthalpy of solution from pycalphad.
 - Closed forms for late-stage multicomponent coarsening (Philippe and Voorhees 2013), checked
   against the precipitation solver in a ternary.
+- Precipitation along heat treatments in dilute alloys (Myhr and Grong 2000), with their AA 6082
+  inputs, checked against all five of their simulation figures.
+- Worked example: ageing and reheating of AA 6082.
 - Worked example: electromigration stress in a passivated aluminium line.
 - Worked example: thermal oxidation of silicon with Deal and Grove's constants, including a two-step run.
 - Linear-parabolic thermal oxidation (Deal and Grove 1965).
