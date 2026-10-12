@@ -51,6 +51,7 @@ def test_semi_infinite_line_follows_eqs_9_and_10():
     near = res.x < 3 * L
     assert np.abs(res.stress[-1][near] - semi_infinite_stress(res.x[near], t, KAPPA, G)).max() < 5e-4 * G * np.sqrt(KAPPA * t)
     assert semi_infinite_stress(0.0, t, KAPPA, G) == pytest.approx(2 * G * np.sqrt(KAPPA * t / np.pi), rel=1e-14)
+    assert np.all(semi_infinite_stress(np.array([0.0, 1e-6]), 0.0, KAPPA, G) == 0.0)  # stress-free at the start
 
 
 def test_void_end_follows_eq_15():

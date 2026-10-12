@@ -32,7 +32,9 @@ First version.
   misfit energy, grain-junction nucleation (Clemm and Fisher 1955), temperature schedules,
   several phases or nucleation sites competing for one matrix, and nucleation site counts
   from the grain size (Cahn 1956) or the dislocation density.
-- Whipple's grain-boundary solution and Le Claire's y^6/5 analysis of sectioning data (Le Claire 1963).
+- Whipple's grain-boundary solution and Le Claire's y^6/5 analysis of sectioning data (Le Claire 1963),
+  and Harrison's (1961) A/B/C regimes.
+- Worked example: electromigration stress in a passivated aluminium line.
 - Linear-parabolic thermal oxidation (Deal and Grove 1965).
 - Two compound layers with interfacial reaction barriers in thin-film couples (Gosele and Tu 1982).
 - Electromigration stress in confined metal lines (Korhonen et al. 1993): blocked, void and

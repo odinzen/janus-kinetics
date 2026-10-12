@@ -18,6 +18,7 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Gösele U., Tu K.N. (1982). Growth kinetics of planar binary diffusion couples: ''Thin-film case'' versus ''bulk cases''. *Journal of Applied Physics* 53, 3252-3260. https://doi.org/10.1063/1.331028
 - Hallström S., Halvarsson M., Höglund L., Jonsson T., Ågren J. (2013). High temperature oxidation of chromium: Kinetic modeling and microstructural investigation. *Solid State Ionics* 240, 41-50. https://doi.org/10.1016/j.ssi.2013.02.017
 - Hallström S., Höglund L., Ågren J. (2011). Modeling of iron diffusion in the iron oxides magnetite and hematite with variable stoichiometry. *Acta Materialia* 59, 53-60. https://doi.org/10.1016/j.actamat.2010.08.032
+- Harrison L.G. (1961). Influence of dislocations on diffusion kinetics in solids with particular reference to the alkali halides. *Transactions of the Faraday Society* 57, 1191. https://doi.org/10.1039/tf9615701191
 - Hart E. (1957). On the role of dislocations in bulk diffusion. *Acta Metallurgica* 5, 597. https://doi.org/10.1016/0001-6160(57)90127-x
 - Helander T., Ågren J. (1999). A phenomenological treatment of diffusion in Al-Fe and Al-Ni alloys having B2-b.c.c. ordered structure. *Acta Materialia* 47, 1141-1152. https://doi.org/10.1016/s1359-6454(99)00010-5
 - Jönsson B. (1992). On Ferromagnetic Ordering and Lattice Diffusion - A Simple Model / Uber ferromagnetische Ordnung und Gitterdiffusion Ein einfaches Modell. *International Journal of Materials Research* 83, 349-355. https://doi.org/10.1515/ijmr-1992-830512

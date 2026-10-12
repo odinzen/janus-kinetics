@@ -27,6 +27,7 @@ from .interstitial import InterstitialPhase
 from .grain_boundary import (
     FisherBoundary,
     boundary_product_from_slope,
+    harrison_regime,
     le_claire_boundary_product,
     solve_fisher,
     whipple_beta,
@@ -176,6 +177,7 @@ __all__ = [
     "growth_constant_from_conversion",
     "growth_rate",
     "growth_window",
+    "harrison_regime",
     "helander1999_bcc_alni",
     "integrated_diffusivity",
     "interdiffusion_from_profile",

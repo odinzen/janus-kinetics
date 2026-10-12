@@ -166,6 +166,12 @@ Read with eq. 15, an exact Whipple profile at beta = 100 returns D' delta 3.4 % 
 (its own coefficient being 0.765), while Fisher's linear reading returns a third of it,
 the 'about three times too small' Le Claire reports.
 
+Which picture applies follows Harrison (1961): type A once lattice diffusion crosses a
+grain within the anneal, a_g^2 / D << t (his eq. 1), when the solid diffuses as a whole
+with Hart's average; type C while lattice diffusion stays within the boundary layer,
+(D t)^1/2 << delta (eq. 5); type B, Whipple's, between. Harrison leaves '<<' unquantified;
+the package's harrison_regime takes it as a factor of 10, which can be changed.
+
 ## Interstitial elements
 
 Andersson and Agren 1992, sections II.B and VI.A. With u_k = x_k / sum_{j in S} x_j

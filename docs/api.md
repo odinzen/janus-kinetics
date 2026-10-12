@@ -171,10 +171,10 @@ at (D/kT) Omega Delta sigma / l; below the threshold of eq. (5) nothing moves.
 Stress in a line blocked at both ends, Korhonen et al. eq. (13), summed over ``terms`` modes
 m_n = (2n + 1) pi.
 
-### `def semi_infinite_stress(x, t: 'float', kappa: 'float', gradient: 'float')`
+### `def semi_infinite_stress(x, t, kappa: 'float', gradient: 'float')`
 
 Stress in a semi-infinite line blocked at x = 0 from t = 0, Korhonen et al. eq. (9); at the
-block it is 2 G sqrt(kappa t / pi), eq. (10).
+block it is 2 G sqrt(kappa t / pi), eq. (10). ``x`` and ``t`` broadcast; the line starts stress-free.
 
 ### `def solve_line_stress(length: 'float', n_cells: 'int', gradient: 'float', kappa: 'float | Callable[[np.ndarray], np.ndarray]', t_end: 'float', dt: 'float', left: 'LineEnd' = LineEnd(kind='blocked', width=None, stress=0.0), right: 'LineEnd' = LineEnd(kind='blocked', width=None, stress=0.0), save_times: 'Sequence[float] | None' = None, initial: 'np.ndarray | float' = 0.0, yield_stress: 'float | None' = None, tolerance: 'float | None' = None, picard_tol: 'float' = 1e-10, max_picard: 'int' = 50) -> 'StressResult'`
 
@@ -255,6 +255,16 @@ D' delta (m^3/s) from a measured penetration slope d log10(a)/dy (1/m), invertin
 
 The classic reading of a radiotracer sectioning experiment; Fisher's eq. (15)
 gives D / (D' delta) = 21.3 cm^-1 for silver at 478 C this way.
+
+### `def harrison_regime(d_lattice: 'float', grain_radius: 'float', boundary_width: 'float', t: 'float', margin: 'float' = 10.0) -> 'str'`
+
+Harrison's kinetic regime, Trans. Faraday Soc. 57 (1961) 1191: 'A' when lattice diffusion crosses a grain
+within the anneal, a_g^2 / D_g << t (his eq. 1), so the solid diffuses as a whole with Hart's average
+D_c = f D' + (1 - f) D (eq. 3; :class:`ShortCircuit`), f = 3 delta / a_g for spherical grains of radius a_g;
+'C' when lattice diffusion does not leave the boundary layer, (D_g t)^(1/2) << delta (eq. 5), so only the
+boundaries carry material; 'B' between, where Whipple's solution and :func:`le_claire_boundary_product`
+apply. Harrison leaves '<<' unquantified (and calls eq. 1 perhaps far too strict); here it means a factor
+``margin``, a choice of this package.
 
 ### `def le_claire_boundary_product(slope: 'float', d_lattice: 'float', t: 'float', coefficient: 'float' = 0.78) -> 'float'`
 

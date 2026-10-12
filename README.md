@@ -161,11 +161,14 @@ print(result.markers[-1])  # Kirkendall marker position after 10 h, m
 
 More complete scripts, each tested, are in [examples/](examples): the couple
 above with a figure, chromium loss to a surface in a ternary, a precipitation
-run, an alpha/beta couple solved by both two-phase models, and a reaction layer
+run, an alpha/beta couple solved by both two-phase models, a reaction layer
 growing between two thin films during a rapid thermal anneal, with both
 interfaces following the tie-lines as the temperature ramps, holds and cools,
 oxygen dissolving into a metal film from an atmosphere during an anneal, a metal
-film reacting into two line compounds, and van Loo's Ni-Sn Kirkendall analysis.
+film reacting into two line compounds, van Loo's Ni-Sn Kirkendall analysis, a
+Cr2O3 scale growing on chromium, solidification segregation in a Ni-Al-Cr alloy
+and its removal by an anneal, and electromigration stress building up in a
+passivated aluminium line.
 
 Conventions worth knowing:
 

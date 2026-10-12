@@ -210,3 +210,21 @@ def le_claire_boundary_product(slope: float, d_lattice: float, t: float, coeffic
     if slope >= 0:
         raise ValueError("ln(c_bar) must fall with y^(6/5): the slope must be negative")
     return np.sqrt(4 * d_lattice / t) * (coefficient / -slope) ** (5 / 3)
+
+
+def harrison_regime(d_lattice: float, grain_radius: float, boundary_width: float, t: float,
+                    margin: float = 10.0) -> str:
+    """Harrison's kinetic regime, Trans. Faraday Soc. 57 (1961) 1191: 'A' when lattice diffusion crosses a grain
+    within the anneal, a_g^2 / D_g << t (his eq. 1), so the solid diffuses as a whole with Hart's average
+    D_c = f D' + (1 - f) D (eq. 3; :class:`ShortCircuit`), f = 3 delta / a_g for spherical grains of radius a_g;
+    'C' when lattice diffusion does not leave the boundary layer, (D_g t)^(1/2) << delta (eq. 5), so only the
+    boundaries carry material; 'B' between, where Whipple's solution and :func:`le_claire_boundary_product`
+    apply. Harrison leaves '<<' unquantified (and calls eq. 1 perhaps far too strict); here it means a factor
+    ``margin``, a choice of this package."""
+    if min(d_lattice, grain_radius, boundary_width, t, margin) <= 0:
+        raise ValueError("diffusivity, grain radius, boundary width, time and margin must be positive")
+    if grain_radius**2 / d_lattice * margin < t:
+        return "A"
+    if np.sqrt(d_lattice * t) * margin < boundary_width:
+        return "C"
+    return "B"

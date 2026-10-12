@@ -9,6 +9,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parents[1] / "examples"))
 
 import fe_cr_couple  # noqa: E402
+import interconnect_electromigration  # noqa: E402
 import chromia_scale  # noqa: E402
 import film_reaction  # noqa: E402
 import ni_sn_kirkendall  # noqa: E402
@@ -133,3 +134,14 @@ def test_solidify_and_homogenize():
     inv = res.inventory()
     assert np.max(np.abs(inv - inv[0])) < 1e-10 * np.max(inv[0])
     assert np.all(np.diff(segregation_index(res.x[:, :, 1])) < 0)
+
+
+def test_interconnect_electromigration_reaches_blechs_steady_state():
+    """Korhonen et al.'s numbers (G = 16.5 MPa/um, kappa = 2.6 um^2/h) in a 50 um line: the cathode end follows their
+    eq. (13), 212 MPa at 50 h, and reaches Blech's G L / 2 = 412 MPa by 1000 h."""
+    from janus_kinetics import finite_line_stress, steady_stress
+
+    res = interconnect_electromigration.run(coarse=True)["result"]
+    ex = interconnect_electromigration
+    assert res.stress[2][0] == pytest.approx(finite_line_stress(res.x[0], 50 * 3600, ex.LENGTH, ex.KAPPA, ex.G), rel=0.02)
+    np.testing.assert_allclose(res.stress[-1], steady_stress(res.x, ex.LENGTH, ex.G), rtol=0, atol=0.01 * ex.G * ex.LENGTH)

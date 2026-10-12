@@ -71,12 +71,14 @@ def steady_stress(x, length: float, gradient: float):
     return gradient * length * (0.5 - np.asarray(x, dtype=float) / length)
 
 
-def semi_infinite_stress(x, t: float, kappa: float, gradient: float):
+def semi_infinite_stress(x, t, kappa: float, gradient: float):
     """Stress in a semi-infinite line blocked at x = 0 from t = 0, Korhonen et al. eq. (9); at the
-    block it is 2 G sqrt(kappa t / pi), eq. (10)."""
-    x = np.asarray(x, dtype=float)
-    s = np.sqrt(4 * kappa * t)
-    return gradient * (s / np.sqrt(np.pi) * np.exp(-(x / s) ** 2) - x * erfc(x / s))
+    block it is 2 G sqrt(kappa t / pi), eq. (10). ``x`` and ``t`` broadcast; the line starts stress-free."""
+    x, t = np.broadcast_arrays(np.asarray(x, dtype=float), np.asarray(t, dtype=float))
+    s = np.sqrt(4 * kappa * np.maximum(t, 0.0))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        sigma = gradient * (s / np.sqrt(np.pi) * np.exp(-(x / s) ** 2) - x * erfc(x / s))
+    return np.where(t > 0, sigma, 0.0)
 
 
 def finite_line_stress(x, t: float, length: float, kappa: float, gradient: float, terms: int = 400):

@@ -8,6 +8,7 @@ from scipy.special import erfc
 from janus_kinetics.grain_boundary import (
     FisherBoundary,
     boundary_product_from_slope,
+    harrison_regime,
     le_claire_boundary_product,
     solve_fisher,
     whipple_beta,
@@ -163,3 +164,18 @@ def test_le_claire_reads_back_the_boundary_product_and_fisher_does_not():
 def test_le_claire_inputs_are_checked():
     with pytest.raises(ValueError, match="negative"):
         le_claire_boundary_product(0.1, 1e-17, 1e5)
+
+
+def test_harrison_regimes_follow_his_conditions():
+    """Harrison (1961): type A once a_g^2 / D_g << t (eq. 1), type C while (D_g t)^(1/2) << delta (eq. 5), type B
+    between; '<<' taken as a factor 10. A 1 um grain with D = 1e-17 m^2/s needs 1e5 s to cross, so it is A beyond
+    1e6 s; a 0.5 nm boundary keeps it C below 2.5e-4 s."""
+    d, a_g, delta = 1e-17, 1e-6, 0.5e-9
+    assert harrison_regime(d, a_g, delta, 2e6) == "A"
+    assert harrison_regime(d, a_g, delta, 1e4) == "B"
+    assert harrison_regime(d, a_g, delta, 1e-4) == "C"
+    assert harrison_regime(d, a_g, delta, 0.9e6) == "B"  # just short of the factor 10
+    assert harrison_regime(d, a_g, delta, 3e-4) == "B"
+    assert harrison_regime(d, a_g, delta, 2e6, margin=100.0) == "B"
+    with pytest.raises(ValueError, match="positive"):
+        harrison_regime(d, a_g, delta, -1.0)
