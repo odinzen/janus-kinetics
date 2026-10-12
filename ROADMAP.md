@@ -123,6 +123,8 @@ Left for later, each needing a source to be opened first:
   (part II section 3.5). Site counts from grain size (Cahn 1956 eq. 1) and dislocation
   density: done. Open there: the Thermo-Calc curvatures of Sudbrack
   et al. (2007) Table 4 (ours 10-30 % higher for the same database);
+- growth rate of one particle with local equilibrium and each element's own diffusion distance: done
+  (Chen, Jeppsson and Agren 2008); not yet coupled to the size-class solvers;
 - interfacial energy from the enthalpy of solution: done for coherent interfaces (Sonderegger and
   Kozeschnik 2009, generalized broken bonds); their size and diffuse-interface corrections are later
   papers, not yet read;

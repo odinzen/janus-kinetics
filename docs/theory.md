@@ -650,6 +650,28 @@ between 0.72 and 1.09. A step is now halved whenever the matrix rate reverses be
 steps by more than a thousandth of the step limit (smaller reversals are rounding noise
 at the fixed point).
 
+## Growth of one particle with local equilibrium
+
+Chen, Jeppsson and Agren (2008) recast the exact growth of a sphere in a binary, v = 2 D lambda^2 / R
+with 2 lambda^2 - 2 lambda^3 sqrt(pi) exp(lambda^2) erfc(lambda) = Omega (eqs. 1-2), as a steady-state
+flux over an effective distance n R, n = Omega / (2 lambda^2) (eqs. 4-6), and give every element of a
+multicomponent matrix its own n_j from its own supersaturation Omega_j. The growth rate and both
+interface compositions then follow from local equilibrium with the Gibbs-Thomson pressure on the
+particle (eq. 9) and one flux balance per independent element, in diffusivities (eq. 10) or in
+mobilities and chemical potentials (eq. 13).
+
+Eq. (2) is Zener's eq. (12) for a sphere with alpha = 2 lambda; near Omega = 1 it cancels in floating
+point, so there 1 - f is taken from the asymptotic series of erfc, checked against Laplace's continued
+fraction to 1e-9. With a diagonal D and no capillarity each element's field is the exact binary one,
+so eq. (10) is exact for growth from zero size: a sphere grown by the sharp-interface solver in an
+ideal ternary, one solute diffusing 4 times faster than the other, follows it within 0.1 % in
+d(R^2)/dt and 2e-6 in the operating tie-line. Eq. (13) writes the flux with interface quantities, so in
+an ideal dilute matrix it falls short of the exact rate by x^I ln(x^M/x^I) / (x^M - x^I) (0.53 for a
+threefold supersaturation); the paper prefers it for the cross terms it carries through the chemical
+potentials. Where Omega_j falls outside (0, 1), eq. (2) has no root and n_j = 1 is used, a package
+choice. The paper's Fe-Cr-C example needs the commercial TCFE4 and MOB2 databases and is not
+reproduced.
+
 ## Precipitation along heat treatments
 
 Myhr and Grong (2000) follow a size distribution through ageing, up-quenching and heating

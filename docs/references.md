@@ -10,6 +10,7 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Booth-Morrison C., Weninger J., Sudbrack C.K., Mao Z., Noebe R.D., Seidman D.N. (2008). Effects of solute concentrations on kinetic pathways in Ni-Al-Cr alloys. *Acta Materialia* 56, 3422-3438. https://doi.org/10.1016/j.actamat.2008.03.016
 - Cahn J.W. (1956). The kinetics of grain boundary nucleated reactions. *Acta Metallurgica* 4, 449-459. https://doi.org/10.1016/0001-6160(56)90041-4
 - Campbell C., Boettinger W., Kattner U. (2002). Development of a diffusion mobility database for Ni-base superalloys. *Acta Materialia* 50, 775-792. https://doi.org/10.1016/s1359-6454(01)00383-4
+- Chen Q., Jeppsson J., Ågren J. (2008). Analytical treatment of diffusion during precipitate growth in multicomponent systems. *Acta Materialia* 56, 1890-1896. https://doi.org/10.1016/j.actamat.2007.12.037
 - Claire A.D.L. (1963). The analysis of grain boundary diffusion measurements. *British Journal of Applied Physics* 14, 351-356. https://doi.org/10.1088/0508-3443/14/6/317
 - Clemm P., Fisher J. (1955). The influence of grain boundaries on the nucleation of secondary phases. *Acta Metallurgica* 3, 70-73. https://doi.org/10.1016/0001-6160(55)90014-6
 - Deal B.E., Grove A.S. (1965). General Relationship for the Thermal Oxidation of Silicon. *Journal of Applied Physics* 36, 3770-3778. https://doi.org/10.1063/1.1713945

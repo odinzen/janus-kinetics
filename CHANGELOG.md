@@ -41,6 +41,8 @@ First version.
 - Precipitation along heat treatments in dilute alloys (Myhr and Grong 2000), with their AA 6082
   inputs, checked against all five of their simulation figures.
 - Worked example: ageing and reheating of AA 6082.
+- Particle growth rate with local equilibrium in a multicomponent matrix (Chen, Jeppsson and Agren
+  2008), checked against Zener's sphere solution and the sharp-interface solver.
 - Worked example: electromigration stress in a passivated aluminium line.
 - Worked example: thermal oxidation of silicon with Deal and Grove's constants, including a two-step run.
 - Linear-parabolic thermal oxidation (Deal and Grove 1965).

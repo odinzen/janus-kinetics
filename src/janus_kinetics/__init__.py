@@ -106,6 +106,7 @@ from .moving_boundary import (
     solve_moving_boundary,
 )
 from .particle_reaction import conversion, conversion_integral, growth_constant_from_conversion, layer_thickness
+from .particle_growth import GrowthState, diffusion_distance_factor, growth_parameter, particle_growth_rate
 from .phase import ShortCircuit, SolutionPhase
 from .precipitation import (
     DiluteSolution,
@@ -146,6 +147,7 @@ __all__ = [
     "FixedInterface",
     "GibbsEnergy",
     "GrainBoundaryMobility",
+    "GrowthState",
     "HeatTreatableAlloy",
     "HeatTreatmentResult",
     "InterstitialPhase",
@@ -195,6 +197,7 @@ __all__ = [
     "critical_radius",
     "critical_thickness",
     "deal_grove_constants",
+    "diffusion_distance_factor",
     "dmu_dx",
     "drift_velocity",
     "effective_coordination",
@@ -203,6 +206,7 @@ __all__ = [
     "grain_structure",
     "grow_oxide",
     "growth_constant_from_conversion",
+    "growth_parameter",
     "growth_rate",
     "growth_window",
     "harrison_regime",
@@ -232,6 +236,7 @@ __all__ = [
     "oxide_thickness",
     "parabolic_growth",
     "parabolic_scale_growth",
+    "particle_growth_rate",
     "precipitate_composition_shift",
     "reduced_hessian",
     "scheil_gulliver",

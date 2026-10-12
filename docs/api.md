@@ -940,6 +940,33 @@ standard state (1 bar for the usual R*T*LN(1E-05*P) term), using its GAS phase.
 - `state_at_potential(self, T: 'float', mu_o: 'float') -> 'dict'`: As :meth:`state`, at the oxygen chemical potential ``mu_o`` (J/mol) instead of a pressure.
 - `tracer_diffusivity(self, T: 'float', p_o2: 'float') -> 'float'`: D*_M in m^2/s, eq. (7) (eq. (13) for a single path).
 
+## `janus_kinetics.particle_growth`
+
+### `class GrowthState(radius: 'float', velocity: 'float', matrix_interface: 'np.ndarray', particle_interface: 'np.ndarray', omega: 'np.ndarray', factor: 'np.ndarray') -> None`
+
+Growth rate ``velocity`` (m/s) of a particle of ``radius``, with all mole fractions of the matrix
+(``matrix_interface``) and particle (``particle_interface``) at its interface, and each independent element's
+supersaturation ``omega`` and distance factor ``factor``.
+
+
+### `def diffusion_distance_factor(omega) -> 'np.ndarray'`
+
+n = Omega / (2 lambda^2) of eq. (5); 1 where Omega <= 0, below 1e-12, or at or above 1 - 1e-12 taken there.
+
+### `def growth_parameter(omega: 'float') -> 'float'`
+
+lambda of eq. (2) for a supersaturation 0 < Omega < 1.
+
+### `def particle_growth_rate(matrix: 'SolutionPhase', particle: 'SolutionPhase', x_matrix: 'Sequence[float]', radius: 'float', T: 'float', start: 'tuple[Sequence[float], Sequence[float]]', diffusivity=None, gamma: 'float' = 0.0, molar_volume: 'float' = 1e-05, form: "Literal['diffusivity', 'mobility']" = 'diffusivity') -> 'GrowthState'`
+
+Growth rate of a sphere of ``radius`` in a matrix of far-field composition ``x_matrix`` (independent mole
+fractions, the phases' dependent element last), solving eq. (9) with eq. (10) (``form="diffusivity"``, with the
+matrix interdiffusion ``diffusivity``, an (n-1) x (n-1) array in m^2/s) or eq. (13) (``form="mobility"``, with the
+matrix's own mobilities at the interface composition). ``start`` gives the interface compositions (matrix,
+particle) to begin from, for instance a tie-line from pycalphad; where more than one operating tie-line exists
+(partitioning and non-partitioning growth) it decides which is found. ``gamma`` (J/m^2) and ``molar_volume``
+(m^3/mol) add the Gibbs-Thomson pressure on the particle.
+
 ## `janus_kinetics.particle_reaction`
 
 ### `def conversion(t, growth_constant: 'float | Callable[[float], float]', radius: 'float', z: 'float', geometry: 'Geometry', temperature: 'Temperature | None' = None) -> 'np.ndarray'`
