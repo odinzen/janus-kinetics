@@ -71,11 +71,14 @@ class SolutionPhase:
         dependent: str | None = None,
         mobility_db: Database | None = None,
         short_circuit: ShortCircuit | None = None,
+        mobilities: bool = True,
     ):
         self.lattice = SubstitutionalLattice.from_database(db, phase_name, elements, dependent)
         self.gibbs = GibbsEnergy(db, self.lattice)
-        self.mobility_model = MobilityModel(mobility_db or db, self.lattice)
-        self._warn_about_omitted_terms(db, mobility_db or db)
+        # a phase used for its thermodynamics alone (a liquid kept uniform, say) need not have mobilities
+        self.mobility_model = MobilityModel(mobility_db or db, self.lattice) if mobilities else None
+        if mobilities:
+            self._warn_about_omitted_terms(db, mobility_db or db)
         self.short_circuit = short_circuit
         self._path_model = MobilityModel(short_circuit.mobility_db, self.lattice) if short_circuit else None
 
@@ -93,6 +96,8 @@ class SolutionPhase:
             warnings.warn(f"{name}: parameters of type {kinds} are present but not used by this package", stacklevel=3)
 
     def _mobility(self, x: np.ndarray, T, magnetic_factor) -> np.ndarray:
+        if self.mobility_model is None:
+            raise ValueError(f"{self.lattice.phase_name} was built without mobilities (mobilities=False)")
         m = self.mobility_model.mobility(x, T, magnetic_factor)
         if self._path_model is None:
             return m

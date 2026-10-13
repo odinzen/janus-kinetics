@@ -843,3 +843,20 @@ within 1 %. The worked example takes Ni-5.2Al-14.2Cr through Scheil solidificati
 on Dupin's description and a 1200 C anneal of a 25 um dendrite arm with Campbell's
 mobilities.
 
+Back-diffusion with CALPHAD tie-lines. `solve_solidification` is the volume-element
+calculation of DICTRA's solidification runs for any number of elements: the primary solid
+grows from the arm's centre as the temperature falls, diffusing with its own
+interdiffusion matrix on a grid graded toward the interface; the liquid beyond is kept
+uniform; the interface follows the tie-line of local equilibrium at the current
+temperature, and the element is closed. It is the layered-stack solver with a liquid layer
+of very high diffusivity, so the interface balance, conservation and geometry are those
+already checked. Its two limits come out on an ideal A-B-C alloy with a 35 K equilibrium
+freezing range (partition ratios about 0.36 and 0.57): with the solid frozen the fraction
+solid and the liquid follow pycalphad's Scheil-Gulliver path within 1e-3 down to 1560 K, in a
+plate and around a cylinder alike; with fast diffusion in the solid the fraction solid is
+the lever rule's within 3e-3 and the liquid runs out at the equilibrium solidus. In between
+it lies between them and rises with the solid diffusivity, and every element is conserved to
+1e-9. Only the primary solid forms; a second solid (a eutectic, or Lippard et al.'s carbides)
+is beyond it, as are the AerMet100 data of Lippard et al. (1998), which need commercial
+databases.
+

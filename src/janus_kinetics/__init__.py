@@ -129,11 +129,14 @@ from .schedule import TemperatureSchedule
 from .solidification import (
     BackDiffusionResult,
     ScheilResult,
+    SolidificationResult,
+    equilibrium_start,
     kobayashi,
     scheil_gulliver,
     segregation_index,
     segregation_profile,
     solve_back_diffusion,
+    solve_solidification,
 )
 from .solver import Boundary, DiffusionResult, solve_planar, uniform_faces
 from .thermo import GibbsEnergy, R, dmu_dx, reduced_hessian, thermodynamic_factor
@@ -183,6 +186,7 @@ __all__ = [
     "ScaleGrowth",
     "ScheilResult",
     "ShortCircuit",
+    "SolidificationResult",
     "SolutionPhase",
     "StackResult",
     "StressResult",
@@ -208,6 +212,7 @@ __all__ = [
     "dmu_dx",
     "drift_velocity",
     "effective_coordination",
+    "equilibrium_start",
     "finite_line_stress",
     "fit_linear_parabolic",
     "fixed_composition_growth_rate",
@@ -266,6 +271,7 @@ __all__ = [
     "solve_multicomponent_precipitation",
     "solve_planar",
     "solve_reaction_layers",
+    "solve_solidification",
     "solve_two_layers",
     "steady_stress",
     "stress_diffusivity",

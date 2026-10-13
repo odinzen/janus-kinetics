@@ -1039,7 +1039,7 @@ holds MQ/MF parameters for diffusion along the paths, entered under the same
 phase name and constitution as the lattice parameters.
 
 
-### `class SolutionPhase(db: 'Database', phase_name: 'str', elements: 'list[str] | tuple[str, ...]', dependent: 'str | None' = None, mobility_db: 'Database | None' = None, short_circuit: 'ShortCircuit | None' = None)`
+### `class SolutionPhase(db: 'Database', phase_name: 'str', elements: 'list[str] | tuple[str, ...]', dependent: 'str | None' = None, mobility_db: 'Database | None' = None, short_circuit: 'ShortCircuit | None' = None, mobilities: 'bool' = True)`
 
 Thermodynamics and mobilities of one substitutional solution phase.
 
@@ -1242,6 +1242,18 @@ mole fractions.
 - `increments(self) -> 'tuple[np.ndarray, np.ndarray]'`: (fraction-solid edges, independent mole fractions of the solid laid down in each step), the input
 - `solid_phase_fractions(self) -> 'dict'`: Amount of each solid phase formed over the whole path, as a fraction of the alloy.
 
+### `class SolidificationResult(times: 'np.ndarray', temperature: 'np.ndarray', fraction_solid: 'np.ndarray', liquid: 'np.ndarray', interface_solid: 'np.ndarray', solid_faces: 'list', solid: 'list', finished: 'bool') -> None`
+
+Times (s), temperatures (K), fraction solid (by volume of the element), the liquid's mole fractions (t, n-1),
+the interface solid's (t, n-1), the solid's faces (m) and compositions at each saved time, and whether the
+liquid ran out (``finished``).
+
+
+### `def equilibrium_start(db: 'Database', components: 'Sequence[str]', solid_phase: 'str', liquid_phase: 'str', alloy: 'Sequence[float]', T: 'float') -> 'tuple[float, np.ndarray, np.ndarray]'`
+
+(fraction solid, solid and liquid independent mole fractions) of the solid-liquid equilibrium of ``alloy``
+at ``T`` from pycalphad, a start for :func:`solve_solidification` a little below the liquidus.
+
 ### `def kobayashi(k: 'float', gamma: 'float', fs, x=None, terms: 'int' = 10000) -> 'np.ndarray'`
 
 Exact solution of the Brody-Flemings model over C0 (Kobayashi eqs. 37-40): the interface solid
@@ -1284,6 +1296,24 @@ the solid is solved on its stretched grid by the package's moving-grid scheme, a
 composition from the element's solute balance. The solid's response is linear in the held interface
 value, so two solves give the exact C_L of the step. The run starts at ``fs_start`` with the solid at
 k C0 (the Scheil and exact solutions agree there to order f_s). Compositions are over C0.
+
+### `def solve_solidification(solid: 'SolutionPhase', liquid: 'SolutionPhase', temperature: 'TemperatureSchedule', t_end: 'float', length: 'float', start: 'tuple[float, Sequence[float], Sequence[float]]', solid_diffusivity=None, cells: 'int' = 200, grading: 'float' = 20.0, dt: 'float' = 0.05, save_times=None, geometry: 'Geometry' = 'planar', liquid_diffusivity: 'float' = 1e-06, liquid_cells: 'int' = 4, tol: 'float' = 1e-08, tolerance: 'float | None' = None) -> 'SolidificationResult'`
+
+Solidification with back-diffusion in the solid and local equilibrium at its interface with the liquid, for
+any number of elements, the volume-element calculation of DICTRA's solidification runs (Borgenstam et al.,
+J. Phase Equilib. 21 (2000) 269; Lippard et al., Metall. Mater. Trans. B 29 (1998) 205). The primary solid
+grows from r = 0 (a plate, or the axis of a cylinder or centre of a sphere) across a volume element of
+``length``, half the dendrite arm spacing, as ``temperature`` falls; the liquid beyond it is kept uniform (a
+diffusivity ``liquid_diffusivity`` far above the solid's), the interface follows the tie-line of local
+equilibrium at the current temperature, and nothing leaves the element.
+
+``start`` is (fraction solid, solid and liquid independent mole fractions) at t = 0, for instance
+:func:`equilibrium_start` a little below the liquidus. ``solid_diffusivity`` is a constant matrix or a callable
+of (x) or (x, t); by default the solid's own interdiffusion matrix at the current temperature. The solid's
+``cells`` are graded ``grading``:1 toward the interface. Only the primary solid forms: a run that should form a
+second solid (a eutectic) is beyond it. When the liquid runs out the run stops and returns what it has
+(``finished``). With no diffusion in the solid it follows the Scheil-Gulliver path, with fast diffusion the
+lever rule.
 
 ## `janus_kinetics.solver`
 

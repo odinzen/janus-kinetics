@@ -50,6 +50,9 @@ First version.
 - Two compound layers with interfacial reaction barriers in thin-film couples (Gosele and Tu 1982).
 - Electromigration stress in confined metal lines (Korhonen et al. 1993): blocked, void and
   reservoir ends, stress-dependent diffusivity, ideal plasticity, and Blech's threshold.
+- Solidification with back-diffusion in the solid and CALPHAD tie-lines for any number of elements
+  (`solve_solidification`), checked against the Scheil-Gulliver and lever-rule limits;
+  `SolutionPhase(mobilities=False)` for a phase used for its thermodynamics alone.
 - Grids graded toward moving interfaces in the layered-stack and two-phase solvers (`graded_faces`,
   `Layer(faces=...)`, `solve_moving_boundary(grading=...)`).
 - Adaptive time steps in the planar, homogenization and layered-stack solvers, with recovery

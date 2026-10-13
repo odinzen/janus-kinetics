@@ -18,7 +18,19 @@ import numpy as np
 from pycalphad import Database, equilibrium, variables as v
 from scipy.special import hyp1f1
 
-from .moving_boundary import _End, _Region, _region_step
+from .errors import ConvergenceError
+from .moving_boundary import (
+    Layer,
+    LocalEquilibrium,
+    PhaseDissolvedError,
+    _End,
+    _Region,
+    _region_step,
+    graded_faces,
+    solve_layers,
+)
+from .phase import SolutionPhase
+from .schedule import TemperatureSchedule
 from .solver import Geometry, _as_callable, cell_measures
 
 
@@ -268,3 +280,90 @@ def segregation_index(x) -> np.ndarray:
     x = np.asarray(x, dtype=float)
     spread = x.max(axis=1) - x.min(axis=1)
     return spread / spread[0]
+
+
+@dataclass
+class SolidificationResult:
+    """Times (s), temperatures (K), fraction solid (by volume of the element), the liquid's mole fractions (t, n-1),
+    the interface solid's (t, n-1), the solid's faces (m) and compositions at each saved time, and whether the
+    liquid ran out (``finished``)."""
+
+    times: np.ndarray
+    temperature: np.ndarray
+    fraction_solid: np.ndarray
+    liquid: np.ndarray
+    interface_solid: np.ndarray
+    solid_faces: list
+    solid: list
+    finished: bool
+
+
+def equilibrium_start(db: Database, components: Sequence[str], solid_phase: str, liquid_phase: str,
+                      alloy: Sequence[float], T: float) -> tuple[float, np.ndarray, np.ndarray]:
+    """(fraction solid, solid and liquid independent mole fractions) of the solid-liquid equilibrium of ``alloy``
+    at ``T`` from pycalphad, a start for :func:`solve_solidification` a little below the liquidus."""
+    comps = [c.upper() for c in components]
+    x = np.asarray(alloy, dtype=float)
+    eq = equilibrium(db, comps + ["VA"], [solid_phase, liquid_phase],
+                     {v.T: T, v.P: 101325, v.N: 1, **{v.X(c): xi for c, xi in zip(comps[:-1], x)}})
+    names = [str(p) for p in np.ravel(eq.Phase.values)]
+    amounts = np.ravel(eq.NP.values)
+    comp = eq.X.values.reshape(len(names), -1)
+    order = [list(map(str, eq.component.values)).index(c) for c in comps]
+    found = {n: (a, comp[i][order]) for i, (n, a) in enumerate(zip(names, amounts)) if n}
+    if solid_phase not in found or liquid_phase not in found:
+        raise ValueError(f"{solid_phase} and {liquid_phase} do not coexist at {T:g} K; start between solidus and liquidus")
+    return float(found[solid_phase][0]), found[solid_phase][1][:-1], found[liquid_phase][1][:-1]
+
+
+def solve_solidification(solid: SolutionPhase, liquid: SolutionPhase, temperature: TemperatureSchedule,
+                         t_end: float, length: float, start: tuple[float, Sequence[float], Sequence[float]],
+                         solid_diffusivity=None, cells: int = 200, grading: float = 20.0, dt: float = 0.05,
+                         save_times=None, geometry: Geometry = "planar", liquid_diffusivity: float = 1e-6,
+                         liquid_cells: int = 4, tol: float = 1e-8, tolerance: float | None = None) -> SolidificationResult:
+    """Solidification with back-diffusion in the solid and local equilibrium at its interface with the liquid, for
+    any number of elements, the volume-element calculation of DICTRA's solidification runs (Borgenstam et al.,
+    J. Phase Equilib. 21 (2000) 269; Lippard et al., Metall. Mater. Trans. B 29 (1998) 205). The primary solid
+    grows from r = 0 (a plate, or the axis of a cylinder or centre of a sphere) across a volume element of
+    ``length``, half the dendrite arm spacing, as ``temperature`` falls; the liquid beyond it is kept uniform (a
+    diffusivity ``liquid_diffusivity`` far above the solid's), the interface follows the tie-line of local
+    equilibrium at the current temperature, and nothing leaves the element.
+
+    ``start`` is (fraction solid, solid and liquid independent mole fractions) at t = 0, for instance
+    :func:`equilibrium_start` a little below the liquidus. ``solid_diffusivity`` is a constant matrix or a callable
+    of (x) or (x, t); by default the solid's own interdiffusion matrix at the current temperature. The solid's
+    ``cells`` are graded ``grading``:1 toward the interface. Only the primary solid forms: a run that should form a
+    second solid (a eutectic) is beyond it. When the liquid runs out the run stops and returns what it has
+    (``finished``). With no diffusion in the solid it follows the Scheil-Gulliver path, with fast diffusion the
+    lever rule.
+    """
+    f0, xs0, xl0 = start
+    xs0, xl0 = np.atleast_1d(np.asarray(xs0, dtype=float)), np.atleast_1d(np.asarray(xl0, dtype=float))
+    if not 0 < f0 < 1:
+        raise ValueError("the starting fraction solid must lie strictly between 0 and 1")
+    if length <= 0 or t_end <= 0:
+        raise ValueError("length and t_end must be positive")
+    if not callable(temperature):
+        raise ValueError("solidification needs a falling temperature: give a TemperatureSchedule")
+    p = {"planar": 0, "cylindrical": 1, "spherical": 2}[geometry]
+    s0 = length * f0 ** (1 / (p + 1))
+    if solid_diffusivity is None:
+        def solid_diffusivity(x, t):
+            return solid.interdiffusion_matrix(x, temperature(t))
+    m = xs0.size
+    layers = [Layer(np.tile(xs0, (cells, 1)), solid_diffusivity, "solid", graded_faces(cells, grading, "right")),
+              Layer(np.tile(xl0, (liquid_cells, 1)), np.eye(m) * liquid_diffusivity, "liquid")]
+    cond = [LocalEquilibrium(solid, liquid, temperature, xs0, xl0)]
+    finished = False
+    try:
+        res = solve_layers([0.0, s0, length], layers, cond, t_end, dt, save_times=save_times, tol=tol,
+                           geometry=geometry, tolerance=tolerance)
+    except (PhaseDissolvedError, ConvergenceError) as err:
+        # the liquid running out ends solidification; any other failure is passed on
+        if "liquid" not in str(err):
+            raise
+        res, finished = err.result, True
+    widths = cell_measures(np.moveaxis(res.faces[1], 0, -1), geometry)
+    liquid_x = np.einsum("it,tik->tk", widths, res.x[1]) / widths.sum(axis=0)[:, None]
+    return SolidificationResult(res.times, temperature(res.times), (res.interfaces[:, 0] / length) ** (p + 1),
+                                liquid_x, res.interface_left[:, 0], list(res.faces[0]), list(res.x[0]), finished)

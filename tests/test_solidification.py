@@ -249,3 +249,116 @@ def test_back_diffusion_profile_homogenizes():
     assert index[-1] < np.exp(-1)
     inv = ann.inventory()[:, 0]
     assert abs(inv[-1] - inv[0]) < 1e-11 * inv[0]
+
+
+# --- solidification with back-diffusion and CALPHAD tie-lines -------------------------------------------------
+
+from pycalphad import equilibrium, variables as v  # noqa: E402
+
+from janus_kinetics import SolutionPhase, TemperatureSchedule  # noqa: E402
+from janus_kinetics.solidification import equilibrium_start, scheil_gulliver, solve_solidification  # noqa: E402
+
+# ideal solid and liquid A-B-C, fusion entropy 30 J/mol K, melting points A 1700, B 1200, C 1400 K: B and C go to the
+# liquid (k about 0.36 and 0.57) and A-5B-5C freezes at equilibrium between about 1641 and 1676 K
+_TOY_MELT = {"A": 1700.0, "B": 1200.0, "C": 1400.0}
+_TOY_ALLOY = np.array([0.05, 0.05])
+_COOLING = TemperatureSchedule([0.0, 112.0], [1672.0, 1560.0])
+_LENGTH = 50e-6
+
+
+@functools.lru_cache(maxsize=None)
+def _toy():
+    lines = ["ELEMENT VA VACUUM 0 0 0 !"] + [f"ELEMENT {e} BLANK 1 0 0 !" for e in "ABC"]
+    lines += ["TYPE_DEFINITION % SEQ * !", "PHASE FCC % 1 1 !", "CONSTITUENT FCC :A,B,C: !", "PHASE LIQUID % 1 1 !",
+              "CONSTITUENT LIQUID :A,B,C: !"]
+    for e in "ABC":
+        lines += [f"PARAMETER G(FCC,{e};0) 298.15 0; 6000 N !", f"PARAMETER G(LIQUID,{e};0) 298.15 30*({_TOY_MELT[e]}-T); 6000 N !",
+                  f"PARAMETER MQ(FCC&{e},*;0) 298.15 R*T*LN(1E-13); 6000 N !"]
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        db = Database(chr(10).join(lines))
+        return db, SolutionPhase(db, "FCC", ["B", "C", "A"]), SolutionPhase(db, "LIQUID", ["B", "C", "A"], mobilities=False)
+
+
+def _lever(T):
+    db = _toy()[0]
+    eq = equilibrium(db, ["A", "B", "C", "VA"], ["FCC", "LIQUID"],
+                     {v.T: T, v.P: 101325, v.N: 1, v.X("B"): _TOY_ALLOY[0], v.X("C"): _TOY_ALLOY[1]})
+    return float(sum(a for n, a in zip(np.ravel(eq.Phase.values), np.ravel(eq.NP.values)) if str(n) == "FCC"))
+
+
+@functools.lru_cache(maxsize=None)
+def _solidify(ds, geometry="planar"):
+    db, solid, liquid = _toy()
+    start = equilibrium_start(db, ["B", "C", "A"], "FCC", "LIQUID", _TOY_ALLOY, 1672.0)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return solve_solidification(solid, liquid, _COOLING, 112.0, _LENGTH, start,
+                                    solid_diffusivity=None if ds is None else np.eye(2) * ds, cells=60, dt=0.1,
+                                    save_times=np.arange(2.0, 112.0, 2.0), geometry=geometry)
+
+
+@functools.lru_cache(maxsize=None)
+def _toy_scheil():
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return scheil_gulliver(_toy()[0], ["B", "C", "A"], ["FCC", "LIQUID"], _TOY_ALLOY, 1680.0, step=0.25)
+
+
+@pytest.mark.parametrize("geometry", ["planar", "cylindrical"])
+def test_without_solid_diffusion_solidification_follows_scheil(geometry):
+    """With the solid frozen the fraction solid follows pycalphad's Scheil-Gulliver path (Bocklund et al.) within
+    1e-3 down to 1560 K, in a plate and around a cylinder alike (Scheil knows no geometry), and the liquid's
+    composition follows the Scheil liquid within 1e-3."""
+    res, sch = _solidify(1e-25, geometry), _toy_scheil()
+    np.testing.assert_allclose(res.fraction_solid, np.interp(-res.temperature, -sch.temperatures, sch.fraction_solid),
+                               atol=1e-3)
+    for k in range(2):
+        ref = np.interp(-res.temperature, -sch.temperatures, sch.liquid_composition[:, k])
+        np.testing.assert_allclose(res.liquid[:, k], ref, atol=1e-3)
+    assert not res.finished and res.fraction_solid[-1] > 0.9
+
+
+def test_with_fast_solid_diffusion_solidification_follows_the_lever_rule():
+    """With D = 1e-8 m^2/s over 50 um the solid stays uniform and the fraction solid is the equilibrium one within
+    3e-3; the liquid runs out at the equilibrium solidus, about 1641 K (the run stops within 3 K of it)."""
+    res = _solidify(1e-8)
+    for T, fs in zip(res.temperature[::4], res.fraction_solid[::4]):
+        assert fs == pytest.approx(_lever(float(T)), abs=3e-3)
+    assert res.finished and 1636 < res.temperature[-1] < 1644
+
+
+def test_back_diffusion_lies_between_the_limits_and_conserves_solute():
+    """With D = 1e-12 and 1e-13 m^2/s (and the solid's own mobility, which here is 1e-13) the fraction solid lies
+    between Scheil and the lever rule at every temperature and rises with D; the default diffusivity, read from
+    the mobility database, reproduces the explicit 1e-13 run; every element is conserved to 1e-9 of the alloy."""
+    sch = _toy_scheil()
+    runs = {ds: _solidify(ds) for ds in (1e-13, 1e-12)}
+    for res in runs.values():
+        scheil_fs = np.interp(-res.temperature, -sch.temperatures, sch.fraction_solid)
+        assert np.all(res.fraction_solid >= scheil_fs - 1e-3)
+        lever = np.array([_lever(float(T)) for T in res.temperature[::6]])
+        assert np.all(res.fraction_solid[::6] <= lever + 1e-3)
+    n = min(len(r.times) for r in runs.values())
+    assert np.all(runs[1e-12].fraction_solid[1:n] > runs[1e-13].fraction_solid[1:n])
+    default = _solidify(None)
+    np.testing.assert_allclose(default.fraction_solid, runs[1e-13].fraction_solid, atol=1e-9)
+    res = runs[1e-12]
+    for k in range(len(res.times)):
+        faces = res.solid_faces[k]
+        solid = np.diff(faces) @ res.solid[k]
+        total = solid + res.liquid[k] * (_LENGTH - faces[-1])
+        np.testing.assert_allclose(total / _LENGTH, _TOY_ALLOY, rtol=1e-9)
+
+
+def test_solidification_inputs_are_checked():
+    db, solid, liquid = _toy()
+    start = (0.05, [0.02, 0.03], [0.05, 0.05])
+    with pytest.raises(ValueError, match="strictly between"):
+        solve_solidification(solid, liquid, _COOLING, 1.0, _LENGTH, (0.0, [0.02, 0.03], [0.05, 0.05]))
+    with pytest.raises(ValueError, match="TemperatureSchedule"):
+        solve_solidification(solid, liquid, 1650.0, 1.0, _LENGTH, start)
+    with pytest.raises(ValueError, match="coexist"):
+        equilibrium_start(db, ["B", "C", "A"], "FCC", "LIQUID", _TOY_ALLOY, 1750.0)
+    with pytest.raises(ValueError, match="without mobilities"):
+        liquid.mobility([0.05, 0.05], 1650.0)
