@@ -21,8 +21,11 @@ from scipy.special import erfc, erfcx
 from janus_kinetics import SolutionPhase
 from janus_kinetics.moving_boundary import (
     FixedInterface,
+    Layer,
     LocalEquilibrium,
     PhaseDissolvedError,
+    graded_faces,
+    solve_layers,
     solve_moving_boundary,
 )
 from conftest import HEADER
@@ -268,3 +271,73 @@ def test_dissolving_phase_is_reported():
 def test_fixed_interface_refuses_ternaries():
     with pytest.raises(ValueError, match="binaries"):
         FixedInterface([0.1, 0.2], [0.3, 0.4])
+
+
+# ------------------------------------------------- grids graded toward the interface
+
+def test_graded_faces():
+    """Faces run 0..1, increase, and the widest cell is ``ratio`` times the narrowest at the far end; ratio 1 is
+    uniform, "both" is symmetric, and an odd count keeps a middle cell as wide as its neighbours."""
+    np.testing.assert_allclose(graded_faces(5), np.linspace(0, 1, 6))
+    for toward in ("left", "right", "both"):
+        for cells in (6, 7, 40):
+            f = graded_faces(cells, 25.0, toward)
+            w = np.diff(f)
+            assert f[0] == 0 and f[-1] == 1 and np.all(w > 0) and len(f) == cells + 1
+            assert w.max() / w.min() == pytest.approx(25.0, rel=1e-12)
+    w = np.diff(graded_faces(40, 25.0, "left"))
+    assert w[0] == w.min() and w[-1] == w.max()
+    np.testing.assert_allclose(graded_faces(40, 25.0, "right"), 1 - graded_faces(40, 25.0, "left")[::-1], atol=1e-15)
+    sym = graded_faces(7, 4.0, "both")
+    np.testing.assert_allclose(sym, 1 - sym[::-1], atol=1e-15)
+    with pytest.raises(ValueError, match="ratio"):
+        graded_faces(10, 0.5)
+    with pytest.raises(ValueError, match="toward"):
+        graded_faces(10, 2.0, "middle")
+    with pytest.raises(ValueError, match="faces must be"):
+        solve_layers([0, 1e-6, 2e-6], [Layer(np.full(4, 0.5), 1e-14, faces=[0, 0.5, 0.4, 0.8, 1]),
+                                       Layer(np.full(4, 0.1), 1e-14)], [FixedInterface([0.5], [0.1])], 1.0, 1.0)
+
+
+def test_graded_two_sided_couple():
+    """The similarity couple above on 50 + 100 cells graded 30:1 toward the interface lands within 0.15 % of the
+    exact position at t1/4 and t1, closer than 400 + 800 uniform cells (0.19 and 0.12 %); 50 + 100 uniform cells
+    are 4.5 % off at t1/4. Solute is conserved to round-off on the graded grid as on the uniform one."""
+    dl, dr = 2e-15, 1e-14
+    xl_inf, xr_inf, xl_i, xr_i = 0.9, 0.1, 0.7, 0.4
+    k = two_sided_k(dl, dr, xl_inf, xr_inf, xl_i, xr_i)
+    t1 = 1e5
+    half = 10 * np.sqrt(dr * t1)
+    runs = {g: solve_moving_boundary(2 * half, half, np.full(50, xl_inf), np.full(100, xr_inf), dl, dr,
+                                     FixedInterface([xl_i], [xr_i]), t1, t1 / 800, save_times=[t1 / 4], grading=g)
+            for g in (1.0, 30.0)}
+    graded, uniform = runs[30.0], runs[1.0]
+    exact = k * np.sqrt(np.array([t1 / 4, t1]))
+    np.testing.assert_allclose(graded.interface[1:] - half, exact, rtol=1.5e-3)
+    assert abs((uniform.interface[1] - half) / exact[0] - 1) > 0.03
+    w = np.diff(graded.z_right[-1])
+    assert w.max() / w.min() == pytest.approx(30.0, rel=1e-9) and w[0] == w.min()
+    inv = graded.inventory()
+    assert np.max(np.abs(inv - inv[0])) < 1e-12 * inv[0, 0]
+
+
+def test_graded_ternary_couple(ternary_couple, two_phase_db):
+    """The ternary couple on 40 cells a side graded 20:1 toward the interface: the interface shift within 0.5 % and
+    the operating tie-line within 5e-4 of the 200-cell uniform run (both within 0.4 % and 1e-4 of a 400-cell one),
+    where 40 uniform cells a side miss by 10 % and 0.01; every element conserved."""
+    ref, alpha, beta, half = ternary_couple
+    xa, xb, _ = pycalphad_tie_line(two_phase_db, ["A", "B", "C"], {v.X("A"): 0.45, v.X("C"): 0.1})
+    t1 = 400.0
+    out = {}
+    for g in (1.0, 20.0):
+        out[g] = solve_moving_boundary(2 * half, half, np.tile([0.75, 0.15], (40, 1)), np.tile([0.10, 0.75], (40, 1)),
+                                       lambda x: alpha.interdiffusion_matrix(x, T), lambda x: beta.interdiffusion_matrix(x, T),
+                                       LocalEquilibrium(alpha, beta, T, xa[:2], xb[:2]), t1, t1 / 200,
+                                       save_times=[t1 / 4], grading=g)
+    graded, uniform = out[20.0], out[1.0]
+    assert (graded.interface[-1] - half) / (ref.interface[-1] - half) == pytest.approx(1.0, abs=5e-3)
+    np.testing.assert_allclose(graded.interface_left[-1], ref.interface_left[-1], atol=5e-4)
+    np.testing.assert_allclose(graded.interface_right[-1], ref.interface_right[-1], atol=5e-4)
+    assert abs((uniform.interface[-1] - half) / (ref.interface[-1] - half) - 1) > 0.05
+    inv = graded.inventory()
+    assert np.max(np.abs(inv - inv[0])) < 1e-10 * np.abs(inv[0]).max()

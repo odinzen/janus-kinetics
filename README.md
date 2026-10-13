@@ -46,7 +46,9 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
 - **Moving interfaces in layered stacks**: any number of phase layers, each
   interface in local equilibrium or at fixed compositions, with every interface
   velocity and operating tie-line solved together. Reaction layers grow or are
-  consumed; a consumed layer stops the run with the history returned.
+  consumed; a consumed layer stops the run with the history returned. Grids can be
+  graded toward the interfaces, where accuracy is decided: 300 graded cells beat
+  1200 uniform ones on Zener's growing sphere.
 - **Stoichiometric reaction layers** (silicides, intermetallics, oxide scales):
   a binary couple of line compounds grown from mobilities and Gibbs energies or
   from measured integrated diffusivities (Wagner's D_int, van Loo 1990), with

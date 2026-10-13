@@ -592,13 +592,14 @@ tie-line is unique, and the setting of Zener's analysis. With more elements a
 fixed pair of compositions cannot satisfy every flux balance at once.
 
 
-### `class Layer(x0: 'np.ndarray', diffusivity: 'Diffusivity', name: 'str' = '') -> None`
+### `class Layer(x0: 'np.ndarray', diffusivity: 'Diffusivity', name: 'str' = '', faces: 'np.ndarray | None' = None) -> None`
 
 One phase layer of a planar stack.
 
-``x0`` is the initial profile on a uniform grid across the layer, shape (N, n-1)
-or (N,) for a binary; ``diffusivity`` is a constant matrix or a callable of
-(x) or (x, t), as for :func:`solve_planar`.
+``x0`` is the initial profile on the layer's cells, shape (N, n-1) or (N,) for a binary;
+``diffusivity`` is a constant matrix or a callable of (x) or (x, t), as for :func:`solve_planar`.
+``faces`` places the N + 1 faces as fractions 0..1 of the layer (see :func:`graded_faces`); the default
+is a uniform grid. The fractions are kept as the layer stretches or shrinks.
 
 
 ### `class LocalEquilibrium(left: 'SolutionPhase', right: 'SolutionPhase', temperature: 'Temperature', x_left, x_right)`
@@ -635,6 +636,13 @@ Saved state of a layered run; index [t] is a saved time, [j] a layer, [i] an int
 - `profile(self, index: 'int' = -1) -> 'tuple[np.ndarray, np.ndarray]'`: Cell centres (m) and compositions through the whole stack at one saved time.
 - `thickness(self) -> 'np.ndarray'`: Layer thicknesses [t, j] in m.
 
+### `def graded_faces(cells: 'int', ratio: 'float' = 1.0, toward: "Literal['left', 'right', 'both']" = 'both') -> 'np.ndarray'`
+
+Face positions across a layer as fractions 0..1 for ``cells`` cells whose widths grow geometrically away
+from the ``toward`` end (or both ends), the widest ``ratio`` times the narrowest. A moving interface takes its
+flux from the composition gradient over the first half cell, first-order accurate in that width, so fine
+cells beside it buy accuracy where it is spent; ``ratio = 1`` is the uniform grid.
+
 ### `def solve_layers(positions, layers: 'list[Layer]', conditions: 'list', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50, geometry: 'Geometry' = 'planar', tolerance: 'float | None' = None) -> 'StackResult'`
 
 Integrate diffusion through a stack of phase layers with moving interfaces, in a plate (default)
@@ -656,14 +664,15 @@ thin reaction layer is followed as closely as a thick one. A step that does not 
 or in which a layer seems to vanish while it still holds 2 % of its first thickness, is
 halved and redone.
 
-### `def solve_moving_boundary(length: 'float', interface: 'float', x0_left, x0_right, d_left: 'Diffusivity', d_right: 'Diffusivity', condition: 'FixedInterface | LocalEquilibrium', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50, geometry: 'Geometry' = 'planar', tolerance: 'float | None' = None) -> 'MovingBoundaryResult'`
+### `def solve_moving_boundary(length: 'float', interface: 'float', x0_left, x0_right, d_left: 'Diffusivity', d_right: 'Diffusivity', condition: 'FixedInterface | LocalEquilibrium', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50, geometry: 'Geometry' = 'planar', tolerance: 'float | None' = None, grading: 'float' = 1.0) -> 'MovingBoundaryResult'`
 
 Integrate two-phase diffusion with a moving interface, as two layers of :func:`solve_layers`; in a
 cylinder or sphere (``geometry``) the left phase is the core and the right one the surrounding shell.
 
-``x0_left`` (N_L, n-1) and ``x0_right`` (N_R, n-1) are the initial profiles on
-uniform grids over [0, interface] and [interface, length]; a binary may pass
-1D arrays. ``d_left``/``d_right`` are constant matrices or callables like those
+``x0_left`` (N_L, n-1) and ``x0_right`` (N_R, n-1) are the initial profiles on the cells over
+[0, interface] and [interface, length]; a binary may pass 1D arrays. The cells are uniform, or with
+``grading`` > 1 they shrink geometrically toward the interface on both sides, the widest ``grading`` times
+the narrowest (:func:`graded_faces`); the result's face arrays give their positions. ``d_left``/``d_right`` are constant matrices or callables like those
 of :func:`solve_planar`, for example ``lambda x: alpha.interdiffusion_matrix(x, T)``.
 ``left``/``right`` are the conditions at z = 0 and z = length. ``tolerance`` adapts the step as in
 :func:`solve_layers`.

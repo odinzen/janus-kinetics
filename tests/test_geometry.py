@@ -116,7 +116,7 @@ from scipy.integrate import quad  # noqa: E402
 from scipy.special import erfc, exp1  # noqa: E402
 from scipy.optimize import brentq  # noqa: E402
 
-from janus_kinetics.moving_boundary import FixedInterface, solve_moving_boundary  # noqa: E402
+from janus_kinetics.moving_boundary import FixedInterface, graded_faces, solve_moving_boundary  # noqa: E402
 
 N0, N1, NINF, DM = 0.95, 0.05, 0.20, 1e-14
 
@@ -151,16 +151,17 @@ def test_zener_growth_coefficients_lie_in_the_stated_ranges():
         assert 1.4 - 0.05 < k3 < 2.4 + 0.05
 
 
-def zener_curved(geometry, n_right=1200, steps=1600):
+def zener_curved(geometry, n_right=1200, steps=1600, grading=1.0):
     lam = {"cylindrical": 2, "spherical": 3}[geometry]
     alpha = zener_alpha(lam, (NINF - N1) / (N0 - N1))
     t0, t1 = 1e3, 1e5
     s0 = alpha * np.sqrt(DM * t0)
     length = 30 * np.sqrt(DM * t1)
-    zr = s0 + (length - s0) * (np.arange(n_right) + 0.5) / n_right
+    faces = s0 + (length - s0) * graded_faces(n_right, grading, "left")
+    zr = 0.5 * (faces[1:] + faces[:-1])
     x_right = NINF + (N1 - NINF) * np.array([phi(z / np.sqrt(DM * t0), lam) for z in zr]) / phi(alpha, lam)  # eq. (10)
     res = solve_moving_boundary(length, s0, np.full(20, N0), x_right, 1e-30, DM, FixedInterface([N0], [N1]),
-                                t1 - t0, (t1 - t0) / steps, geometry=geometry)
+                                t1 - t0, (t1 - t0) / steps, geometry=geometry, grading=grading)
     return res, alpha, lam, t1
 
 
@@ -188,6 +189,25 @@ def test_zener_curved_error_falls_with_the_grid(geometry):
     for n in (1200, 2400):
         res, alpha, _, t1 = zener_curved(geometry, n, 1600)
         errors.append(abs(res.interface[-1] / (alpha * np.sqrt(DM * t1)) - 1))
+    assert errors[1] < 0.75 * errors[0]
+
+
+@pytest.mark.parametrize("geometry", ["cylindrical", "spherical"])
+def test_graded_grid_beats_a_finer_uniform_one(geometry):
+    """The matrix shell on 300 cells graded 100:1 toward the interface: the radius at 1e5 s is closer to Zener's
+    than with 1200 uniform cells (0.17 against 0.35 % for the sphere, 0.11 against 0.24 % for the cylinder), and
+    halving the cells' widths cuts the error to about 0.6 of its value. The interface flux is a one-sided
+    gradient over half a cell, so its error follows the width of the cell beside the interface. The core, a
+    uniform phase on a graded grid, stays uniform as it stretches, and the solute is conserved."""
+    errors = []
+    for n in (300, 600):
+        res, alpha, _, t1 = zener_curved(geometry, n, 1600, grading=100.0)
+        errors.append(abs(res.interface[-1] / (alpha * np.sqrt(DM * t1)) - 1))
+        np.testing.assert_allclose(res.x_left[-1, :, 0], N0, atol=1e-12)
+        inv = res.inventory()
+        assert np.max(np.abs(inv - inv[0])) < 1e-12 * inv[0, 0]
+    uniform, alpha, _, t1 = zener_curved(geometry, 1200, 1600)
+    assert errors[0] < 0.6 * abs(uniform.interface[-1] / (alpha * np.sqrt(DM * t1)) - 1)
     assert errors[1] < 0.75 * errors[0]
 
 

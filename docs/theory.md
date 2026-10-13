@@ -219,6 +219,18 @@ seems to vanish within an adaptive step while it still holds 2 % of its first
 thickness is retried with a shorter step; a real end, such as a 0.5 um film eaten
 by a growing layer (near 84 s with 0.2 s steps and adaptively), still stops the run.
 
+Graded grids. The interface takes each side's flux from the gradient over the half cell beside it,
+first-order accurate in that cell's width, so the cells there decide the accuracy. A layer may
+place its faces at any fractions of its width (kept as it stretches); `graded_faces` makes them
+grow geometrically away from one or both ends, the widest `ratio` times the narrowest. On Zener's
+growing sphere 300 matrix cells graded 100:1 give the radius at 1e5 s within 0.17 %, against 0.35 %
+with 1200 uniform cells (cylinder 0.11 against 0.24 %), and the error falls in proportion to the
+interface cell; the two-sided similarity couple on 50 + 100 graded cells lands within 0.15 %,
+closer than 400 + 800 uniform ones, and the ternary local-equilibrium couple on 40 graded cells a
+side matches a 400-cell uniform run within 0.4 % in position and 1e-4 in the operating tie-line,
+where 40 uniform cells miss by 10 %. A uniform phase stays uniform on a stretching graded grid and
+every element is conserved to round-off.
+
 ## Stoichiometric reaction layers
 
 A line compound has no measurable gradient, so its flux is described by Wagner's

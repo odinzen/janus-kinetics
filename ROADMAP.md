@@ -86,7 +86,8 @@ Cylindrical and spherical geometry: done for solve_planar and solve_layers
 (checked against both), and for the line-compound reaction layers (several layers,
 derived here; one layer reproduces van Loo's eqs. 25-26).
 
-Left for later: graded grids next to a moving interface, layers that nucleate
+Graded grids next to moving interfaces: done (graded_faces; 300 graded cells beat 1200 uniform
+ones on Zener's sphere). Left for later: layers that nucleate
 during a run (today a reaction layer must exist from the start), and an adaptive
 (on-demand) equilibrium table for four or more elements (done: OnDemandEquilibriumTable,
 isothermal only, as in the paper).

@@ -1,7 +1,7 @@
 """Sharp-interface diffusion between phase layers in a plate, a long cylinder or a sphere.
 
 Phase L occupies 0 < z < S(t) and phase R occupies S(t) < z < length. Each phase
-has its own grid, stretched uniformly as the interface moves, and is solved with
+has its own grid, uniform or graded toward the interfaces and stretched as they move, and is solved with
 the same backward-Euler finite-volume scheme as :func:`solve_planar` plus the
 flux carried by the moving faces. The interface sits at the compositions given by
 an interface condition, and moves at the velocity that conserves every element:
@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 import scipy.sparse as sp
@@ -229,18 +230,47 @@ class LocalEquilibrium:
                                "gives for the intended two-phase field")
 
 
+def graded_faces(cells: int, ratio: float = 1.0, toward: Literal["left", "right", "both"] = "both") -> np.ndarray:
+    """Face positions across a layer as fractions 0..1 for ``cells`` cells whose widths grow geometrically away
+    from the ``toward`` end (or both ends), the widest ``ratio`` times the narrowest. A moving interface takes its
+    flux from the composition gradient over the first half cell, first-order accurate in that width, so fine
+    cells beside it buy accuracy where it is spent; ``ratio = 1`` is the uniform grid."""
+    if cells < 1 or ratio < 1:
+        raise ValueError("need at least one cell and ratio >= 1")
+    if toward not in ("left", "right", "both"):
+        raise ValueError("toward is 'left', 'right' or 'both'")
+    if toward == "both":
+        half = cells // 2
+        if half == 0:
+            return np.array([0.0, 1.0])
+        left = _geometric_widths(half, ratio)
+        widths = np.concatenate([left, [left[-1]] if cells % 2 else [], left[::-1]])
+    else:
+        widths = _geometric_widths(cells, ratio)
+        if toward == "right":
+            widths = widths[::-1]
+    faces = np.concatenate([[0.0], np.cumsum(widths)])
+    return faces / faces[-1]
+
+
+def _geometric_widths(cells: int, ratio: float) -> np.ndarray:
+    return ratio ** (np.arange(cells) / max(cells - 1, 1))
+
+
 @dataclass
 class Layer:
     """One phase layer of a planar stack.
 
-    ``x0`` is the initial profile on a uniform grid across the layer, shape (N, n-1)
-    or (N,) for a binary; ``diffusivity`` is a constant matrix or a callable of
-    (x) or (x, t), as for :func:`solve_planar`.
+    ``x0`` is the initial profile on the layer's cells, shape (N, n-1) or (N,) for a binary;
+    ``diffusivity`` is a constant matrix or a callable of (x) or (x, t), as for :func:`solve_planar`.
+    ``faces`` places the N + 1 faces as fractions 0..1 of the layer (see :func:`graded_faces`); the default
+    is a uniform grid. The fractions are kept as the layer stretches or shrinks.
     """
 
     x0: np.ndarray
     diffusivity: Diffusivity
     name: str = ""
+    faces: np.ndarray | None = None
 
 
 @dataclass
@@ -321,7 +351,14 @@ def solve_layers(
         x0 = np.asarray(layer.x0, dtype=float)
         x0 = x0[:, None] if x0.ndim == 1 else x0.copy()
         dfun, constant = _as_callable(layer.diffusivity)
-        regions.append(_Region(dfun, constant, np.linspace(0.0, 1.0, len(x0) + 1), x0))
+        if layer.faces is None:
+            xi = np.linspace(0.0, 1.0, len(x0) + 1)
+        else:
+            xi = np.asarray(layer.faces, dtype=float)
+            if xi.shape != (len(x0) + 1,) or xi[0] != 0.0 or xi[-1] != 1.0 or np.any(np.diff(xi) <= 0):
+                raise ValueError(f"layer {layer.name or len(regions)}: faces must be {len(x0) + 1} increasing "
+                                 "fractions from 0 to 1, one more than the cells of x0")
+        regions.append(_Region(dfun, constant, xi, x0))
     m = regions[0].x.shape[1]
     length = pos[-1]
     n_if = n_layers - 1
@@ -357,8 +394,10 @@ def solve_layers(
         for c in conditions:
             c.prepare(t_new)
         b_old = bounds(s_old)
-        widths = np.diff(b_old) / np.array([len(r.x) for r in regions])
-        ws = np.minimum(widths[:-1], widths[1:]) / step  # velocity in cells per step keeps unknowns near one
+        # velocity in cells beside the interface per step keeps the unknowns near one
+        left_cell = np.array([(b_old[j + 1] - b_old[j]) * (1 - regions[j].xi[-2]) for j in range(n_if)])
+        right_cell = np.array([(b_old[j + 2] - b_old[j + 1]) * regions[j + 1].xi[1] for j in range(n_if)])
+        ws = np.minimum(left_cell, right_cell) / step
         y = np.concatenate([np.append(u_ifaces[i], w_prev[i] / ws[i]) for i in range(n_if)])
 
         def unpack(y):
@@ -561,21 +600,25 @@ def solve_moving_boundary(
     max_picard: int = 50,
     geometry: Geometry = "planar",
     tolerance: float | None = None,
+    grading: float = 1.0,
 ) -> MovingBoundaryResult:
     """Integrate two-phase diffusion with a moving interface, as two layers of :func:`solve_layers`; in a
     cylinder or sphere (``geometry``) the left phase is the core and the right one the surrounding shell.
 
-    ``x0_left`` (N_L, n-1) and ``x0_right`` (N_R, n-1) are the initial profiles on
-    uniform grids over [0, interface] and [interface, length]; a binary may pass
-    1D arrays. ``d_left``/``d_right`` are constant matrices or callables like those
+    ``x0_left`` (N_L, n-1) and ``x0_right`` (N_R, n-1) are the initial profiles on the cells over
+    [0, interface] and [interface, length]; a binary may pass 1D arrays. The cells are uniform, or with
+    ``grading`` > 1 they shrink geometrically toward the interface on both sides, the widest ``grading`` times
+    the narrowest (:func:`graded_faces`); the result's face arrays give their positions. ``d_left``/``d_right`` are constant matrices or callables like those
     of :func:`solve_planar`, for example ``lambda x: alpha.interdiffusion_matrix(x, T)``.
     ``left``/``right`` are the conditions at z = 0 and z = length. ``tolerance`` adapts the step as in
     :func:`solve_layers`.
     """
     if not 0.0 < interface < length:
         raise ValueError("the interface must lie inside (0, length)")
-    res = solve_layers([0.0, interface, length], [Layer(x0_left, d_left), Layer(x0_right, d_right)], [condition],
-                       t_end, dt, left, right, save_times, tol, picard_tol, max_newton, max_picard, geometry,
-                       tolerance)
+    n_left, n_right = len(np.asarray(x0_left)), len(np.asarray(x0_right))
+    layers = [Layer(x0_left, d_left, faces=graded_faces(n_left, grading, "right")),
+              Layer(x0_right, d_right, faces=graded_faces(n_right, grading, "left"))]
+    res = solve_layers([0.0, interface, length], layers, [condition], t_end, dt, left, right, save_times, tol,
+                       picard_tol, max_newton, max_picard, geometry, tolerance)
     return MovingBoundaryResult(res.times, res.interfaces[:, 0], res.faces[0], res.x[0], res.faces[1], res.x[1],
                                 res.interface_left[:, 0], res.interface_right[:, 0], geometry)

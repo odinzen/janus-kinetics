@@ -50,6 +50,8 @@ First version.
 - Two compound layers with interfacial reaction barriers in thin-film couples (Gosele and Tu 1982).
 - Electromigration stress in confined metal lines (Korhonen et al. 1993): blocked, void and
   reservoir ends, stress-dependent diffusivity, ideal plasticity, and Blech's threshold.
+- Grids graded toward moving interfaces in the layered-stack and two-phase solvers (`graded_faces`,
+  `Layer(faces=...)`, `solve_moving_boundary(grading=...)`).
 - Adaptive time steps in the planar, homogenization and layered-stack solvers, with recovery
   from steps that fail to converge.
 - Parabolic growth of a compact oxide scale from cation and anion transport with

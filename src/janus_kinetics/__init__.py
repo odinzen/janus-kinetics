@@ -102,6 +102,7 @@ from .moving_boundary import (
     MovingBoundaryResult,
     PhaseDissolvedError,
     StackResult,
+    graded_faces,
     solve_layers,
     solve_moving_boundary,
 )
@@ -210,6 +211,7 @@ __all__ = [
     "finite_line_stress",
     "fit_linear_parabolic",
     "fixed_composition_growth_rate",
+    "graded_faces",
     "grain_structure",
     "grow_oxide",
     "growth_constant_from_conversion",
