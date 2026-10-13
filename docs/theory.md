@@ -672,6 +672,23 @@ potentials. Where Omega_j falls outside (0, 1), eq. (2) has no root and n_j = 1 
 choice. The paper's Fe-Cr-C example needs the commercial TCFE4 and MOB2 databases and is not
 reproduced.
 
+As a growth law for the precipitation solver. A class keeps its nucleation composition and Gibbs
+energy, so local equilibrium is one condition, sum_i x^P_i mu^I_i = G^P + V_m (2 sigma / R + misfit),
+with the flux balances; all classes are solved together by Newton, each starting from its previous
+step. A class too small for any matrix composition to balance its capillary pressure (a few tenths of
+a nanometre) has no local equilibrium; it is dissolving and shrinks at the extremal rate of eq. (45).
+Linearized about the tie-line, eq. (13) gives dR/dt = (F - 2 sigma V_m / R) / (R Q) with
+Q = sum_j a_j dx_j / (x_j M_j) over the solutes, a_j = x^P_j - x^P_solvent x_j / x_solvent, so Philippe
+and Voorhees' K = 8 sigma V_m / (9 Q) follows; a seeded run in an ideal ternary coarsens at it within
+3 %. The extremal law also charges the solvent's flux, sum over all elements; with a solvent 100 times
+slower than the slowest solute its K is 1.8 times lower, so the two laws part where the solvent's
+diffusion matters. For gamma' in Ni-5.2Al-14.2Cr at 873 K (the Sudbrack case of the precipitation
+section) local-equilibrium growth gives 1.75 nm, 2.5e24 m^-3 and 5.8 % at 4 h (extremal law 1.54 nm,
+3.2e24, 5.3 %; measured 1.27 nm, 3.2e24, 5.2 %) and K = 4.2e-31 m^3/s between 256 and 1024 h, 4.8 times
+the measurement against 4.5 for the extremal law: neither closes the coarsening gap, which Sudbrack
+et al. put down to diffusion through the gamma'. The two forms agree within a few percent there. It runs
+about seven times slower than the extremal law.
+
 ## Precipitation along heat treatments
 
 Myhr and Grong (2000) follow a size distribution through ageing, up-quenching and heating

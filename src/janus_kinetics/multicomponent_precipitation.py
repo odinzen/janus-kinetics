@@ -44,6 +44,7 @@ import numpy as np
 from pycalphad import Database, equilibrium, variables as v
 from scipy.optimize import brentq
 
+from .particle_growth import _fixed_composition_batch
 from .phase import SolutionPhase
 from .schedule import Temperature, temperature_at
 from .thermo import R
@@ -460,14 +461,16 @@ class MulticomponentResult:
 @dataclass(frozen=True)
 class Population:
     """One precipitate phase nucleating at one kind of site, for :func:`solve_competing_precipitation`.
-    ``initial`` and ``precipitate_tracer`` are as in :func:`solve_multicomponent_precipitation`. A phase
-    may form several populations, in the bulk and on grain boundaries say, as part II (p. 158) creates
-    one kinetic object per phase and nucleation site."""
+    ``initial``, ``precipitate_tracer``, ``growth`` and ``growth_form`` are as in
+    :func:`solve_multicomponent_precipitation`. A phase may form several populations, in the bulk and on grain
+    boundaries say, as part II (p. 158) creates one kinetic object per phase and nucleation site."""
 
     precipitate: PrecipitateThermo
     settings: NucleationSettings
     initial: dict | None = None
     precipitate_tracer: Sequence[float] | None = None
+    growth: Literal["extremal", "local_equilibrium"] = "extremal"
+    growth_form: Literal["mobility", "diffusivity"] = "mobility"
 
 
 def solve_multicomponent_precipitation(
@@ -490,6 +493,8 @@ def solve_multicomponent_precipitation(
     min_class_number: float = 1e-6,
     initial: dict | None = None,
     precipitate_tracer: Sequence[float] | None = None,
+    growth: Literal["extremal", "local_equilibrium"] = "extremal",
+    growth_form: Literal["mobility", "diffusivity"] = "mobility",
 ) -> MulticomponentResult:
     """Precipitation from a supersaturated matrix of mole fractions ``alloy`` at temperature ``T``, a
     constant or a :class:`TemperatureSchedule` (quench and age, ramps, multi-step treatments).
@@ -524,9 +529,17 @@ def solve_multicomponent_precipitation(
     ``min_class_number`` times the precipitates present (and at least one per m^3) have
     formed; until then they are held back. ``initial`` holds precipitates present at
     ``t_start`` as arrays "number" (m^-3), "radius" (m) and "composition" (k, n).
+
+    ``growth="local_equilibrium"`` grows each class instead by the law of Chen, Jeppsson and Agren (Acta Mater.
+    56 (2008) 1890; :func:`fixed_composition_growth_rate`): local equilibrium between the matrix at the interface
+    and the class's composition under its capillary pressure, and one flux balance per element over its own
+    effective distance, in the matrix mobilities (``growth_form="mobility"``, their eq. 13) or its interdiffusion
+    matrix at the far-field composition (``"diffusivity"``, eq. 10). Classes keep their nucleation composition;
+    nucleation is unchanged.
     """
     return solve_competing_precipitation(
-        matrix, [Population(precipitate, settings, initial, precipitate_tracer)], alloy, T, t_end, save_times,
+        matrix, [Population(precipitate, settings, initial, precipitate_tracer, growth, growth_form)], alloy, T,
+        t_end, save_times,
         t_start=t_start, max_temperature_change=max_temperature_change, max_radius_change=max_radius_change,
         max_matrix_change=max_matrix_change, max_composition_change=max_composition_change,
         max_classes=max_classes, min_classes=min_classes, smallest_radius=smallest_radius,
@@ -536,9 +549,15 @@ def solve_multicomponent_precipitation(
 class _PopulationState:
     """Classes, nucleus and rates of one population during a run."""
 
-    def __init__(self, pop: Population, n_el: int, varying: bool, T0: float):
+    def __init__(self, pop: Population, n_el: int, varying: bool, T0: float, matrix: SolutionPhase):
         self.precipitate, self.settings = pop.precipitate, pop.settings
         self.evolving = pop.precipitate_tracer is not None
+        if pop.growth not in ("extremal", "local_equilibrium") or pop.growth_form not in ("mobility", "diffusivity"):
+            raise ValueError("growth is 'extremal' or 'local_equilibrium', growth_form 'mobility' or 'diffusivity'")
+        self.local_equilibrium = pop.growth == "local_equilibrium"
+        self.growth_form, self.matrix = pop.growth_form, matrix
+        if self.local_equilibrium and self.evolving:
+            raise ValueError("local-equilibrium growth holds each class's composition; leave out precipitate_tracer")
         self.varying = varying
         if varying or self.evolving:
             self.minimizer = self.precipitate.minimizer if self.precipitate.fixed is None else None
@@ -556,6 +575,8 @@ class _PopulationState:
             if not cls["number"].shape == cls["radius"].shape == cls["comp"].shape[:1] or cls["comp"].shape[1] != n_el:
                 raise ValueError("initial needs one number, radius and composition row per class")
             cls["gibbs"] = np.array([self.precipitate.gm(x, T0) for x in cls["comp"]])
+        if self.local_equilibrium:
+            cls["solver"] = np.full((len(cls["number"]), n_el), np.nan)  # Newton state, NaN until first solved
         self.track_sites = (self.evolving or varying) and self.precipitate.fixed is None
         if self.track_sites:
             cls["sites"] = np.array([self.precipitate.site_fractions(x, T0) for x in cls["comp"]]).reshape(
@@ -592,12 +613,43 @@ class _PopulationState:
             cls["sites"], cls["gibbs"], mu_k = self.minimizer.solve(comp, cls["sites"], T)
             self.rate, self.dcomp = evolution_rates(radius, comp, mu_k, x0, mu0, tracer, self.precipitate_tracer,
                                                     self.settings, T)
+        elif radius.size and self.local_equilibrium:
+            self.rate = self._local_equilibrium_rates(x0, mu0, tracer, T)
         elif radius.size:
             self.rate = growth_rates(radius, comp, (comp @ mu0 - cls["gibbs"]) / omega - self.settings.misfit, x0,
                                      tracer, self.settings, T)
         else:
             self.rate = np.zeros(0)
         self.j, self.rho_star = nucleation(self.nucleus_x, f_nuc, x0, tracer, self.settings, T, t)
+
+    def _local_equilibrium_rates(self, x0, mu0, tracer, T: float) -> np.ndarray:
+        cls = self.cls
+        diffusivity = self.matrix.interdiffusion_matrix(x0, T) if self.growth_form == "diffusivity" else None
+        start = cls["solver"].copy()
+        # a class marked +inf has already proved too small to hold local equilibrium; it is dissolving and is not
+        # solved again (each attempt would run Newton to its limit)
+        lost = np.isinf(start).any(axis=1)
+        fresh = np.isnan(start).any(axis=1) & ~lost
+        if fresh.any():
+            m = x0.size - 1
+            xi = np.clip(x0[:m], 1e-12, None)
+            start[fresh] = np.append(np.log(xi) - np.log(1 - xi.sum()), 0.0)
+        velocity = np.full(cls["radius"].size, np.nan)
+        live = ~lost
+        if live.any():
+            velocity[live], _, _, _, state, solved = _fixed_composition_batch(
+                self.matrix, cls["comp"][live], cls["gibbs"][live], cls["radius"][live], x0, T, self.settings.gamma,
+                self.settings.molar_volume, self.growth_form, diffusivity, self.settings.misfit, start[live],
+                max_iter=20, strict=False)
+            start[live] = np.where(solved[:, None], state, np.inf)
+            lost[live] = ~solved
+        cls["solver"] = start
+        if lost.any():
+            # no matrix composition balances such a class's capillary pressure, so it has no local equilibrium;
+            # it shrinks at the extremal rate of eq. (45)
+            f = (cls["comp"][lost] @ mu0 - cls["gibbs"][lost]) / self.settings.molar_volume - self.settings.misfit
+            velocity[lost] = growth_rates(cls["radius"][lost], cls["comp"][lost], f, x0, tracer, self.settings, T)
+        return velocity
 
     def advance(self, dt: float, smallest_radius: float, min_class_number: float, max_classes: int,
                 min_classes: int):
@@ -618,6 +670,8 @@ class _PopulationState:
             self.pending = 0.0
             if self.track_sites:
                 new["sites"] = self.nucleus_y
+            if self.local_equilibrium:
+                new["solver"] = np.full(self.nucleus_x.size, np.nan)
             cls = {key: np.concatenate([val, np.atleast_1d(new[key])[None] if val.ndim == 2 else [new[key]]])
                    for key, val in cls.items()}
         if cls["radius"].size > max_classes:
@@ -675,7 +729,7 @@ def solve_competing_precipitation(
     varying = callable(T)
     schedule = T  # T is reassigned to the current temperature each step
     temp = (lambda t: temperature_at(schedule, t))
-    states = [_PopulationState(p, n_el, varying, temp(t_start)) for p in populations]
+    states = [_PopulationState(p, n_el, varying, temp(t_start), matrix) for p in populations]
     t, dt = t_start, t_start
     out = [{k: [] for k in ("t", "r", "n", "phi", "xp", "classes")} for _ in states]
     out_x0 = []

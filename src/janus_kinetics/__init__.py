@@ -106,7 +106,13 @@ from .moving_boundary import (
     solve_moving_boundary,
 )
 from .particle_reaction import conversion, conversion_integral, growth_constant_from_conversion, layer_thickness
-from .particle_growth import GrowthState, diffusion_distance_factor, growth_parameter, particle_growth_rate
+from .particle_growth import (
+    GrowthState,
+    diffusion_distance_factor,
+    fixed_composition_growth_rate,
+    growth_parameter,
+    particle_growth_rate,
+)
 from .phase import ShortCircuit, SolutionPhase
 from .precipitation import (
     DiluteSolution,
@@ -203,6 +209,7 @@ __all__ = [
     "effective_coordination",
     "finite_line_stress",
     "fit_linear_parabolic",
+    "fixed_composition_growth_rate",
     "grain_structure",
     "grow_oxide",
     "growth_constant_from_conversion",

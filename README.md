@@ -114,6 +114,8 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   (Chen, Jeppsson and Agren 2008): the operating tie-line and growth rate of a sphere
   of given radius, with each element's own effective diffusion distance and the
   Gibbs-Thomson effect, exact against the sharp-interface solver where it should be.
+  The multicomponent precipitation solver can grow its size classes by this law
+  (`growth="local_equilibrium"`) instead of the thermodynamic extremal principle.
 
 Three published mobility databases ship with the package:
 `jonsson1995_bcc_crfeni()` (bcc Cr-Fe-Ni, Jonsson 1995), `campbell2002_fcc_ni()`

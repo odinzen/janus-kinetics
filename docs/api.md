@@ -707,12 +707,12 @@ constraints: with x_n dependent, dG/dx_i = -nu_i, mu_n = G + sum_i x_i nu_i and 
 - `disordered(self, x) -> 'np.ndarray'`: Site fractions with every sublattice at composition ``x``, a starting point.
 - `solve(self, x, y0, T: 'float', tol: 'float' = 1e-11, max_iter: 'int' = 60)`: (site fractions (k, ny), G (k,) in J/mol, mu (k, n)) at mole fractions ``x`` (k, n), from ``y0``.
 
-### `class Population(precipitate: 'PrecipitateThermo', settings: 'NucleationSettings', initial: 'dict | None' = None, precipitate_tracer: 'Sequence[float] | None' = None) -> None`
+### `class Population(precipitate: 'PrecipitateThermo', settings: 'NucleationSettings', initial: 'dict | None' = None, precipitate_tracer: 'Sequence[float] | None' = None, growth: "Literal['extremal', 'local_equilibrium']" = 'extremal', growth_form: "Literal['mobility', 'diffusivity']" = 'mobility') -> None`
 
 One precipitate phase nucleating at one kind of site, for :func:`solve_competing_precipitation`.
-``initial`` and ``precipitate_tracer`` are as in :func:`solve_multicomponent_precipitation`. A phase
-may form several populations, in the bulk and on grain boundaries say, as part II (p. 158) creates
-one kinetic object per phase and nucleation site.
+``initial``, ``precipitate_tracer``, ``growth`` and ``growth_form`` are as in
+:func:`solve_multicomponent_precipitation`. A phase may form several populations, in the bulk and on grain
+boundaries say, as part II (p. 158) creates one kinetic object per phase and nucleation site.
 
 
 ### `class PrecipitateThermo(db: 'Database', phase: 'str', components: 'Sequence[str]', composition: 'Sequence[float] | None' = None)`
@@ -775,7 +775,7 @@ depletion by every population together, and shrinking classes of all populations
 dissolution budget. All populations need the same molar volume, part I's single Omega (p. 167),
 with which volume fractions carry the mass balance.
 
-### `def solve_multicomponent_precipitation(matrix: 'SolutionPhase', precipitate: 'PrecipitateThermo', alloy: 'Sequence[float]', T: 'Temperature', t_end: 'float', settings: 'NucleationSettings', save_times: 'Sequence[float]', t_start: 'float' = 0.001, max_temperature_change: 'float' = 1.0, max_radius_change: 'float' = 0.02, max_matrix_change: 'float' = 0.0002, max_composition_change: 'float' = 0.001, max_classes: 'int' = 400, min_classes: 'int' = 100, smallest_radius: 'float' = 1e-10, nucleus_update: 'float' = 0.001, min_class_number: 'float' = 1e-06, initial: 'dict | None' = None, precipitate_tracer: 'Sequence[float] | None' = None) -> 'MulticomponentResult'`
+### `def solve_multicomponent_precipitation(matrix: 'SolutionPhase', precipitate: 'PrecipitateThermo', alloy: 'Sequence[float]', T: 'Temperature', t_end: 'float', settings: 'NucleationSettings', save_times: 'Sequence[float]', t_start: 'float' = 0.001, max_temperature_change: 'float' = 1.0, max_radius_change: 'float' = 0.02, max_matrix_change: 'float' = 0.0002, max_composition_change: 'float' = 0.001, max_classes: 'int' = 400, min_classes: 'int' = 100, smallest_radius: 'float' = 1e-10, nucleus_update: 'float' = 0.001, min_class_number: 'float' = 1e-06, initial: 'dict | None' = None, precipitate_tracer: 'Sequence[float] | None' = None, growth: "Literal['extremal', 'local_equilibrium']" = 'extremal', growth_form: "Literal['mobility', 'diffusivity']" = 'mobility') -> 'MulticomponentResult'`
 
 Precipitation from a supersaturated matrix of mole fractions ``alloy`` at temperature ``T``, a
 constant or a :class:`TemperatureSchedule` (quench and age, ramps, multi-step treatments).
@@ -810,6 +810,13 @@ the nucleus maximises it. Nuclei open a new class only once more than
 ``min_class_number`` times the precipitates present (and at least one per m^3) have
 formed; until then they are held back. ``initial`` holds precipitates present at
 ``t_start`` as arrays "number" (m^-3), "radius" (m) and "composition" (k, n).
+
+``growth="local_equilibrium"`` grows each class instead by the law of Chen, Jeppsson and Agren (Acta Mater.
+56 (2008) 1890; :func:`fixed_composition_growth_rate`): local equilibrium between the matrix at the interface
+and the class's composition under its capillary pressure, and one flux balance per element over its own
+effective distance, in the matrix mobilities (``growth_form="mobility"``, their eq. 13) or its interdiffusion
+matrix at the far-field composition (``"diffusivity"``, eq. 10). Classes keep their nucleation composition;
+nucleation is unchanged.
 
 ## `janus_kinetics.ordered`
 
@@ -952,6 +959,16 @@ supersaturation ``omega`` and distance factor ``factor``.
 ### `def diffusion_distance_factor(omega) -> 'np.ndarray'`
 
 n = Omega / (2 lambda^2) of eq. (5); 1 where Omega <= 0, below 1e-12, or at or above 1 - 1e-12 taken there.
+Vectorized: ln lambda by cubic Hermite interpolation of the inverse of ln f below Omega = 1/2 and of ln(1 - f)
+above (which keeps both ends free of cancellation), tabulated with their slopes.
+
+### `def fixed_composition_growth_rate(matrix: 'SolutionPhase', composition: 'Sequence[float]', gibbs: 'float', x_matrix: 'Sequence[float]', radius: 'float', T: 'float', diffusivity=None, gamma: 'float' = 0.0, molar_volume: 'float' = 1e-05, misfit: 'float' = 0.0, form: "Literal['diffusivity', 'mobility']" = 'diffusivity') -> 'GrowthState'`
+
+Growth rate of a sphere of fixed mole fractions ``composition`` (all n) and molar Gibbs energy ``gibbs``
+(J/mol), a stoichiometric phase or one whose composition is held, as the paper's model allows (p. 1891).
+Local equilibrium is then the single condition sum_i x^P_i mu^I_i = G^P + V_m (2 sigma / R + misfit), with
+``misfit`` an elastic energy per volume; the flux balances are those of :func:`particle_growth_rate`, whose
+other arguments these are. The matrix interface starts from the far-field composition.
 
 ### `def growth_parameter(omega: 'float') -> 'float'`
 
