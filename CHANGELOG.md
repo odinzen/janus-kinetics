@@ -50,6 +50,8 @@ First version.
 - Two compound layers with interfacial reaction barriers in thin-film couples (Gosele and Tu 1982).
 - Electromigration stress in confined metal lines (Korhonen et al. 1993): blocked, void and
   reservoir ends, stress-dependent diffusivity, ideal plasticity, and Blech's threshold.
+- Phase layers that nucleate during a layered run (`solve_layers_with_nucleation`), inserted where the
+  d'Heurle interface barrier falls to a threshold, conserving every element.
 - Nucleation of a new phase at an interface (d'Heurle 1988): specific thickness and the critical lens for any
   three interface energies. Blech's 1977 erratum, Clyne and Kurz (1981) and Purdy and Kirkaldy (1971) checked
   against the package.

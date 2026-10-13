@@ -75,7 +75,8 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   compound where the phase diagram has several (Gosele and Tu 1982): interfacial
   reaction barriers, linear-to-parabolic changeover, and the critical thickness at which
   a second compound can appear; and the nucleation barrier of a new phase at an interface
-  (d'Heurle 1988), whose small driving forces make some silicides nucleation-controlled.
+  (d'Heurle 1988), whose small driving forces make some silicides nucleation-controlled;
+  a layered run can let such a phase nucleate at an interface once its barrier is low enough.
 - **Thermal oxidation**: Deal and Grove's linear-parabolic law (1965), from the
   physical constants or fitted as they fit it, along temperature schedules, checked
   against their tables and figures.

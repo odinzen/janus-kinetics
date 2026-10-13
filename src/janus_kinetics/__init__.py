@@ -30,6 +30,13 @@ from .electromigration import (
     void_line_stress,
     wind_stress_gradient,
 )
+from .layer_nucleation import (
+    LayeredRun,
+    NucleatingLayer,
+    NucleationEvent,
+    driving_force,
+    solve_layers_with_nucleation,
+)
 from .interface_nucleation import InterfaceNucleus, interface_nucleus, molar_volume, specific_thickness
 from .interfacial_energy import broken_bond_energy, broken_bond_factor, effective_coordination, solution_enthalpy
 from .interstitial import InterstitialPhase
@@ -166,6 +173,7 @@ __all__ = [
     "JumpPath",
     "Kinetics",
     "Layer",
+    "LayeredRun",
     "LineCompound",
     "LineEnd",
     "LocalEquilibrium",
@@ -174,6 +182,8 @@ __all__ = [
     "MobilityModel",
     "MovingBoundaryResult",
     "MulticomponentResult",
+    "NucleatingLayer",
+    "NucleationEvent",
     "NucleationSettings",
     "OnDemandEquilibriumTable",
     "OxideCationDiffusion",
@@ -213,6 +223,7 @@ __all__ = [
     "diffusion_distance_factor",
     "dmu_dx",
     "drift_velocity",
+    "driving_force",
     "effective_coordination",
     "equilibrium_start",
     "finite_line_stress",
@@ -270,6 +281,7 @@ __all__ = [
     "solve_homogenized",
     "solve_kwn",
     "solve_layers",
+    "solve_layers_with_nucleation",
     "solve_line_stress",
     "solve_moving_boundary",
     "solve_multicomponent_precipitation",

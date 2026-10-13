@@ -584,6 +584,41 @@ controlled; for a beta layer of zero thickness the exact onset is x_crit - x*_ga
 Integrate eqs. (15)-(18) from layer thicknesses ``initial`` (m). A layer of zero thickness whose rate would
 be negative stays at zero (the phase is kinetically suppressed); a shrinking layer stops at zero.
 
+## `janus_kinetics.layer_nucleation`
+
+### `class LayeredRun(segments: 'list', events: 'list' = <factory>) -> None`
+
+The run in segments, one :class:`StackResult` (times absolute) per stretch with a fixed set of layers, and
+the nucleation events between them.
+
+- `inventory(self) -> 'list[np.ndarray]'`: Each segment's integral of every independent mole fraction over the stack (planar).
+- `thickness(self, name: 'str') -> 'tuple[np.ndarray, np.ndarray]'`: (times, thickness) of the layer called ``name`` over the segments where it exists.
+
+### `class NucleatingLayer(phase: 'SolutionPhase', interface: 'int', energies: 'tuple[float, float, float]', molar_volume: 'float', diffusivity: 'Diffusivity', name: 'str' = '', cells: 'int' = 20, thickness: 'float' = 2e-09, grading: 'float' = 4.0, barrier: 'float' = 60.0) -> None`
+
+A phase that may nucleate at interface ``interface`` (between layers i and i+1, held in local equilibrium):
+the interface energies of the old interface and of the new phase against its left and right neighbours (J/m^2),
+its molar volume (m^3/mol), its diffusivity (as for :class:`Layer`), and the layer it starts as.
+
+
+### `class NucleationEvent(time: 'float', temperature: 'float', interface: 'int', name: 'str', barrier_kt: 'float', driving_force: 'float', composition: 'np.ndarray') -> None`
+
+NucleationEvent(time: 'float', temperature: 'float', interface: 'int', name: 'str', barrier_kt: 'float', driving_force: 'float', composition: 'np.ndarray')
+
+
+### `def driving_force(phase: 'SolutionPhase', potentials: 'Sequence[float]', T: 'float') -> 'tuple[float, np.ndarray]'`
+
+(Delta G_m in J/mol, mole fractions) of the composition of ``phase`` that gains most from forming out of
+material at chemical potentials ``potentials`` (J/mol, one per element): the parallel tangent,
+max_x (sum_i x_i mu_i - G_m(x)). Negative when the phase cannot form.
+
+### `def solve_layers_with_nucleation(positions, layers: 'list[Layer]', conditions: 'list', t_end: 'float', dt: 'float', temperature: 'Temperature', candidates: 'Sequence[NucleatingLayer]', check_interval: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10) -> 'LayeredRun'`
+
+:func:`solve_layers` (planar) in stretches of ``check_interval``, inserting each candidate layer once its
+nucleation barrier at its interface falls to its ``barrier`` (in kT) at the temperature ``temperature`` (the
+one the interface conditions follow). Candidates are indexed by the interfaces of the stack they find; after one
+nucleates, the interfaces to its right shift up by one. Returns the run in segments with the events.
+
 ## `janus_kinetics.mobility`
 
 ### `class MobilityModel(db: 'Database', lattice: 'SubstitutionalLattice')`

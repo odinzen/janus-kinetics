@@ -459,6 +459,19 @@ his unit cells (Ni2Si 19.6, Ni3Si2 34.4, NiSi2 23.8 cm^3/mol) and the NiSi2 driv
 the grain-boundary lens of Clemm and Fisher coded separately for precipitation, at every k. Two of his
 worked numbers are slightly off his own inputs: d_s for Ni2Si comes to 0.137 nm (printed 0.15), and the
 NiSi driving force to 300 cal/cm^3 (printed 285).
+
+Layers that nucleate during a run. `solve_layers_with_nucleation` runs the layered solver in
+stretches; at each check it takes a candidate phase's driving force at an interface in local
+equilibrium as the parallel tangent to the interface chemical potentials, max_x (sum x_i mu_i - G(x)),
+and its barrier as the lens above. Once the barrier is down to a threshold (in kT, a package
+choice, as are the check interval and the starting thickness) the phase is inserted: a slab from each
+neighbour, split by the lever rule so the mixture lies as near the nucleus composition as it can
+(exactly in a binary), becomes the new layer, so every element is conserved, and the neighbours are
+remapped conservatively. In d'Heurle's own scenario, a couple heated at 1 K/s past the point where a
+phase between its sides gains enough driving force (here 1.3 kJ/mol at 500 K to 4.4 at 900 K, as NiSi2
+gains in his Table III), the phase appears at the first check after its barrier reaches 60 kT, which an
+independent calculation puts at 897.5 K; the B content is unchanged to 1e-12 through the insertion and
+the new layer grows from 2 nm to micrometres.
 ## Electromigration stress
 
 In a metal line held by a rigid passivation the electron wind moves atoms along the
