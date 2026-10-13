@@ -30,6 +30,7 @@ from .electromigration import (
     void_line_stress,
     wind_stress_gradient,
 )
+from .interface_nucleation import InterfaceNucleus, interface_nucleus, molar_volume, specific_thickness
 from .interfacial_energy import broken_bond_energy, broken_bond_factor, effective_coordination, solution_enthalpy
 from .interstitial import InterstitialPhase
 from .grain_boundary import (
@@ -160,6 +161,7 @@ __all__ = [
     "GrowthState",
     "HeatTreatableAlloy",
     "HeatTreatmentResult",
+    "InterfaceNucleus",
     "InterstitialPhase",
     "JumpPath",
     "Kinetics",
@@ -227,6 +229,7 @@ __all__ = [
     "helander1999_bcc_alni",
     "integrated_diffusivity",
     "interdiffusion_from_profile",
+    "interface_nucleus",
     "intrinsic_from_profile",
     "intrinsic_matrix",
     "jonsson1995_bcc_crfeni",
@@ -241,6 +244,7 @@ __all__ = [
     "matrix_supersaturation",
     "metal_oxide_potential",
     "misfit_energy",
+    "molar_volume",
     "nucleation_rate",
     "nucleation_sites",
     "number_density",
@@ -273,6 +277,7 @@ __all__ = [
     "solve_reaction_layers",
     "solve_solidification",
     "solve_two_layers",
+    "specific_thickness",
     "steady_stress",
     "stress_diffusivity",
     "stretched_radii",

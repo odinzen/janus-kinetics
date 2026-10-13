@@ -441,6 +441,24 @@ settle on the diffusion-controlled thickness ratio within 0.6 %, of order x*/x; 
 interface-controlled layers grow linearly at the rates of eq. 32, or one shrinks away
 when the flux ratio leaves the window.
 
+
+## Nucleation at an interface
+
+d'Heurle (1988) explains why some compounds (NiSi2, IrSi3, Rh4Si5) appear suddenly at a sharp
+temperature instead of growing by diffusion: a new phase AB between A and B replaces one interface
+by two, raising the interfacial energy by Delta sigma = sigma_2 + sigma_3 - sigma_1 (eq. 11), and when
+it forms from a neighbouring compound its driving force is small. A layer pays for itself beyond the
+specific thickness d_s = Delta sigma / Delta h (eq. 12). A discrete nucleus is a lens of two caps on the
+old interface; with equal energies it adds (5 pi / 4) R^2 and holds (5 pi / 12) R^3, so R* = 2 sigma /
+Delta h (eqs. 14-16). For unequal energies the rim follows Neumann's triangle; the lens exists while
+each energy is below the sum of the other two (eqs. 17-18), a cap is a hemisphere when sigma_1^2 +
+sigma_2^2 = sigma_3^2 (eq. 19), each cap's critical radius is 2 sigma_i / Delta g and the barrier is a
+third of the interface energy added. Checks: Table II's specific thicknesses; the molar volumes from
+his unit cells (Ni2Si 19.6, Ni3Si2 34.4, NiSi2 23.8 cm^3/mol) and the NiSi2 driving force of Table III,
+55 to 99 cal/cm^3 between 300 and 1100 K; the equal-energy lens; eq. (19); and, with sigma_2 = sigma_3,
+the grain-boundary lens of Clemm and Fisher coded separately for precipitation, at every k. Two of his
+worked numbers are slightly off his own inputs: d_s for Ni2Si comes to 0.137 nm (printed 0.15), and the
+NiSi driving force to 300 cal/cm^3 (printed 285).
 ## Electromigration stress
 
 In a metal line held by a rigid passivation the electron wind moves atoms along the
@@ -458,7 +476,8 @@ exchanges no flux with the rest of the line, so its edge advances as the elastic
 beside it reaches yield (section III, eq. 11). The steady state of a line blocked at both
 ends, sigma = G L (1/2 - x/L) (eq. 12), has the end-to-end difference G L that Blech's
 threshold (1976, eq. 6) sets equal to the largest sustainable Delta sigma:
-(jL)_c = Omega Delta sigma / (|Z*| e rho). Blech's paper has an erratum (1977) not read here.
+(jL)_c = Omega Delta sigma / (|Z*| e rho), eq. (6) as Blech's erratum (1977) corrects it (the paper printed eq. (5)
+without rho and eq. (6) inverted on the left); his own 1.2e-9 cm^2/dyn for Z*/Delta sigma follows from the corrected form.
 
 Checks. The solver converges at first order in the step onto eq. 9 (semi-infinite line),
 eq. 13 (blocked at both ends) and eq. 15 (a void at one end, alpha = 5), and settles on
@@ -841,7 +860,10 @@ start). In a closed plate, cylinder and sphere the slowest mode decays as
 exp(-alpha^2 D t / L^2) with alpha = pi, 3.8317 and 4.4934, which the anneal follows
 within 1 %. The worked example takes Ni-5.2Al-14.2Cr through Scheil solidification
 on Dupin's description and a 1200 C anneal of a 25 um dendrite arm with Campbell's
-mobilities.
+mobilities. Purdy and Kirkaldy (1971)
+review the same picture: a sinusoid decays as exp(-pi^2 D t / l^2) (eq. 6), a ternary one in two modes at the
+eigenvalues of D (eqs. 11-16), and a fast solute ends slaved to a slow one with amplitude -(D_12 / D_11) A_2
+(eq. 21); the planar solver follows all three, eq. 21 within D_22 / D_11 as its derivation allows.
 
 Back-diffusion with CALPHAD tie-lines. `solve_solidification` is the volume-element
 calculation of DICTRA's solidification runs for any number of elements: the primary solid

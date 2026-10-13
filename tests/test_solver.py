@@ -274,3 +274,33 @@ def test_tolerance_must_be_positive():
     faces, z, x0 = step_couple(20, np.array([0.8]), np.array([0.2]))
     with pytest.raises(ValueError, match="tolerance"):
         solve_planar(faces, x0, D, 10.0, 1.0, tolerance=0.0)
+
+
+def test_ternary_homogenization_follows_purdy_and_kirkaldy():
+    """Purdy and Kirkaldy, Metall. Trans. 2 (1971) 371: a sinusoidal segregation decays as exp(-D pi^2 t / l^2)
+    (eq. 6); in a ternary each Fourier component decays as two modes at the eigenvalues of D (eqs. 11-16); and once
+    the fast solute 1 has relaxed it is slaved to the slow one, J_1 ~ 0, with amplitude A_1 = -(D_12 / D_11) A_2
+    (eq. 21). In a closed plate with solute 2 laid out as cos(pi x / l) and solute 1 uniform, the cosine amplitudes
+    follow expm(-(pi/l)^2 D t) within 3e-6 (the backward-Euler error of the fast mode, first order in the
+    step: 2e-6 with 5 s steps, 1e-5 with 25 s), the late ratio A_1 / A_2 is the slow eigenvector's,
+    -D_12 / (D_11 - u_2), within 1e-3, and eq. 21, which drops u_2, is within D_22 / D_11 of it."""
+    from scipy.linalg import expm
+
+    d = np.array([[1e-12, 3e-13], [0.0, 1e-14]])
+    length, n, a2 = 100e-6, 400, 0.01
+    faces = uniform_faces(length, n)
+    centers = 0.5 * (faces[1:] + faces[:-1])
+    mode = np.cos(np.pi * centers / length)
+    x0 = np.column_stack([np.full(n, 0.02), 0.05 + a2 * mode])
+    times = np.array([2e3, 1e4, 5e4])
+    res = solve_planar(faces, x0, d, times[-1], 5.0, save_times=times[:-1])
+    u = np.sort(np.linalg.eigvals(d).real)[::-1]
+    tr, det = np.trace(d), np.linalg.det(d)
+    np.testing.assert_allclose(u, [(tr + np.sqrt(tr**2 - 4 * det)) / 2, (tr - np.sqrt(tr**2 - 4 * det)) / 2], rtol=1e-12)  # eq. 16
+    k2 = (np.pi / length) ** 2
+    for t, x in zip(res.times[1:], res.x[1:]):
+        amp = 2 * (x - x.mean(axis=0)).T @ mode / n
+        np.testing.assert_allclose(amp, expm(-k2 * d * t) @ np.array([0.0, a2]), atol=3e-6)
+    late = 2 * (res.x[-1] - res.x[-1].mean(axis=0)).T @ mode / n
+    assert late[0] / late[1] == pytest.approx(-d[0, 1] / (d[0, 0] - u[1]), rel=1e-3)
+    assert late[0] / late[1] == pytest.approx(-d[0, 1] / d[0, 0], rel=1.5 * d[1, 1] / d[0, 0])

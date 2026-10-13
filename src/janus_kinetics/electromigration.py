@@ -14,8 +14,8 @@ atom. The x axis points along the electron flow, so atoms leave x = 0. A blocked
 d sigma/dx + G = 0, and the steady state of a line blocked at both ends is Blech's linear profile
 (eq. 12), sigma = G L (1/2 - x/L), whose end-to-end difference G L is the Delta sigma of Blech's eq. (6):
 no electromigration damage occurs below the current density-length product (jL)_c = Omega Delta sigma_max
-/ (|Z*| e rho). Blech's paper has an erratum (J. Appl. Phys. 48 (1977) 2648) that has not been read here;
-only his equations and his own check of the threshold are used.
+/ (|Z*| e rho). That is eq. (6) as Blech's erratum (J. Appl. Phys. 48 (1977) 2648) corrects it: the paper printed
+eq. (5) without rho and eq. (6) with Z* / Delta sigma on the left; the erratum also divides his D_0 and delta D_0b by 10.
 """
 
 from __future__ import annotations

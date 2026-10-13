@@ -362,3 +362,37 @@ def test_solidification_inputs_are_checked():
         equilibrium_start(db, ["B", "C", "A"], "FCC", "LIQUID", _TOY_ALLOY, 1750.0)
     with pytest.raises(ValueError, match="without mobilities"):
         liquid.mobility([0.05, 0.05], 1650.0)
+
+
+# --- Clyne and Kurz, Metall. Trans. A 12 (1981) 965, against the restatement of Kobayashi used above ----------
+
+def _clyne_kurz_omega(alpha):
+    """Their eq. (21), Omega(alpha) = alpha (1 - exp(-1/alpha)) - exp(-1/(2 alpha)) / 2, with alpha = D_s t_f / L^2
+    (eq. 6)."""
+    return alpha * (1 - np.exp(-1 / alpha)) - 0.5 * np.exp(-1 / (2 * alpha))
+
+
+def test_clyne_kurz_parameter_is_their_eq_21():
+    """Kobayashi writes the Clyne-Kurz substitute in gamma = 2 alpha, beta(gamma) = gamma (1 - exp(-2/gamma))
+    - exp(-1/gamma); that is twice their Omega(alpha), so clyne_kurz is their eq. (7a) with alpha replaced by
+    Omega(alpha). Omega -> alpha as alpha -> 0 (Scheil end, eq. 19) and Omega -> 1/2 as alpha -> infinity (eq. 20),
+    where eq. (7a) becomes the lever rule exactly, their eq. (18)."""
+    for alpha in (0.01, 0.1, 0.42, 1.0, 2.6, 30.0):
+        assert clyne_kurz_beta(2 * alpha) == pytest.approx(2 * _clyne_kurz_omega(alpha), rel=1e-12)
+        fs = np.linspace(0.0, 0.95, 20)
+        for k in (0.1, 0.35, 0.7):
+            eq7a = k * (1 - (1 - 2 * _clyne_kurz_omega(alpha) * k) * fs) ** ((k - 1) / (1 - 2 * _clyne_kurz_omega(alpha) * k))
+            np.testing.assert_allclose(clyne_kurz(k, 2 * alpha, fs), eq7a, rtol=1e-12)
+    assert _clyne_kurz_omega(1e-3) == pytest.approx(1e-3, rel=1e-6)
+    assert _clyne_kurz_omega(1e4) == pytest.approx(0.5, abs=1e-4)
+    fs = np.linspace(0.0, 0.99, 34)
+    for k in (0.1, 0.35, 0.7):
+        np.testing.assert_allclose(brody_flemings(k, 1.0, fs), lever_rule(k, fs), rtol=1e-12)  # alpha' = 1/2
+
+
+def test_clyne_kurz_table_1():
+    """Table I (two plain carbon steels): alpha' = Omega(alpha) from their alpha column, to the two or three figures
+    printed."""
+    table = [(2.6, 0.42), (2.5, 0.415), (2.4, 0.41), (2.1, 0.40), (1.9, 0.395), (1.8, 0.39)]
+    for alpha, printed in table:
+        assert _clyne_kurz_omega(alpha) == pytest.approx(printed, abs=0.005)

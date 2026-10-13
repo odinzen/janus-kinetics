@@ -141,12 +141,14 @@ Left for later, each needing a source to be opened first:
 ## Thin films (in progress)
 
 - Electromigration stress in confined lines (Korhonen et al. 1993) with Blech's threshold
-  (1976): done; Blech's 1977 erratum not yet read.
+  (1976): done, with eqs. (5)-(6) as his 1977 erratum corrects them.
 - Grain-boundary diffusion: Whipple's solution and Le Claire's (1963) analysis of sectioning
   data, done (Whipple 1954 itself requested), with Harrison's (1961) A/B/C regime check.
   Suzuoka's (1961) thin-source layer average and coefficient: done.
 - Layer suppression by interfacial barriers in thin-film couples (Gosele and Tu 1982): done
-  for two compounds; d'Heurle 1988 (first-phase nucleation) requested.
+  for two compounds. Nucleation of a new phase at an interface (d'Heurle 1988): specific thickness and
+  the critical lens for any three interface energies, done; starting a layer by nucleation inside a
+  layered run is still open.
 - Linear-parabolic oxidation (Deal and Grove 1965): done.
 
 ## Phase 4. Examples, documentation and release preparation (done)

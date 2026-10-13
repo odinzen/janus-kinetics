@@ -50,6 +50,9 @@ First version.
 - Two compound layers with interfacial reaction barriers in thin-film couples (Gosele and Tu 1982).
 - Electromigration stress in confined metal lines (Korhonen et al. 1993): blocked, void and
   reservoir ends, stress-dependent diffusivity, ideal plasticity, and Blech's threshold.
+- Nucleation of a new phase at an interface (d'Heurle 1988): specific thickness and the critical lens for any
+  three interface energies. Blech's 1977 erratum, Clyne and Kurz (1981) and Purdy and Kirkaldy (1971) checked
+  against the package.
 - Solidification with back-diffusion in the solid and CALPHAD tie-lines for any number of elements
   (`solve_solidification`), checked against the Scheil-Gulliver and lever-rule limits;
   `SolutionPhase(mobilities=False)` for a phase used for its thermodynamics alone.

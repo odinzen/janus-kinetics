@@ -13,6 +13,7 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Chen Q., Jeppsson J., Ågren J. (2008). Analytical treatment of diffusion during precipitate growth in multicomponent systems. *Acta Materialia* 56, 1890-1896. https://doi.org/10.1016/j.actamat.2007.12.037
 - Claire A.D.L. (1963). The analysis of grain boundary diffusion measurements. *British Journal of Applied Physics* 14, 351-356. https://doi.org/10.1088/0508-3443/14/6/317
 - Clemm P., Fisher J. (1955). The influence of grain boundaries on the nucleation of secondary phases. *Acta Metallurgica* 3, 70-73. https://doi.org/10.1016/0001-6160(55)90014-6
+- Clyne T.W., Kurz W. (1981). Solute redistribution during solidification with rapid solid state diffusion. *Metallurgical Transactions A* 12, 965-971. https://doi.org/10.1007/bf02643477
 - Deal B.E., Grove A.S. (1965). General Relationship for the Thermal Oxidation of Silicon. *Journal of Applied Physics* 36, 3770-3778. https://doi.org/10.1063/1.1713945
 - Dupin N., Ansara I., Sundman B. (2001). Thermodynamic re-assessment of the ternary system Al-Cr-Ni. *Calphad* 25, 279-298. https://doi.org/10.1016/s0364-5916(01)00049-9
 - Fisher J.C. (1951). Calculation of Diffusion Penetration Curves for Surface and Grain Boundary Diffusion. *Journal of Applied Physics* 22, 74-77. https://doi.org/10.1063/1.1699825
@@ -34,6 +35,7 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Perez M., Dumont M., Acevedo-Reyes D. (2008). Implementation of classical nucleation and growth theories for precipitation. *Acta Materialia* 56, 2119-2132. https://doi.org/10.1016/j.actamat.2007.12.050
 - Perez M., Dumont M., Acevedo-Reyes D. (2009). Corrigendum to "Implementation of classical nucleation and growth theories for precipitation" [Acta Materialia 56 (2008) 2119-2132]. *Acta Materialia* 57, 1318. https://doi.org/10.1016/j.actamat.2008.11.020
 - Philippe T., Voorhees P. (2013). Ostwald ripening in multicomponent alloys. *Acta Materialia* 61, 4237-4244. https://doi.org/10.1016/j.actamat.2013.03.049
+- Purdy G.R., Kirkaldy J.S. (1971). Homogenization by diffusion. *Metallurgical Transactions* 2, 371-378. https://doi.org/10.1007/bf02663324
 - SUDBRACK C., NOEBE R., SEIDMAN D. (2007). Compositional pathways and capillary effects during isothermal precipitation in a nondilute Ni-Al-Cr alloy. *Acta Materialia* 55, 119-130. https://doi.org/10.1016/j.actamat.2006.08.009
 - SUDBRACK C., YOON K., NOEBE R., SEIDMAN D. (2006). Temporal evolution of the nanostructure and phase compositions in a model Ni-Al-Cr alloy. *Acta Materialia* 54, 3199-3210. https://doi.org/10.1016/j.actamat.2006.03.015
 - Sonderegger B., Kozeschnik E. (2009). Generalized Nearest-Neighbor Broken-Bond Analysis of Randomly Oriented Coherent Interfaces in Multicomponent Fcc and Bcc Structures. *Metallurgical and Materials Transactions A* 40, 499-510. https://doi.org/10.1007/s11661-008-9752-6
@@ -43,4 +45,5 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Wagner C. (1969). The evaluation of data obtained with diffusion couples of binary single-phase and multiphase systems. *Acta Metallurgica* 17, 99-107. https://doi.org/10.1016/0001-6160(69)90131-x
 - Whipple R. (1954). CXXXVIII. Concentration contours in grain boundary diffusion. *The London, Edinburgh, and Dublin Philosophical Magazine and Journal of Science* 45, 1225-1236. https://doi.org/10.1080/14786441208561131
 - Zener C. (1949). Theory of Growth of Spherical Precipitates from Solid Solution. *Journal of Applied Physics* 20, 950-953. https://doi.org/10.1063/1.1698258
+- d'Heurle F.M. (1988). Nucleation of a new phase from the interaction of two adjacent phases: Some silicides. *Journal of Materials Research* 3, 167-195. https://doi.org/10.1557/jmr.1988.0167
 - van Loo F. (1990). Multiphase diffusion in binary and ternary solid-state systems. *Progress in Solid State Chemistry* 20, 47-99. https://doi.org/10.1016/0079-6786(90)90007-3

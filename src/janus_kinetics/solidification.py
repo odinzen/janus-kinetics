@@ -51,7 +51,8 @@ def brody_flemings(k: float, gamma: float, fs) -> np.ndarray:
 
 
 def clyne_kurz_beta(gamma: float) -> float:
-    """beta = gamma [1 - exp(-2/gamma)] - exp(-1/gamma) (Kobayashi eq. 7)."""
+    """beta = gamma [1 - exp(-2/gamma)] - exp(-1/gamma) (Kobayashi eq. 7): twice Clyne and Kurz's Omega(alpha),
+    Metall. Trans. A 12 (1981) 965 eq. (21), with gamma = 2 alpha."""
     return gamma * (1 - np.exp(-2 / gamma)) - np.exp(-1 / gamma)
 
 

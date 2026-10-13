@@ -136,6 +136,19 @@ def test_blech_threshold_from_his_own_numbers():
     assert v1 == pytest.approx(slope * j_c, rel=1e-12)
 
 
+def test_threshold_is_eq_6_as_the_erratum_corrects_it():
+    """Blech's erratum (J. Appl. Phys. 48 (1977) 2648): eq. (5) is j_c l = Delta F / (e Z* rho) and eq. (6)
+    Delta sigma / Z* = (j_c l) e rho / Omega, where the paper printed eq. (5) without rho and eq. (6) with Z* / Delta
+    sigma on the left. blech_product is the corrected form, and it reproduces the number Blech quotes (p. 1206):
+    j_c l = 1260 A/cm gives Z* / Delta sigma about 1.2e-9 cm^2/dyn (here 1.27e-9 with rho = 6.5e-8 ohm m for Al at
+    350 C), so a stress of about 1e9 dyn/cm^2 means Z* about 1, as he concludes."""
+    rho, omega = 6.5e-8, 1.66e-29
+    per_charge = 1260e2 * ELEMENTARY_CHARGE * rho / omega  # Delta sigma / Z* in Pa
+    assert blech_product(per_charge * 3.0, 3.0, rho, omega) == pytest.approx(1260e2, rel=1e-12)
+    assert 1 / (per_charge * 10) == pytest.approx(1.2e-9, rel=0.07)  # cm^2/dyn, 1 Pa = 10 dyn/cm^2
+    assert 1e9 / 10 / per_charge == pytest.approx(1.0, rel=0.3)
+
+
 def test_yielding_front_follows_eq_11():
     """With ideal plasticity at 200 MPa the yielded zone at a blocked end spreads at v = G kappa / sigma_y and the
     stress ahead of it is sigma_y exp(-G x'/sigma_y): measured front speed within 0.3 % and tail within 1 % of

@@ -474,6 +474,32 @@ mu_k + epsilon RT ln u_k, which is how it enters here.
 ``tolerance`` adapts the step as in :func:`solve_planar`, in mole fraction; a step that does
 not converge, or leaves the table, is halved and redone.
 
+## `janus_kinetics.interface_nucleation`
+
+### `class InterfaceNucleus(angle_a: 'float', angle_b: 'float', cap_radius_a: 'float', cap_radius_b: 'float', rim_radius: 'float', height: 'float', volume: 'float', area_energy: 'float', barrier: 'float') -> None`
+
+The critical lens at an interface: the angles (rad) its caps make with the old interface on the A and B
+sides, their radii, the radius of the rim, its height normal to the interface, its volume (m^3), the interfacial
+energy it adds (J) and the barrier (J).
+
+
+### `def interface_nucleus(sigma_old: 'float', sigma_a: 'float', sigma_b: 'float', driving_force: 'float') -> 'InterfaceNucleus'`
+
+The critical nucleus of a new phase at the A/B interface (energy ``sigma_old``), bounded by A/new and new/B
+interfaces of energies ``sigma_a`` and ``sigma_b`` (J/m^2), for a driving force per volume ``driving_force``
+(J/m^3). Raises ValueError where no lens forms: if sigma_a + sigma_b <= sigma_old the new phase wets the
+interface and there is no barrier, and if one of the new interfaces costs more than the other two together
+(eqs. 17-18) the nucleus leaves the interface.
+
+### `def molar_volume(cell_volume: 'float', formula_units: 'int') -> 'float'`
+
+Volume per mole of formula units, N_A V_cell / Z (m^3/mol), as d'Heurle obtains it from unit cells.
+
+### `def specific_thickness(interface_energy_change: 'float', driving_force: 'float') -> 'float'`
+
+d_s = Delta sigma / Delta h (m), eq. (12), for Delta sigma in J/m^2 and the formation energy released per
+volume of the new phase Delta h in J/m^3.
+
 ## `janus_kinetics.interfacial_energy`
 
 ### `def broken_bond_energy(solution_enthalpy: 'float', molar_volume: 'float', structure: 'Structure' = 'fcc', normal: 'Sequence[float] | None' = None, exponent: 'float' = 6.0, factor: 'float | None' = None) -> 'float'`
