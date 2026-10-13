@@ -206,3 +206,62 @@ def test_suzuoka_six_fifths_slope_is_le_claires_eq_16(beta):
     read = le_claire_boundary_product(np.polyfit(y**1.2, log_c, 1)[0], d, t, suzuoka_coefficient(beta))
     assert read == pytest.approx(product, rel=0.02)
     assert suzuoka_layer_integral(0.5, 1.0) < 0 < suzuoka_layer_integral(2.0, 1.0) < suzuoka_layer_integral(3.0, 1.0)
+
+
+# --- Whipple, Phil. Mag. 45 (1954) 1225, read first-hand ---------------------------------------------------------
+
+def _whipple_contour(c, beta):
+    from scipy.optimize import brentq
+
+    eta0 = brentq(lambda e: whipple_concentration(e, 0.0, beta) - c, 1e-6, 30.0, xtol=1e-12)
+    h = 1e-4  # one-sided in xi: the lattice lies at xi >= 0
+    c_xi = (whipple_concentration(eta0, h, beta) - whipple_concentration(eta0, 0.0, beta)) / h
+    c_eta = (whipple_concentration(eta0 + h, 0.0, beta) - whipple_concentration(eta0 - h, 0.0, beta)) / (2 * h)
+    return eta0, -c_xi / c_eta
+
+
+def test_whipple_contour_angles_of_figs_1_and_2():
+    """Figs. 1-2 print the angle at which the contours C = 0.8, 0.6, 0.4, 0.2 meet the slab: 89.0, 88.0, 86.7, 85.1
+    degrees for beta = 0.1 and 81.9, 73.8, 65.8, 57.5 for beta = 1 (90 degrees less the tilt, tan theta = d eta /
+    d xi). From the solution here they are within 0.06 degrees for beta = 0.1 and 0.15 for the two upper contours
+    at beta = 1; the two deeper ones come to 65.3 and 56.4, 0.5 and 1.1 degrees under the printed angles, which
+    Whipple worked out by numerical integration in 1954."""
+    printed = {0.1: (89.0, 88.0, 86.7, 85.1), 1.0: (81.9, 73.8, 65.8, 57.5)}
+    tolerance = {0.1: (0.1, 0.1, 0.1, 0.1), 1.0: (0.2, 0.2, 0.6, 1.2)}
+    for beta, angles in printed.items():
+        for c, angle, tol in zip((0.8, 0.6, 0.4, 0.2), angles, tolerance[beta]):
+            _, slope = _whipple_contour(c, beta)
+            assert 90 - np.degrees(np.arctan(abs(slope))) == pytest.approx(angle, abs=tol), (beta, c)
+
+
+def test_whipple_penetration_figs_4_and_5():
+    """Fig. 4 plots the depth where C = 0.6 meets the slab over its depth far away, labelled 0.742: that is
+    2 erfc^-1(0.6), the lattice term erfc(eta / 2) of his eq. (3.12). (His eqs. 5.1-5.2 print the term as erfc eta,
+    a misprint the 0.742 confirms.) The ratio is 1.39 at beta = 1 and 2.88 at beta = 10, as the curve reads, and the
+    contour's slope where it meets the slab, Fig. 5, is 0.29 and 2.0 (63 degrees)."""
+    from scipy.special import erfcinv
+
+    far = 2 * erfcinv(0.6)
+    assert far == pytest.approx(0.742, abs=5e-4)
+    for beta, ratio, tan in ((1.0, 1.39, 0.29), (10.0, 2.88, 2.0)):
+        eta0, slope = _whipple_contour(0.6, beta)
+        assert eta0 / far == pytest.approx(ratio, abs=0.05)
+        assert abs(slope) == pytest.approx(tan, abs=0.05 * tan)
+
+
+def test_whipple_steepest_descents_eq_5_3():
+    """Eq. (5.3), C_2 = 1.159 beta^(1/3) eta^(-2/3) exp[-(0.473 beta^(-2/3) eta^(4/3) - 0.396 beta^(-4/3) eta^(2/3)
+    (1 - beta xi))]: its coefficients are 2^(11/6) (3 pi)^(-1/2), 3 / 2^(8/3) and 2^(-4/3) of eqs. (A.17)-(A.18), and
+    on the slab it approaches the exact boundary term from above as eta grows, within 6 % by eta = 32 for beta = 1
+    and 10 (22 and 54 % at eta = 4, outside the range Whipple gives for it)."""
+    assert 2 ** (11 / 6) / np.sqrt(3 * np.pi) == pytest.approx(1.159, abs=2e-3)
+    assert 3 / 2 ** (8 / 3) == pytest.approx(0.473, abs=6e-4)  # 0.47247, printed rounded up
+    assert 2 ** (-4 / 3) == pytest.approx(0.396, abs=1e-3)
+    for beta in (1.0, 10.0):
+        ratios = []
+        for eta in (4.0, 8.0, 16.0, 32.0):
+            exact = whipple_concentration(eta, 0.0, beta) - erfc(eta / 2)
+            asym = 1.159 * beta ** (1 / 3) * eta ** (-2 / 3) * np.exp(-(0.473 * beta ** (-2 / 3) * eta ** (4 / 3)
+                                                                         - 0.396 * beta ** (-4 / 3) * eta ** (2 / 3)))
+            ratios.append(asym / exact)
+        assert np.all(np.diff(ratios) < 0) and 1.0 < ratios[-1] < 1.06

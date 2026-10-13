@@ -58,6 +58,9 @@ First version.
 - Solidification with back-diffusion in the solid and CALPHAD tie-lines for any number of elements
   (`solve_solidification`), checked against the Scheil-Gulliver and lever-rule limits;
   `SolutionPhase(mobilities=False)` for a phase used for its thermodynamics alone.
+- Dendrite tip operating point for any number of solutes (Kattner, Boettinger and Coriell 1996), with
+  partition ratios and liquidus slopes from the solid-liquid equilibrium; Whipple's (1954) contour angles,
+  penetration ratios and asymptote checked against his paper.
 - Grids graded toward moving interfaces in the layered-stack and two-phase solvers (`graded_faces`,
   `Layer(faces=...)`, `solve_moving_boundary(grading=...)`).
 - Adaptive time steps in the planar, homogenization and layered-stack solvers, with recovery

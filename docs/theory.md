@@ -156,7 +156,13 @@ writes it, a single integral for c/c_0 in eta = y/(Dt)^1/2, xi and beta = (D'/D)
 (Dt)^1/2 (his eq. 7), and the layer average of a sectioning experiment (eq. 13). Le
 Claire's reading of such data is ln c_bar linear in y^6/5 with D' delta = (4D/t)^1/2
 (0.78 / |slope|)^5/3 = 1.322 (D/t)^1/2 |slope|^-5/3 (eq. 15), valid for beta above about 10.
-Whipple's own paper has not been read; his solution is taken from Le Claire.
+Against Whipple's paper itself, the contours of his Figs. 1-2 meet the boundary at
+his printed angles (within 0.06 degrees at beta = 0.1, and 0.15-1.1 degrees at beta = 1,
+the larger misses on the deeper contours he integrated numerically), Fig. 4's penetration
+ratios (1.39 at beta = 1, 2.88 at beta = 10, over the lattice depth 0.742 = 2 erfc^-1 0.6)
+are reproduced, and his steepest-descents form, eq. 5.3, approaches the exact boundary
+term from above (within 6 % by eta = 32). His eqs. 5.1-5.2 print the lattice term as
+erfc eta where his eq. 3.12 and the 0.742 of Fig. 4 have erfc(eta / 2).
 
 Checks. Above beta of 10 the boundary concentration depends on eta beta^-1/2 alone, as
 Le Claire's Fig. 5 shows; the exact solution of Fisher's equations approaches it with
@@ -894,4 +900,38 @@ it lies between them and rises with the solid diffusivity, and every element is 
 1e-9. Only the primary solid forms; a second solid (a eutectic, or Lippard et al.'s carbides)
 is beyond it, as are the AerMet100 data of Lippard et al. (1998), which need commercial
 databases.
+
+## Dendrite tip
+
+The tip of a dendrite growing at speed V into a liquid with gradient G is set, as Kattner,
+Boettinger and Coriell (1996) write it for any number of solutes, by three conditions: each
+solute's Ivantsov field gives the tip liquid C*_i = C0_i / [1 - (1 - k_i) Iv(P_i)] with
+P_i = V R / 2 D_i and Iv(P) = P exp(P) E1(P) (eq. 2); marginal stability gives the radius,
+R = 2 pi [Gamma / (sum m_i G_ci - G)]^1/2 (eq. 3); and the tip sits at the liquidus of its own
+liquid less its curvature undercooling (eq. 5). With the phase equilibrium the partition ratios
+and liquidus slopes are taken at T_L(C*) and iterated with the tip equations until C* settles,
+as the paper does. The liquidus here is a Newton solve for equal chemical potentials of every
+element in solid and liquid, and its slopes come from the same Jacobian.
+
+Two printed details are corrected. Eq. 4 gives the solute gradient as +2 P (1 - k) C* / R;
+the liquid concentration falls away from a tip that rejects solute, so the gradient is minus
+that, and only then is m_i G_ci positive for every solute, those enriched in the solid (k > 1,
+m > 0) included, and eq. 3 real. Eq. 5 writes the curvature term as Gamma / 2R; the tip of a
+paraboloid of revolution has both principal radii R, so the Gibbs-Thomson undercooling is
+2 Gamma / R. The paper takes xi_i = 1 in eq. 3, as here.
+
+Checks. The Ivantsov function matches quadrature from P = 1e-4 to 1e4 and its two asymptotes.
+Rebuilding eqs. 2-5 by hand from the returned radius closes them to 1e-9 for three solutes,
+one with k > 1. With one solute and no gradient V R^2 equals 4 pi^2 Gamma D / [m (k - 1) C0]
+times 1 - (1 - k) Iv(P) exactly, so V R^2 settles at that constant as V falls and the tip
+temperature reaches the liquidus. With a gradient no tip exists below the limit of
+constitutional undercooling, V = G D k / [m (k - 1) C0]; just above it the radius diverges,
+C* -> C0 / k and the tip sits at the solidus, so the tip temperature rises, peaks and falls
+with speed, the turn in the paper's Figs. 4 and 6. On the ideal A-B-C alloy of the
+solidification checks the liquidus, partition ratios and slopes match the closed form (slopes to
+1e-6), and the paper's remark on p. 527 holds: with equal liquid diffusivities a lever-rule
+equilibrium of the alloy at T_L(C*), from pycalphad, has the tip's liquid and solid to 1e-6
+and a fraction solid equal to Iv(P); with unequal diffusivities it does not. The paper's own
+curves for IN718 and Rene N4 come from a preliminary database that was not published and are
+not reproduced.
 

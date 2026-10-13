@@ -103,6 +103,46 @@ with it. The antiferromagnetic and structure factors are not printed and are
 the usual ones (see the file header); they change nothing above 600 K that
 matters here.
 
+## `janus_kinetics.dendrite_tip`
+
+### `class DendriteTip(velocity: 'float', gradient: 'float', radius: 'float', peclet: 'np.ndarray', liquid: 'np.ndarray', solid: 'np.ndarray', partition: 'np.ndarray', slopes: 'np.ndarray', liquidus_temperature: 'float', curvature_undercooling: 'float', temperature: 'float') -> None`
+
+A dendrite tip at ``velocity`` (m/s) in a liquid gradient ``gradient`` (K/m): its radius (m), the solutes'
+Peclet numbers, the liquid and solid at the tip (independent mole fractions), the partition ratios and liquidus
+slopes used, the liquidus at the tip liquid T_L(C*), the curvature undercooling 2 Gamma / R and the tip
+temperature T* = T_L(C*) - 2 Gamma / R (K).
+
+
+### `class Liquidus(temperature: 'float', solid: 'np.ndarray', partition: 'np.ndarray', slopes: 'np.ndarray') -> None`
+
+The liquidus at one liquid composition: its temperature (K), the solid on it (independent mole fractions),
+the partition ratios k_i = x_S,i / x_L,i and the slopes m_i = dT_L / dx_L,i (K per mole fraction, the other
+independent fractions held).
+
+
+### `def dendrite_tip(velocity: 'float', gradient: 'float', alloy: 'Sequence[float]', partition: 'Sequence[float]', slopes: 'Sequence[float]', diffusivities, gibbs_thomson: 'float', alloy_liquidus: 'float') -> 'DendriteTip'`
+
+The tip of eqs. (2)-(5) for a linear phase diagram: constant partition ratios and liquidus slopes, so that
+T_L(C*) = T_L(C0) + sum_i m_i (C*_i - C0_i) with ``alloy_liquidus`` = T_L(C0). ``diffusivities`` are the
+solutes' liquid diffusivities (m^2/s, a scalar for all), ``gibbs_thomson`` Gamma in K m.
+
+### `def dendrite_tip_calphad(solid: 'SolutionPhase', liquid: 'SolutionPhase', velocity: 'float', gradient: 'float', alloy: 'Sequence[float]', diffusivities, gibbs_thomson: 'float', temperature: 'float', tol: 'float' = 1e-10, max_iter: 'int' = 200) -> 'DendriteTip'`
+
+The tip of eqs. (2)-(5) with k_i and m_i from the solid-liquid equilibrium at T_L(C*), iterated with the
+tip equations until C* settles, as the paper does (p. 526). ``temperature`` is a guess of the alloy's liquidus;
+compositions are independent mole fractions in the phases' element order.
+
+### `def ivantsov(peclet)`
+
+Iv(P) = P exp(P) E1(P), the supersaturation a paraboloid needle growing at Peclet number P needs (eq. 2).
+
+### `def liquidus(solid: 'SolutionPhase', liquid: 'SolutionPhase', x_liquid: 'Sequence[float]', temperature: 'float', x_solid: 'Sequence[float] | None' = None, tol: 'float' = 1e-12, max_iter: 'int' = 100) -> 'Liquidus'`
+
+The temperature at which ``liquid`` of composition ``x_liquid`` (independent mole fractions, the phases'
+element order) is in equilibrium with ``solid``: every element's chemical potential equal in both, solved by
+Newton from ``temperature`` and ``x_solid`` (the liquid composition by default). The slopes follow from the
+same Jacobian by implicit differentiation.
+
 ## `janus_kinetics.diffusivity`
 
 ### `def intrinsic_matrix(x: 'np.ndarray', mobility: 'np.ndarray', dmu: 'np.ndarray') -> 'np.ndarray'`

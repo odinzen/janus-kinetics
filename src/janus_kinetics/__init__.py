@@ -77,6 +77,7 @@ from .layer_competition import (
     growth_window,
     solve_two_layers,
 )
+from .dendrite_tip import DendriteTip, Liquidus, dendrite_tip, dendrite_tip_calphad, ivantsov, liquidus
 from .datasets import campbell2002_fcc_ni, helander1999_bcc_alni, jonsson1995_bcc_crfeni, kjellqvist2008_cro
 from .errors import ConvergenceError, MissingParameterError, UnstableCompositionError, UnsupportedPhaseError
 from .mobility import MobilityModel
@@ -159,6 +160,7 @@ __all__ = [
     "CompetitionResult",
     "CompoundLayer",
     "ConvergenceError",
+    "DendriteTip",
     "DiffusionResult",
     "DiluteSolution",
     "FisherBoundary",
@@ -176,6 +178,7 @@ __all__ = [
     "LayeredRun",
     "LineCompound",
     "LineEnd",
+    "Liquidus",
     "LocalEquilibrium",
     "LocalEquilibriumTable",
     "MissingParameterError",
@@ -220,6 +223,8 @@ __all__ = [
     "critical_radius",
     "critical_thickness",
     "deal_grove_constants",
+    "dendrite_tip",
+    "dendrite_tip_calphad",
     "diffusion_distance_factor",
     "dmu_dx",
     "drift_velocity",
@@ -243,6 +248,7 @@ __all__ = [
     "interface_nucleus",
     "intrinsic_from_profile",
     "intrinsic_matrix",
+    "ivantsov",
     "jonsson1995_bcc_crfeni",
     "junction_barrier_factor",
     "kjellqvist2008_cro",
@@ -250,6 +256,7 @@ __all__ = [
     "lattice_velocity",
     "layer_thickness",
     "le_claire_boundary_product",
+    "liquidus",
     "log_normal_distribution",
     "lsw_distribution",
     "matrix_supersaturation",

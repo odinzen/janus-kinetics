@@ -25,6 +25,7 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Helander T., Ågren J. (1999). A phenomenological treatment of diffusion in Al-Fe and Al-Ni alloys having B2-b.c.c. ordered structure. *Acta Materialia* 47, 1141-1152. https://doi.org/10.1016/s1359-6454(99)00010-5
 - Jönsson B. (1992). On Ferromagnetic Ordering and Lattice Diffusion - A Simple Model / Uber ferromagnetische Ordnung und Gitterdiffusion Ein einfaches Modell. *International Journal of Materials Research* 83, 349-355. https://doi.org/10.1515/ijmr-1992-830512
 - Jönsson B. (1995). Assessment of the Mobilities of Cr, Fe and Ni in bcc Cr-Fe-Ni Alloys. *ISIJ International* 35, 1415-1421. https://doi.org/10.2355/isijinternational.35.1415
+- Kattner U.R., Boettinger W.J., Coriell S.R. (1996). Application of Lukas' Phase Diagram Programs to Solidification Calculations of Multicomponent Alloys. *International Journal of Materials Research* 87, 522-528. https://doi.org/10.1515/ijmr-1996-870703
 - Kjellqvist L., Selleby M., Sundman B. (2008). Thermodynamic modelling of the Cr-Fe-Ni-O system. *Calphad* 32, 577-592. https://doi.org/10.1016/j.calphad.2008.04.005
 - Kobayashi S. (1988). Solute redistribution during solidification with diffusion in solid phase: A theoretical analysis. *Journal of Crystal Growth* 88, 87-96. https://doi.org/10.1016/s0022-0248(98)90010-0
 - Korhonen M.A., Børgesen P., Tu K.N., Li C.Y. (1993). Stress evolution due to electromigration in confined metal lines. *Journal of Applied Physics* 73, 3790-3799. https://doi.org/10.1063/1.354073

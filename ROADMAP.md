@@ -79,7 +79,8 @@ selection by nucleation are not modelled.
 Microsegregation: done (solidification module; Kobayashi 1988 exact solution,
 Bocklund et al. 2020 Scheil-Gulliver), and back-diffusion with CALPHAD tie-lines and several
 elements for the primary solid (solve_solidification, between and at the Scheil and lever
-limits). Open: secondary solids forming from the last liquid, the AerMet100 case of Lippard
+limits). Dendrite tip operating point for any number of solutes with CALPHAD partition ratios
+and slopes (Kattner, Boettinger and Coriell 1996): done. Open: secondary solids forming from the last liquid, the AerMet100 case of Lippard
 et al. 1998 (commercial databases), and measured homogenization data.
 
 Cylindrical and spherical geometry: done for solve_planar and solve_layers
@@ -143,7 +144,7 @@ Left for later, each needing a source to be opened first:
 - Electromigration stress in confined lines (Korhonen et al. 1993) with Blech's threshold
   (1976): done, with eqs. (5)-(6) as his 1977 erratum corrects them.
 - Grain-boundary diffusion: Whipple's solution and Le Claire's (1963) analysis of sectioning
-  data, done (Whipple 1954 itself requested), with Harrison's (1961) A/B/C regime check.
+  data, done and checked against Whipple (1954) itself, with Harrison's (1961) A/B/C regime check.
   Suzuoka's (1961) thin-source layer average and coefficient: done.
 - Layer suppression by interfacial barriers in thin-film couples (Gosele and Tu 1982): done
   for two compounds. Nucleation of a new phase at an interface (d'Heurle 1988): specific thickness and
