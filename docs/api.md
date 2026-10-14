@@ -1415,14 +1415,16 @@ composition at fraction solid ``fs``, or with ``x`` (x* = x / X, 0 at the dendri
 in the solid. The series converges for 0 < k < 2 and gamma > 0; ``terms`` must grow as f_s
 approaches 1 with k small, where the terms fall off slowly.
 
-### `def scheil_gulliver(db: 'Database', components: 'Sequence[str]', phases: 'Sequence[str]', composition: 'Sequence[float]', start: 'float', step: 'float' = 1.0, liquid: 'str' = 'LIQUID', stop_fraction: 'float' = 0.0001, t_min: 'float' = 300.0) -> 'ScheilResult'`
+### `def scheil_gulliver(db: 'Database', components: 'Sequence[str]', phases: 'Sequence[str]', composition: 'Sequence[float]', start: 'float', step: 'float' = 1.0, liquid: 'str' = 'LIQUID', stop_fraction: 'float' = 0.0001, t_min: 'float' = 300.0, disordered: 'dict | None' = None) -> 'ScheilResult'`
 
 Scheil-Gulliver solidification by the algorithm Bocklund et al., Materialia 11 (2020) 100689, give
 (section 2): from ``start`` (K, above the liquidus) the remaining liquid is equilibrated at each
 temperature, the solid that forms is set aside and never changes again, the liquid's fraction is
 reduced by the solid's, and its composition becomes that of the equilibrium liquid, until less than
 ``stop_fraction`` liquid is left. ``composition`` is the n-1 independent mole fractions in the order of
-``components`` (the last element dependent).
+``components`` (the last element dependent). ``disordered`` maps an ordered phase to the name its disordered
+composition sets take (``{"L12_FCC": "FCC_A1"}`` for gamma and gamma' described by one model); without it
+both appear under the phase's own name.
 
 ### `def segregation_index(x) -> 'np.ndarray'`
 
@@ -1470,7 +1472,7 @@ to a second solid (a eutectic) see :func:`solve_solidification_to_end`. When the
 lever rule. ``stop(t, T, liquid)``, if given, is asked at each save time and ends the run when it returns True
 (``stopped``); :func:`solve_solidification_to_end` uses it to hand a run on once a second solid appears.
 
-### `def solve_solidification_to_end(db: 'Database', phases: 'Sequence[str]', solid: 'SolutionPhase', liquid: 'SolutionPhase', temperature: 'TemperatureSchedule', t_end: 'float', length: 'float', start: 'tuple[float, Sequence[float], Sequence[float]]', step: 'float' = 1.0, threshold: 'float' = 1e-06, **kwargs) -> 'CompleteSolidification'`
+### `def solve_solidification_to_end(db: 'Database', phases: 'Sequence[str]', solid: 'SolutionPhase', liquid: 'SolutionPhase', temperature: 'TemperatureSchedule', t_end: 'float', length: 'float', start: 'tuple[float, Sequence[float], Sequence[float]]', step: 'float' = 1.0, threshold: 'float' = 1e-06, disordered: 'dict | None' = None, **kwargs) -> 'CompleteSolidification'`
 
 :func:`solve_solidification` until the liquid would form a solid other than the primary one, then the
 Scheil-Gulliver path of the liquid left, as Kattner, Boettinger and Coriell, Z. Metallkd. 87 (1996) 522, treat
@@ -1481,9 +1483,10 @@ Scheil steps going on at ``step`` K from there, so the hand-off is as late as on
 the profile back-diffusion gave it; later primary solid joins the Scheil solids. ``temperature`` must fall;
 other keyword arguments go to :func:`solve_solidification`.
 
-Solids are told apart by phase name. A database that describes the primary solid and the second one with a
-single ordered model, as Dupin's Al-Cr-Ni does gamma and gamma' (pycalphad names both L12_FCC), cannot be
-handed on this way: the primary solid itself would count as the second.
+Solids are told apart by phase name. Where one ordered model describes the primary solid and the second, as
+Dupin's Al-Cr-Ni does gamma and gamma' (pycalphad names both L12_FCC), ``disordered`` names the phase its
+disordered composition sets stand for, ``{"L12_FCC": "FCC_A1"}``, and only ordered sets count as the second
+solid (see :func:`scheil_gulliver`).
 
 ## `janus_kinetics.solver`
 

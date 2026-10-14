@@ -518,3 +518,116 @@ def test_eutectic_inputs_are_checked():
                                     10.0, _LENGTH, start)
     with pytest.raises(ValueError, match="save times"):
         solve_solidification_to_end(db, _EUT_PHASES, fcc, liq, _EUT_COOLING, 400.0, _LENGTH, start, save_times=[1.0])
+
+
+# --- gamma and gamma' under one ordered model: Dupin's Al-Cr-Ni, where pycalphad names both L12_FCC ------------
+
+from importlib.resources import files  # noqa: E402
+
+from pycalphad import Model  # noqa: E402
+
+from janus_kinetics.solidification import _composition_sets, _sublattice_slices  # noqa: E402
+
+_ALCRNI = files("pycalphad") / "tests" / "databases" / "alcrni.tdb"
+_NI_COMPS = ["AL", "CR", "NI"]
+_GP_ALLOY = [0.18, 0.02]  # gamma' forms from the last 6.5 % of the Scheil liquid
+_ORDERED = {"L12_FCC": "FCC_A1"}
+
+
+@functools.lru_cache(maxsize=None)
+def _alcrni():
+    if not _ALCRNI.is_file():
+        pytest.skip("pycalphad's alcrni.tdb test database is not installed")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        db = Database(str(_ALCRNI))
+        return (db, SolutionPhase(db, "FCC_A1", _NI_COMPS, mobilities=False),
+                SolutionPhase(db, "LIQUID", _NI_COMPS, mobilities=False))
+
+
+def test_sublattice_groups_follow_pycalphads_order():
+    """The site-fraction groups read from the database match the order of pycalphad's own site fractions, in the
+    ternary and in Al-Ni, where the Cr sites drop out."""
+    db = _alcrni()[0]
+    for comps in (_NI_COMPS, ["AL", "NI"]):
+        for phase in ("L12_FCC", "BCC_A2", "B2", "FCC_A1", "LIQUID"):
+            subs = [y.sublattice_index for y in Model(db, comps + ["VA"], phase).site_fractions]
+            expected = [[i for i, k in enumerate(subs) if k == j] for j in sorted(set(subs))]
+            assert _sublattice_slices(db, comps, phase) == expected, (comps, phase)
+
+
+def test_gamma_and_gamma_prime_are_told_apart():
+    """At 873 K Ni-5.2Al-14.2Cr splits into two L12_FCC sets; the disordered one, gamma (3.95 Al), is labelled
+    FCC_A1 and the ordered one, gamma' (14.56 Al), keeps its name."""
+    db = _alcrni()[0]
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        eq = equilibrium(db, _NI_COMPS + ["VA"], ["L12_FCC"], {v.T: 873.0, v.P: 101325, v.N: 1, v.X("AL"): 0.052,
+                                                                  v.X("CR"): 0.142})
+    sets = {label: x for label, _, x in _composition_sets(eq, db, _NI_COMPS, _ORDERED)}
+    assert set(sets) == {"FCC_A1", "L12_FCC"}
+    assert sets["FCC_A1"][0] == pytest.approx(0.0395, abs=5e-4) and sets["L12_FCC"][0] == pytest.approx(0.1456, abs=5e-4)
+    assert {label for label, _, _ in _composition_sets(eq, db, _NI_COMPS, None)} == {"L12_FCC"}
+
+
+@functools.lru_cache(maxsize=None)
+def _gp_scheil(ordered):
+    db, solid, liquid = _alcrni()
+    from janus_kinetics.dendrite_tip import liquidus
+
+    tl = liquidus(solid, liquid, _GP_ALLOY, 1680.0).temperature
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return tl, scheil_gulliver(db, _NI_COMPS, ["LIQUID", "L12_FCC", "BCC_A2"], _GP_ALLOY, tl + 1, 1.0,
+                                   stop_fraction=1e-4, t_min=1450.0, disordered=_ORDERED if ordered else None)
+
+
+@pytest.mark.slow
+def test_scheil_path_tells_gamma_prime_from_gamma():
+    """Ni-18Al-2Cr freezes as gamma until gamma' (ordered, 25 Al) forms from the last 6.5 % of liquid at 1615 K;
+    without the labelling the whole solid is reported as L12_FCC, the same amount."""
+    tl, sc = _gp_scheil(True)
+    fractions = sc.solid_phase_fractions()
+    assert set(fractions) == {"FCC_A1", "L12_FCC"} and fractions["L12_FCC"] == pytest.approx(0.065, abs=0.002)
+    first = next((T, x) for T, step in zip(sc.temperatures[1:], sc.solids) for n, _, x in step if n == "L12_FCC")
+    assert first[0] == pytest.approx(1615.4, abs=1.0) and first[1][0] > 0.24
+    plain = _gp_scheil(False)[1].solid_phase_fractions()
+    assert set(plain) == {"L12_FCC"} and plain["L12_FCC"] == pytest.approx(sum(fractions.values()), rel=1e-9)
+
+
+@functools.lru_cache(maxsize=None)
+def _gp_run(ds, ordered):
+    db, solid, liquid = _alcrni()
+    tl = _gp_scheil(True)[0]
+    start = equilibrium_start(db, _NI_COMPS, "FCC_A1", "LIQUID", _GP_ALLOY, tl - 0.5)
+    # with the labelling gamma is found only as disordered L12_FCC; without it FCC_A1 must be listed for the primary
+    phases = ["LIQUID", "L12_FCC", "BCC_A2"] if ordered else ["LIQUID", "FCC_A1", "L12_FCC", "BCC_A2"]
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return solve_solidification_to_end(db, phases, solid, liquid,
+                                           TemperatureSchedule([0.0, 120.0], [tl - 0.5, tl - 120.5]), 120.0, _LENGTH,
+                                           start, step=1.0, solid_diffusivity=np.eye(2) * ds, cells=40, dt=0.2,
+                                           disordered=_ORDERED if ordered else None)
+
+
+@pytest.mark.slow
+def test_gamma_prime_ends_back_diffusion_where_scheil_forms_it():
+    """With the solid frozen the run is handed on within the 1 K check below where the Scheil path forms gamma',
+    with the Scheil gamma' fraction within 2 %; slow back-diffusion leaves a little less; both keep Al and Cr to
+    1e-8. Without the labelling the gamma being laid down counts as a second solid at the first check."""
+    tl, sc = _gp_scheil(True)
+    frozen, slow = _gp_run(1e-20, True), _gp_run(1e-14, True)
+    first = next(T for T, step in zip(sc.temperatures[1:], sc.solids) for n, _, _ in step if n == "L12_FCC")
+    assert first - 1.0 <= frozen.handoff_temperature <= first + 1.0
+    scheil_gp = sc.solid_phase_fractions()["L12_FCC"]
+    assert frozen.phase_fractions()["L12_FCC"] == pytest.approx(scheil_gp, rel=0.02)
+    assert slow.phase_fractions()["L12_FCC"] < frozen.phase_fractions()["L12_FCC"]
+    for run in (frozen, slow):
+        np.testing.assert_allclose(run.mean_composition(), _GP_ALLOY, rtol=1e-8)
+    # past the hand-off a little gamma still forms (22.4 Al, disordered, labelled FCC_A1) beside ordered gamma'
+    # (25.4-26 Al); without the labelling both would be L12_FCC
+    labelled = [(n, x[0]) for step in frozen.scheil.solids for n, a, x in step if a > 0]
+    assert {n for n, _ in labelled} == {"FCC_A1", "L12_FCC"}
+    assert min(al for n, al in labelled if n == "L12_FCC") > max(al for n, al in labelled if n == "FCC_A1")
+    blind = _gp_run(1e-20, False)
+    assert blind.handoff_temperature > tl - 2.0

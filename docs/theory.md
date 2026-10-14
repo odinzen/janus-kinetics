@@ -951,6 +951,18 @@ diffusion the liquid runs out at the solidus (0.25 B) and no second solid forms,
 second solid shrinks as the solid diffusivity rises, and every run keeps the solute to 1e-9 (1e-8
 around a cylinder). The AerMet100 data of Lippard et al. (1998) need commercial databases.
 
+Solids are told apart by phase name, which fails where one ordered model describes two of them:
+Dupin's Al-Cr-Ni describes gamma and gamma' by one L1_2 model, and pycalphad names both L12_FCC. A
+composition set of such a model whose sublattices hold their species in the same fractions (to 1e-3)
+is disordered and can be labelled as the disordered phase. In Ni-5.2Al-14.2Cr at 873 K this tells
+gamma (3.95 Al) from gamma' (14.56 Al). Along the Scheil path of Ni-18Al-2Cr, gamma freezes until
+ordered gamma' (25 Al) forms from the last 6.5 % of liquid at 1615 K; back-diffusion with the solid
+frozen hands on within a degree of that and ends with the Scheil gamma' fraction within 2 %, while
+without the labelling the gamma being laid down counts as a second solid at the first check. The
+back-diffusion run stops when its liquid layer, under 2 % of its first thickness, no longer converges,
+so a second solid that forms only from the last percent of liquid (gamma' in Ni-14Al-3Cr, from 0.7 %)
+is beyond it; the Scheil path alone reaches it.
+
 ## Dendrite tip
 
 The tip of a dendrite growing at speed V into a liquid with gradient G is set, as Kattner,

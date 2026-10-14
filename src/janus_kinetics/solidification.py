@@ -208,15 +208,53 @@ class ScheilResult:
         return totals
 
 
+def _sublattice_slices(db: Database, comps: Sequence[str], phase: str) -> list:
+    """Index groups of the site fractions pycalphad reports for ``phase``, one per sublattice: its active species
+    (the components and vacancies), sorted by name within each sublattice, sublattice by sublattice."""
+    active = set(comps) | {"VA"}
+    groups, start = [], 0
+    for constituents in db.phases[phase].constituents:
+        n = len({str(sp.name) for sp in constituents} & active)
+        groups.append(list(range(start, start + n)))
+        start += n
+    return groups
+
+
+def _composition_sets(eq, db: Database, comps: Sequence[str], disordered: dict | None, tol: float = 1e-3) -> list:
+    """(label, amount, mole fractions in ``comps`` order) of each composition set of a one-point equilibrium. A set
+    of a phase named in ``disordered`` whose sublattices hold their species in the same fractions, to ``tol``, is
+    labelled with the name given there: Dupin's L12_FCC, which pycalphad also returns for disordered gamma, can
+    then be told from gamma'."""
+    names = [str(p) for p in np.ravel(eq.Phase.values)]
+    amounts = np.ravel(eq.NP.values)
+    comp = eq.X.values.reshape(len(names), -1)
+    sites = eq.Y.values.reshape(len(names), -1)
+    order = [list(map(str, eq.component.values)).index(c) for c in comps]
+    out = []
+    for i, (name, amount) in enumerate(zip(names, amounts)):
+        if not name:
+            continue
+        label = name
+        if disordered and name in disordered:
+            y = sites[i][np.isfinite(sites[i])]
+            groups = _sublattice_slices(db, comps, name)
+            if len({len(g) for g in groups}) == 1 and all(np.max(np.abs(y[groups[0]] - y[g])) < tol for g in groups[1:]):
+                label = disordered[name]
+        out.append((label, float(amount), comp[i][order]))
+    return out
+
+
 def scheil_gulliver(db: Database, components: Sequence[str], phases: Sequence[str], composition: Sequence[float],
                     start: float, step: float = 1.0, liquid: str = "LIQUID", stop_fraction: float = 1e-4,
-                    t_min: float = 300.0) -> ScheilResult:
+                    t_min: float = 300.0, disordered: dict | None = None) -> ScheilResult:
     """Scheil-Gulliver solidification by the algorithm Bocklund et al., Materialia 11 (2020) 100689, give
     (section 2): from ``start`` (K, above the liquidus) the remaining liquid is equilibrated at each
     temperature, the solid that forms is set aside and never changes again, the liquid's fraction is
     reduced by the solid's, and its composition becomes that of the equilibrium liquid, until less than
     ``stop_fraction`` liquid is left. ``composition`` is the n-1 independent mole fractions in the order of
-    ``components`` (the last element dependent).
+    ``components`` (the last element dependent). ``disordered`` maps an ordered phase to the name its disordered
+    composition sets take (``{"L12_FCC": "FCC_A1"}`` for gamma and gamma' described by one model); without it
+    both appear under the phase's own name.
     """
     comps = [c.upper() for c in components]
     x = np.asarray(composition, dtype=float)
@@ -228,18 +266,14 @@ def scheil_gulliver(db: Database, components: Sequence[str], phases: Sequence[st
         T -= step
         eq = equilibrium(db, comps + ["VA"], list(phases),
                          {v.T: T, v.P: 101325, v.N: 1, **{v.X(c): xi for c, xi in zip(comps[:-1], x)}})
-        names = [str(p) for p in np.ravel(eq.Phase.values)]
-        amounts = np.ravel(eq.NP.values)
-        comp = eq.X.values.reshape(len(names), -1)
-        order = [list(map(str, eq.component.values)).index(c) for c in comps]
-        liquid_amount = sum(a for n, a in zip(names, amounts) if n == liquid)
-        formed = [(n, a * f_liquid, comp[i][order]) for i, (n, a) in enumerate(zip(names, amounts))
-                  if n and n != liquid and a > 0]
+        sets = _composition_sets(eq, db, comps, disordered)
+        liquid_amount = sum(a for n, a, _ in sets if n == liquid)
+        formed = [(n, a * f_liquid, xs) for n, a, xs in sets if n != liquid and a > 0]
         if liquid_amount <= 0:
             solids.append(formed)
             f_liquid = 0.0
         else:
-            x_liq = sum(comp[i][order] * a for i, (n, a) in enumerate(zip(names, amounts)) if n == liquid) / liquid_amount
+            x_liq = sum(xs * a for n, a, xs in sets if n == liquid) / liquid_amount
             solids.append(formed)
             f_liquid *= min(liquid_amount, 1.0)  # above the liquidus pycalphad may return 1 + 1e-16
             x = x_liq[:-1]
@@ -438,7 +472,8 @@ class CompleteSolidification:
 def solve_solidification_to_end(db: Database, phases: Sequence[str], solid: SolutionPhase, liquid: SolutionPhase,
                                 temperature: TemperatureSchedule, t_end: float, length: float,
                                 start: tuple[float, Sequence[float], Sequence[float]], step: float = 1.0,
-                                threshold: float = 1e-6, **kwargs) -> CompleteSolidification:
+                                threshold: float = 1e-6, disordered: dict | None = None,
+                                **kwargs) -> CompleteSolidification:
     """:func:`solve_solidification` until the liquid would form a solid other than the primary one, then the
     Scheil-Gulliver path of the liquid left, as Kattner, Boettinger and Coriell, Z. Metallkd. 87 (1996) 522, treat
     the eutectic (p. 525): 'During eutectic solidification, solid diffusion was neglected.' At every ``step`` K of
@@ -448,12 +483,13 @@ def solve_solidification_to_end(db: Database, phases: Sequence[str], solid: Solu
     the profile back-diffusion gave it; later primary solid joins the Scheil solids. ``temperature`` must fall;
     other keyword arguments go to :func:`solve_solidification`.
 
-    Solids are told apart by phase name. A database that describes the primary solid and the second one with a
-    single ordered model, as Dupin's Al-Cr-Ni does gamma and gamma' (pycalphad names both L12_FCC), cannot be
-    handed on this way: the primary solid itself would count as the second."""
+    Solids are told apart by phase name. Where one ordered model describes the primary solid and the second, as
+    Dupin's Al-Cr-Ni does gamma and gamma' (pycalphad names both L12_FCC), ``disordered`` names the phase its
+    disordered composition sets stand for, ``{"L12_FCC": "FCC_A1"}``, and only ordered sets count as the second
+    solid (see :func:`scheil_gulliver`)."""
     comps = list(solid.elements)
     primary, liquid_name = solid.lattice.phase_name, liquid.lattice.phase_name
-    if primary not in phases or liquid_name not in phases:
+    if (primary not in phases and primary not in (disordered or {}).values()) or liquid_name not in phases:
         raise ValueError(f"phases must include the primary solid {primary} and the liquid {liquid_name}")
     times = np.linspace(0.0, t_end, 20001)
     temps = temperature(times)
@@ -465,13 +501,13 @@ def solve_solidification_to_end(db: Database, phases: Sequence[str], solid: Solu
     checks = np.unique(checks[(checks > 0) & (checks < t_end)])
     if "save_times" in kwargs:
         raise ValueError("the save times are the checks, one every step K; set step instead")
-    others = [ph for ph in phases if ph not in (primary, liquid_name)]
+    others = [ph for ph in phases if ph not in (primary, liquid_name)] or list(disordered or {})
 
     def second_solid(t, T, x):
         eq = equilibrium(db, comps + ["VA"], list(phases),
                          {v.T: T, v.P: 101325, v.N: 1, **{v.X(c): xi for c, xi in zip(comps[:-1], x)}})
-        names = [str(p) for p in np.ravel(eq.Phase.values)]
-        return sum(a for n, a in zip(names, np.ravel(eq.NP.values)) if n in others) > threshold
+        return sum(a for n, a, _ in _composition_sets(eq, db, comps, disordered)
+                   if n not in (primary, liquid_name)) > threshold
 
     run = solve_solidification(solid, liquid, temperature, t_end, length, start, save_times=checks,
                                stop=second_solid if others else None, **kwargs)
@@ -479,5 +515,6 @@ def solve_solidification_to_end(db: Database, phases: Sequence[str], solid: Solu
     if not run.stopped:
         return CompleteSolidification(run, None, None, primary, length, geometry)
     T = float(run.temperature[-1])
-    scheil = scheil_gulliver(db, comps, phases, run.liquid[-1], T + step, step, liquid=liquid_name, t_min=float(temps[-1]))
+    scheil = scheil_gulliver(db, comps, phases, run.liquid[-1], T + step, step, liquid=liquid_name,
+                             t_min=float(temps[-1]), disordered=disordered)
     return CompleteSolidification(run, scheil, T, primary, length, geometry)

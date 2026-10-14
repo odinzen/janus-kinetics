@@ -144,6 +144,7 @@ Tests: test_solidification.py, test_dendrite_tip.py, test_homogenization.py.
 | Back-diffusion with CALPHAD tie-lines: frozen solid and fast solid | Scheil-Gulliver; lever rule | 1e-3 and 3e-3 in fraction solid |
 | Into a eutectic: frozen solid; fast solid | closed-form Scheil eutectic; lever rule | 1 %; no second solid forms |
 | Solute kept through back-diffusion and the hand-off to Scheil | exact | 1e-9 (1e-8 around a cylinder) |
+| gamma' told from gamma under one ordered model; hand-off at gamma' in Ni-18Al-2Cr | pycalphad equilibrium on Dupin's description; Scheil-Gulliver | 0.05 at.% Al; within 1 K and 2 % of the Scheil gamma' |
 | Dendrite tip: Ivantsov function, eqs. 2-5 rebuilt by hand, low-speed limit | Kattner et al. 1996 | 1e-10, 1e-9, exact relation |
 | Tip liquid equals the lever-rule liquid at the tip temperature when diffusivities are equal | Kattner et al. 1996, p. 527 | 1e-6 against pycalphad |
 | Homogenization model against the single-phase solver, in a plate and a sphere | phase-1 solver | 1.7e-5 |

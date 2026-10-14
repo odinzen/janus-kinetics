@@ -58,6 +58,8 @@ First version.
 - Solidification with back-diffusion in the solid and CALPHAD tie-lines for any number of elements
   (`solve_solidification`), checked against the Scheil-Gulliver and lever-rule limits;
   `SolutionPhase(mobilities=False)` for a phase used for its thermodynamics alone.
+- Scheil-Gulliver and the eutectic hand-off tell ordered from disordered composition sets of one model
+  (`disordered={"L12_FCC": "FCC_A1"}`), so gamma' is found as the second solid of a Ni-Al-Cr casting.
 - The Perez et al. Table 1 example draws the mean radius approach beside the size classes, as their Fig. 7 does.
 - Worked example: the dendrite tip of Ni-5.2Al-14.2Cr from Turnbull's interfacial energy and Meyer et al.'s
   liquid diffusivity of nickel.
