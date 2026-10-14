@@ -58,6 +58,8 @@ First version.
 - Solidification with back-diffusion in the solid and CALPHAD tie-lines for any number of elements
   (`solve_solidification`), checked against the Scheil-Gulliver and lever-rule limits;
   `SolutionPhase(mobilities=False)` for a phase used for its thermodynamics alone.
+- The mean radius approach of Perez et al. (2008), section 3.1 (`solve_mean_radius`), checked against the class
+  method and the LSW rate.
 - Two candidate layers reaching the nucleation threshold at one check: the second was read at its old interface
   index and came a check late; both now nucleate in that check.
 - Back-diffusion solidification that goes on into a second solid (`solve_solidification_to_end`), handing the

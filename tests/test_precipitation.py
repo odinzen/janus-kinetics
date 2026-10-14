@@ -166,3 +166,89 @@ def test_solubility_comes_from_pycalphad_equilibrium():
     assert x_alpha == pytest.approx(0.5606, abs=1e-4)
     with pytest.raises(ValueError, match="not in the"):
         solubility_from_pycalphad(db, ["A", "B"], "BETA", "ALPHA", "A", 1000.0, 0.9)
+
+
+# --- the mean radius approach, Perez et al. section 3.1 -------------------------------------------------------
+
+from janus_kinetics.precipitation import coarsening_fraction, solve_mean_radius  # noqa: E402
+
+SAVES = [1e3, 3e3, 1e4, 3e4, 1e5, 3e5, 1e6, 3e6]
+
+
+@pytest.fixture(scope="module")
+def both():
+    return (solve_kwn(THERMO, KIN, 0.06, 1e7, EDGES, save_times=SAVES),
+            solve_mean_radius(THERMO, KIN, 0.06, 1e7, save_times=SAVES))
+
+
+def test_coarsening_fraction_eq_17():
+    """1 - 1000 (R/R* - 1)^2 inside 0.99-1.01 R*, symmetric, 0.9 at the edges, 0 beyond them."""
+    r = np.array([1.0, 1.005, 0.995, 1.0099, 1.011, 0.98, 2.0])
+    np.testing.assert_allclose(coarsening_fraction(r, 1.0), [1.0, 0.975, 0.975, 1 - 1000 * 0.0099**2, 0, 0, 0],
+                               rtol=1e-12)
+
+
+def test_mean_radius_agrees_with_the_classes_through_growth(both):
+    """Section 3.5.1 finds the mean radius approach in 'remarkable' agreement with the class methods on Table 1.
+    Against this package's classes it is: from 1e3 to 1e5 s, through nucleation, growth and the start of
+    coarsening, the mean radius within 4 %, the number density within 15 % and the matrix within 1.5 %."""
+    kwn, mra = both
+    for i, t in enumerate(kwn.times):
+        if 1e3 <= t <= 1e5:
+            assert mra.mean_radius[i] == pytest.approx(kwn.mean_radius[i], rel=0.04)
+            assert mra.number_density[i] == pytest.approx(kwn.number_density[i], rel=0.15)
+            assert mra.matrix_fraction[i] == pytest.approx(kwn.matrix_fraction[i], rel=0.015)
+
+
+def test_late_coarsening_is_lsw(both):
+    """Late on, R stays within the 1 % band around R*, R^3 grows at the LSW rate (4/9) X^i / (alpha X^P - X^i) R0 D
+    of eq. (11) within 2 % (from 3e6 to 1e7 s), and eq. (14) keeps the matrix at the Gibbs-Thomson composition of
+    R, eq. (9), within 0.2 %. The classes coarsen 30 % faster than LSW over the same span (the distribution has not reached
+    the LSW shape), so the two part: at 1e7 s the classes' mean radius is 10 % larger and their number density
+    lower."""
+    kwn, mra = both
+    late = mra.times >= 1e6
+    assert np.all(np.abs(mra.mean_radius[late] / mra.critical_radius[late] - 1) < 0.01)
+    lsw = 4 / 9 * 0.01 / (1.0 - 0.01) * THERMO.capillary_length * 5e-20
+    slope = np.diff(mra.mean_radius[-2:] ** 3) / np.diff(mra.times[-2:])
+    assert slope[0] == pytest.approx(lsw, rel=0.02)
+    np.testing.assert_allclose(mra.matrix_fraction[late], THERMO.interface_composition(mra.mean_radius[late]),
+                               rtol=2e-3)
+    kwn_slope = np.diff(kwn.mean_radius[-2:] ** 3) / np.diff(kwn.times[-2:])
+    assert 1.2 < kwn_slope[0] / lsw < 1.45
+    assert 1.05 < kwn.mean_radius[-1] / mra.mean_radius[-1] < 1.15
+
+
+@pytest.mark.parametrize("alpha", [1.0, 1.4])
+def test_mean_radius_growth_without_capillarity(alpha):
+    """With a negligible interface energy and no new nuclei a fixed population grows by Zener's law: at first, with
+    so few particles that X stays put, R^2 = R0^2 + 2 D (X - X^i) / (alpha X^P - X^i) t; a denser one stops where
+    the matrix is down to X^i, the mass balance of eq. (13), X0 = alpha f X^P + X^i (1 - alpha f), then fixing R."""
+    thermo = DiluteSolution(0.01, 1.0, V_AT, alpha * V_AT, 1e-12, T)
+    kin = Kinetics(5e-20, 4.04e-10, 0.0)
+    few = solve_mean_radius(thermo, kin, 0.04, 2e5, number0=1e10, radius0=5e-9, save_times=[5e4], rtol=1e-9)
+    lam = 5e-20 * 0.03 / (alpha - 0.01)
+    np.testing.assert_allclose(few.mean_radius, np.sqrt(25e-18 + 2 * lam * few.times), rtol=1e-5)
+    dense = solve_mean_radius(thermo, kin, 0.04, 1e8, number0=1e22, radius0=2e-9, rtol=1e-9)
+    fraction = (0.04 - 0.01) / (alpha * (1.0 - 0.01))
+    final = (3 * fraction / (4 * np.pi * 1e22)) ** (1 / 3)
+    assert dense.mean_radius[-1] == pytest.approx(final, rel=1e-5)
+    assert dense.number_density[-1] == pytest.approx(1e22, rel=1e-9)
+
+
+def test_only_nucleation_adds_particles():
+    """A sparse population seeded at R* with nucleation switched off: eq. (14), derived for a population holding
+    the matrix on the Gibbs-Thomson line, would add particles here, and eq. (18) gives way to the nucleation rate
+    (zero) instead, so the number never rises."""
+    x0 = 0.03
+    seed = float(THERMO.critical_radius(x0))
+    res = solve_mean_radius(THERMO, Kinetics(5e-20, 4.04e-10, 0.0), x0, 1e3, number0=1e15, radius0=seed,
+                            save_times=[1.0, 10.0, 100.0])
+    assert np.all(res.number_density <= 1e15 * (1 + 1e-9))
+
+
+def test_mean_radius_inputs_are_checked():
+    with pytest.raises(ValueError, match="radius0"):
+        solve_mean_radius(THERMO, KIN, 0.06, 1.0, number0=1e20)
+    with pytest.raises(ValueError, match="not supersaturated"):
+        solve_mean_radius(THERMO, KIN, 0.005, 1.0)

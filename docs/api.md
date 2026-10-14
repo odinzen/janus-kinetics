@@ -1198,6 +1198,11 @@ The diffusivity can come from a mobility database as D* = RT M of the solute
 ``R * T * phase.mobility(x, T)[solute_index]``.
 
 
+### `class MeanRadiusResult(times: 'np.ndarray', mean_radius: 'np.ndarray', number_density: 'np.ndarray', matrix_fraction: 'np.ndarray', critical_radius: 'np.ndarray') -> None`
+
+MeanRadiusResult(times: 'np.ndarray', mean_radius: 'np.ndarray', number_density: 'np.ndarray', matrix_fraction: 'np.ndarray', critical_radius: 'np.ndarray')
+
+
 ### `class PrecipitationResult(times: 'np.ndarray', radius_edges: 'np.ndarray', number: 'np.ndarray', matrix_fraction: 'np.ndarray', critical_radius: 'np.ndarray', steps: 'int' = 0, rejected: 'int' = 0) -> None`
 
 PrecipitationResult(times: 'np.ndarray', radius_edges: 'np.ndarray', number: 'np.ndarray', matrix_fraction: 'np.ndarray', critical_radius: 'np.ndarray', steps: 'int' = 0, rejected: 'int' = 0)
@@ -1205,6 +1210,11 @@ PrecipitationResult(times: 'np.ndarray', radius_edges: 'np.ndarray', number: 'np
 - `mean_radius` (property): R_mean = sum R_i N_i / sum N_i (eq. 20); NaN before any precipitate exists.
 - `number_density` (property): N = sum_i N_i (eq. 19).
 - `volume_fraction` (property): f_T = (4/3) pi sum_i N_i R_i^3 (eq. 21).
+
+### `def coarsening_fraction(radius, critical) -> 'np.ndarray'`
+
+f_coars = 1 - 1000 (R / R* - 1)^2 for 0.99 R* < R < 1.01 R*, Perez et al. eq. (17), and 0 outside, where the
+paper leaves it undefined. The function drops from 0.9 to 0 at both edges of the band; it is used as printed.
 
 ### `def growth_rate(thermo: 'DiluteSolution', kin: 'Kinetics', x, radius) -> 'np.ndarray'`
 
@@ -1241,6 +1251,19 @@ implicit fluxes smear the distribution. Particles leaving the smallest
 class through its lower edge have dissolved; their solute returns to the
 matrix through the mass balance of eq. (22). The lower edge must lie above the
 radius where X^i(R) reaches alpha X^P, below which eq. (10) does not hold.
+
+### `def solve_mean_radius(thermo: 'DiluteSolution', kin: 'Kinetics', x0: 'float', t_end: 'float', number0: 'float' = 0.0, radius0: 'float | None' = None, save_times=None, rtol: 'float' = 1e-06) -> 'MeanRadiusResult'`
+
+Number density N and mean radius R of the precipitates alone, the "mean radius approach" of Perez et al.
+(section 3.1). New nuclei of radius R*_kT join at the nucleation rate of eq. (6), pulling R toward their size
+(eq. 12); growth is eq. (10) at R. Coarsening is the LSW rate of eq. (11), d R / dt = (4/27) X^i / (alpha X^P -
+X^i) R0 D / R^2 (R0 over X^P for a compound, as the paper notes), and eq. (14) for N; the two are blended by
+the coarsening fraction of eq. (17), R by eq. (15) and N by eq. (18). The matrix fraction X follows from the mass
+balance, eq. (13). Eq. (18) compares the coarsening and nucleation rates of N, of opposite signs; it is read
+here as comparing their sizes, -dN/dt|coars against dN/dt|nucl. Integrated by LSODA, the paper's adaptive
+Runge-Kutta being unsuited to the stiff start, when 1/N dN/dt is large.
+
+Starting from ``number0`` particles per m^3 of radius ``radius0`` (none by default).
 
 ## `janus_kinetics.reaction_layers`
 

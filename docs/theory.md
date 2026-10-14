@@ -576,6 +576,21 @@ implicitly. Steps grow by 10% and are halved when R* changes by more than 1%,
 the rule of section 3.4.1 (given there for the Lagrange-like approach); the same
 limit on X and on the mean radius is this package's addition.
 
+The paper's mean radius approach (section 3.1) follows only the number density N
+and the mean radius R. New nuclei pull R toward their own size, dR/dt = eq. 10 +
+(1/N)(dN/dt)(R_nuc - R) (eq. 12); coarsening follows LSW, dR/dt = (4/27) X^i /
+(alpha X^P - X^i) R0 D / R^2 (eq. 11, R0 / X^P for a compound) with eq. 14 for N,
+and a coarsening fraction blends the two, 1 - 1000 (R/R* - 1)^2 inside 0.99-1.01 R*
+(eq. 17). Outside that band the paper leaves it undefined; here it is 0, so it
+jumps from 0.9 to 0 at the band's edges. Eq. 18 compares the coarsening and
+nucleation rates of N, which have opposite signs, and is read as comparing their
+sizes. On Table 1 it agrees with the class method through nucleation, growth and
+the start of coarsening (1e3 to 1e5 s: R within 4 %, N within 15 %, X within
+1.5 %), as section 3.5.1 says. Later the two part: the mean radius approach holds
+R in the band around R* and grows R^3 at the LSW rate within 2 %, while the
+classes, whose distribution has not reached the LSW shape, coarsen 30 % faster,
+so by 1e7 s their mean radius is 10 % larger.
+
 ## Multicomponent precipitation
 
 Svoboda, Fischer, Fratzl and Kozeschnik (2004, part I) derive the growth of a

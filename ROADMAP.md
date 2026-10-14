@@ -80,9 +80,10 @@ Microsegregation: done (solidification module; Kobayashi 1988 exact solution,
 Bocklund et al. 2020 Scheil-Gulliver), and back-diffusion with CALPHAD tie-lines and several
 elements for the primary solid (solve_solidification, between and at the Scheil and lever
 limits). Dendrite tip operating point for any number of solutes with CALPHAD partition ratios
-and slopes (Kattner, Boettinger and Coriell 1996): done. A second solid from the last liquid: done by handing the liquid to Scheil-Gulliver at its
-onset, as Kattner et al. 1996 do (solve_solidification_to_end). Open: the AerMet100 case of Lippard
-et al. 1998 (commercial databases), and measured homogenization data.
+and slopes (Kattner, Boettinger and Coriell 1996): done. A second solid from the last liquid:
+done by handing the liquid to Scheil-Gulliver at its onset, as Kattner et al. 1996 do
+(solve_solidification_to_end). Open: the AerMet100 case of Lippard et al. 1998 (commercial
+databases), and measured homogenization data.
 
 Cylindrical and spherical geometry: done for solve_planar and solve_layers
 (Zener 1949 eq. 12 with lambda = 2, 3; series solutions), and for solve_homogenized
@@ -137,8 +138,8 @@ Left for later, each needing a source to be opened first:
 - non-isothermal treatments: done for dilute alloys with an empirical nucleation law (Myhr and Grong
   2000: ageing, up-quenching and heating ramps, AA 6082); the CALPHAD-driven solvers take temperature
   schedules too. Open: heterogeneous nucleation beyond grain junctions;
-- the mean-radius approach, whose coarsening fraction (eq. 17) is defined only
-  for 0.99 R* < R_mean < 1.01 R* in the paper.
+- the mean-radius approach (section 3.1): done (solve_mean_radius), with eq. 17 taken as 0
+  outside 0.99-1.01 R*, where the paper leaves it undefined.
 
 ## Thin films (in progress)
 

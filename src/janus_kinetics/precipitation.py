@@ -9,6 +9,8 @@ coarsening all follow from the nucleation rate (eq. 6) and the growth rate with
 the Gibbs-Thomson interface composition (eqs. 9-10); no separate coarsening law
 is imposed.
 
+Their "mean radius approach" (section 3.1) is here too, as :func:`solve_mean_radius`.
+
 Scope: spherical precipitates of fixed composition in a binary matrix, isothermal.
 """
 
@@ -19,6 +21,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
+from scipy.integrate import solve_ivp
 
 K_B = 1.380649e-23  # J/K
 
@@ -322,3 +325,78 @@ def solve_kwn(
         xs.append(x)
         rstar.append(critical(x))
     return PrecipitationResult(np.array(times), edges, np.array(saved), np.array(xs), np.array(rstar), steps, rejected)
+
+
+def coarsening_fraction(radius, critical) -> np.ndarray:
+    """f_coars = 1 - 1000 (R / R* - 1)^2 for 0.99 R* < R < 1.01 R*, Perez et al. eq. (17), and 0 outside, where the
+    paper leaves it undefined. The function drops from 0.9 to 0 at both edges of the band; it is used as printed."""
+    u = np.asarray(radius, dtype=float) / np.asarray(critical, dtype=float) - 1.0
+    return np.where(np.abs(u) < 0.01, 1.0 - 1000.0 * u**2, 0.0)
+
+
+@dataclass
+class MeanRadiusResult:
+    times: np.ndarray
+    mean_radius: np.ndarray
+    number_density: np.ndarray
+    matrix_fraction: np.ndarray
+    critical_radius: np.ndarray
+
+    @property
+    def volume_fraction(self) -> np.ndarray:
+        return 4.0 / 3.0 * np.pi * self.number_density * self.mean_radius**3
+
+
+def solve_mean_radius(thermo: DiluteSolution, kin: Kinetics, x0: float, t_end: float, number0: float = 0.0,
+                      radius0: float | None = None, save_times=None, rtol: float = 1e-6) -> MeanRadiusResult:
+    """Number density N and mean radius R of the precipitates alone, the "mean radius approach" of Perez et al.
+    (section 3.1). New nuclei of radius R*_kT join at the nucleation rate of eq. (6), pulling R toward their size
+    (eq. 12); growth is eq. (10) at R. Coarsening is the LSW rate of eq. (11), d R / dt = (4/27) X^i / (alpha X^P -
+    X^i) R0 D / R^2 (R0 over X^P for a compound, as the paper notes), and eq. (14) for N; the two are blended by
+    the coarsening fraction of eq. (17), R by eq. (15) and N by eq. (18). The matrix fraction X follows from the mass
+    balance, eq. (13). Eq. (18) compares the coarsening and nucleation rates of N, of opposite signs; it is read
+    here as comparing their sizes, -dN/dt|coars against dN/dt|nucl. Integrated by LSODA, the paper's adaptive
+    Runge-Kutta being unsuited to the stiff start, when 1/N dN/dt is large.
+
+    Starting from ``number0`` particles per m^3 of radius ``radius0`` (none by default)."""
+    if number0 > 0 and (radius0 is None or radius0 <= 0):
+        raise ValueError("an initial population needs a positive radius0")
+    a_xp = thermo.alpha * thermo.x_p
+    xi = thermo.x_eq
+    r0 = thermo.capillary_length / thermo.x_p
+    lsw = 4.0 / 27.0 * xi / (a_xp - xi) * r0 * kin.diffusivity
+
+    def matrix(n, r):
+        f = 4.0 / 3.0 * np.pi * r**3 * n
+        return (x0 - a_xp * f) / (1.0 - thermo.alpha * f)
+
+    start_r = radius0 if number0 > 0 else nucleation_rate(thermo, kin, x0, 1.0)[1]
+    if not np.isfinite(start_r):
+        raise ValueError("the alloy is not supersaturated and holds no precipitates to start from")
+
+    @np.errstate(invalid="ignore", divide="ignore")  # trial states of the integrator may leave the matrix range
+    def rhs(t, y):
+        n, r = max(y[0], 0.0), y[1]
+        x = matrix(n, r)
+        rate, r_kt = nucleation_rate(thermo, kin, x, t)
+        if n <= 0.0:
+            return [rate, 0.0]
+        grow = float(growth_rate(thermo, kin, x, r))
+        if rate > 0.0:
+            grow += rate / n * (r_kt - r)
+        f = float(coarsening_fraction(r, thermo.critical_radius(x)))
+        if f == 0.0:
+            return [rate, grow]
+        coars_r = lsw / r**2
+        coars_n = lsw / r**3 * (r0 * xi / (r * (thermo.x_p - xi)) * (3.0 / (4.0 * np.pi * r**3) - n) - 3.0 * n)
+        dn = f * coars_n if -coars_n > rate else rate
+        return [dn, f * coars_r + (1.0 - f) * grow]
+
+    targets = np.unique(np.append(np.asarray(save_times if save_times is not None else [], dtype=float), t_end))
+    sol = solve_ivp(rhs, (0.0, t_end), [float(number0), float(start_r)], method="LSODA", t_eval=np.concatenate([[0.0], targets]),
+                    rtol=rtol, atol=[1e-6, 1e-15])
+    if not sol.success:
+        raise RuntimeError(f"mean radius integration failed: {sol.message}")
+    n, r = sol.y
+    x = matrix(n, r)
+    return MeanRadiusResult(sol.t, r, n, x, thermo.critical_radius(x))

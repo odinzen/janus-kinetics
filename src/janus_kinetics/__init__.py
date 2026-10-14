@@ -127,11 +127,14 @@ from .phase import ShortCircuit, SolutionPhase
 from .precipitation import (
     DiluteSolution,
     Kinetics,
+    MeanRadiusResult,
     PrecipitationResult,
+    coarsening_fraction,
     growth_rate,
     nucleation_rate,
     solubility_from_pycalphad,
     solve_kwn,
+    solve_mean_radius,
 )
 from .reaction_layers import LineCompound, ParabolicGrowth, ReactionResult, integrated_diffusivity, parabolic_growth, solve_reaction_layers
 from .schedule import TemperatureSchedule
@@ -178,6 +181,7 @@ __all__ = [
     "JumpPath",
     "Kinetics",
     "Layer",
+    "MeanRadiusResult",
     "LayeredRun",
     "LineCompound",
     "LineEnd",
@@ -220,6 +224,7 @@ __all__ = [
     "broken_bond_factor",
     "campbell2002_fcc_ni",
     "coarsening_rate_constant",
+    "coarsening_fraction",
     "composition_factors",
     "conversion",
     "conversion_integral",
@@ -290,6 +295,7 @@ __all__ = [
     "solve_heat_treatment",
     "solve_homogenized",
     "solve_kwn",
+    "solve_mean_radius",
     "solve_layers",
     "solve_layers_with_nucleation",
     "solve_line_stress",
