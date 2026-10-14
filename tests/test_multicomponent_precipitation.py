@@ -991,3 +991,107 @@ def test_mean_field_drift_against_mao_table_4():
         else:
             assert np.all(cr[:-1] > cr[-1]) and np.all(np.diff(cr) < 0), name
     assert 75.09 + 18.0 + 6.9 == pytest.approx(100.0, abs=0.05)
+
+
+# --- composition constraints: Kozeschnik, Svoboda and Fischer, Calphad 28 (2004) 379 ------------------------
+
+from janus_kinetics.multicomponent_precipitation import constrained_evolution_rates, evolution_rates  # noqa: E402
+
+_KSF = NucleationSettings(gamma=0.2, molar_volume=7e-6, lattice_parameter=0.36e-9, misfit=2e7)
+
+
+def _four_element_classes():
+    """Three classes of a precipitate (A,B)2(C,D) in an A-B-C-D matrix, its sublattice holding A + B at 2/3."""
+    radius = np.array([1e-9, 3e-9, 8e-9])
+    comp = np.array([[0.40, 0.26667, 0.20, 0.13333], [0.50, 0.16667, 0.10, 0.23333], [0.30, 0.36667, 0.25, 0.08333]])
+    comp[:, 1] = 2 / 3 - comp[:, 0]
+    comp[:, 3] = 1 / 3 - comp[:, 2]
+    x0 = np.array([0.05, 0.08, 0.04, 0.83])
+    rng = np.random.default_rng(7)
+    mu_k = rng.normal(-3e4, 4e3, (3, 4))
+    mu_0 = np.array([-4.1e4, -3.6e4, -3.9e4, -2.2e4])
+    tracer = np.array([3e-19, 1e-19, 5e-20, 2e-19])
+    ptracer = np.array([1e-21, 4e-22, 2e-21, 1e-21])
+    return radius, comp, mu_k, x0, mu_0, tracer, ptracer
+
+
+def _gibbs_rate_and_dissipation(rho, x, mu_k, x0, mu_0, tracer, ptracer, drho, dx, settings, mobility=np.inf):
+    """dG/dt by eqs. (9)-(10) and Q by eqs. (11), (13), (14), per class, divided by 4 pi."""
+    omega = settings.molar_volume
+    c, c0, dc = x / omega, x0 / omega, dx / omega
+    dmu = mu_k - mu_0
+    g_rho = 2 * rho * settings.gamma + rho**2 * (settings.misfit + (c * dmu).sum(axis=1))
+    g_c = rho[:, None] ** 3 / 3 * dmu
+    gdot = g_rho * drho + (g_c * dc).sum(axis=1)
+    q1 = rho**2 * drho**2 / mobility
+    q2 = R * T * rho**5 * (dc**2 / (c * ptracer)).sum(axis=1) / 45
+    q3 = R * T * rho**3 * ((drho[:, None] * (c - c0) + rho[:, None] * dc / 3) ** 2 / (c0 * tracer)).sum(axis=1)
+    return gdot, q1 + q2 + q3
+
+
+def test_constrained_rates_with_one_balance_are_part_one():
+    """With the single row of ones, eqs. (24)-(32) give part I's rates, :func:`evolution_rates`, to round-off,
+    in this Ni-Al-Cr matrix with three gamma' classes."""
+    rho = np.array([0.8e-9, 2e-9, 5e-9])
+    comp = np.array([[0.16, 0.08, 0.76], [0.18, 0.06, 0.76], [0.15, 0.09, 0.76]])
+    x0 = np.array([0.045, 0.145, 0.81])
+    mu_k = np.array([[-1.5e5, -4.0e4, -2.9e4], [-1.45e5, -4.2e4, -2.95e4], [-1.52e5, -3.9e4, -2.88e4]])
+    mu_0 = np.array([-1.48e5, -4.1e4, -2.92e4])
+    tracer, ptracer = np.array([3e-21, 1e-21, 2e-22]), np.array([1e-23, 2e-23, 1e-23])
+    plain = evolution_rates(rho, comp, mu_k, x0, mu_0, tracer, ptracer, SETTINGS, T)
+    general = constrained_evolution_rates(rho, comp, mu_k, x0, mu_0, tracer, ptracer, np.ones((1, 3)), SETTINGS, T)
+    np.testing.assert_allclose(general[0], plain[0], rtol=1e-10)
+    np.testing.assert_allclose(general[1], plain[1], rtol=1e-9, atol=1e-12 * np.abs(plain[1]).max())
+
+
+def test_constrained_rates_keep_the_stoichiometry():
+    """A precipitate (A,B)2(C,D): with constraints (1,1,1,1) and (1,1,0,0) its classes change composition only
+    within each sublattice, A + B and C + D each fixed (eq. 19), to round-off."""
+    radius, comp, mu_k, x0, mu_0, tracer, ptracer = _four_element_classes()
+    a = np.array([[1, 1, 1, 1], [1, 1, 0, 0]])
+    drho, dx = constrained_evolution_rates(radius, comp, mu_k, x0, mu_0, tracer, ptracer, a, _KSF, T)
+    scale = np.abs(dx).max()
+    assert scale > 0
+    np.testing.assert_allclose(dx[:, 0] + dx[:, 1], 0, atol=1e-12 * scale)
+    np.testing.assert_allclose(dx[:, 2] + dx[:, 3], 0, atol=1e-12 * scale)
+    free = constrained_evolution_rates(radius, comp, mu_k, x0, mu_0, tracer, ptracer, a[:1], _KSF, T)[1]
+    assert np.abs(free[:, 0] + free[:, 1]).max() > 1e-3 * scale
+
+
+@pytest.mark.parametrize("mobility", [np.inf, 1e-16])
+def test_constrained_rates_dissipate_what_the_gibbs_energy_loses(mobility):
+    """The rates make dG/dt + Q = 0 (eq. 17), with G's derivatives of eqs. (9)-(10) and the dissipation of eqs.
+    (11), (13) and (14), for an infinite and a finite interface mobility."""
+    radius, comp, mu_k, x0, mu_0, tracer, ptracer = _four_element_classes()
+    a = np.array([[1, 1, 1, 1], [1, 1, 0, 0]])
+    drho, dx = constrained_evolution_rates(radius, comp, mu_k, x0, mu_0, tracer, ptracer, a, _KSF, T, mobility)
+    gdot, q = _gibbs_rate_and_dissipation(radius, comp, mu_k, x0, mu_0, tracer, ptracer, drho, dx, _KSF, mobility)
+    assert np.all(q > 0)
+    np.testing.assert_allclose(gdot + q, 0, atol=1e-10 * np.abs(q).max())
+
+
+def test_constrained_rates_depend_only_on_defined_potentials():
+    """In a stoichiometric phase only combinations of the chemical potentials are defined: shifting them by w_j a_j
+    with sum_j w_j U_j = 0 (U_j = a_j c_k, so that sum_i c_ki mu_ki is kept) leaves every rate unchanged."""
+    radius, comp, mu_k, x0, mu_0, tracer, ptracer = _four_element_classes()
+    a = np.array([[1.0, 1, 1, 1], [1, 1, 0, 0]])
+    base = constrained_evolution_rates(radius, comp, mu_k, x0, mu_0, tracer, ptracer, a, _KSF, T)
+    u = comp @ a.T  # U_j per class, in mole fractions
+    w = np.column_stack([u[:, 1], -u[:, 0]]) * 5e3
+    shifted = constrained_evolution_rates(radius, comp, mu_k + w @ a, x0, mu_0, tracer, ptracer, a, _KSF, T)
+    np.testing.assert_allclose(shifted[0], base[0], rtol=1e-10)
+    np.testing.assert_allclose(shifted[1], base[1], rtol=1e-8, atol=1e-12 * np.abs(base[1]).max())
+
+
+def test_interface_mobility_slows_the_interface():
+    """A finite interface mobility M adds 1/M to the radius row (eq. 26): every class moves more slowly, and as M
+    grows the rates return to part I's."""
+    radius, comp, mu_k, x0, mu_0, tracer, ptracer = _four_element_classes()
+    a = np.array([[1, 1, 1, 1], [1, 1, 0, 0]])
+    fast = constrained_evolution_rates(radius, comp, mu_k, x0, mu_0, tracer, ptracer, a, _KSF, T)[0]
+    slow = constrained_evolution_rates(radius, comp, mu_k, x0, mu_0, tracer, ptracer, a, _KSF, T, 1e-17)[0]
+    nearly = constrained_evolution_rates(radius, comp, mu_k, x0, mu_0, tracer, ptracer, a, _KSF, T, 1e-6)[0]
+    assert np.all(np.abs(slow) < np.abs(fast)) and np.all(np.sign(slow) == np.sign(fast))
+    np.testing.assert_allclose(nearly, fast, rtol=1e-6)
+    with pytest.raises(ValueError, match="one coefficient per element"):
+        constrained_evolution_rates(radius, comp, mu_k, x0, mu_0, tracer, ptracer, [[1, 1, 1]], _KSF, T)

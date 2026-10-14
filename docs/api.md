@@ -842,6 +842,22 @@ chosen stoichiometry); without it nuclei take the composition of largest driving
 - `nucleus(self, mu_matrix: 'np.ndarray', T: 'float') -> 'tuple[np.ndarray, float]'`: (composition, molar driving force in J/mol) of the precipitate with the largest driving force
 - `site_fractions(self, x: 'Sequence[float]', T: 'float') -> 'np.ndarray'`: Equilibrium site fractions of the phase at mole fractions ``x``, in pycalphad's order, from the
 
+### `def constrained_evolution_rates(radius, composition, mu_precipitate, x_matrix, mu_matrix, tracer, precipitate_tracer, constraints, settings: 'NucleationSettings', T: 'float', interface_mobility: 'float' = inf)`
+
+(drho/dt (k,), dx/dt (k, n)) with the precipitate composition held to linear constraints, after
+Kozeschnik, Svoboda and Fischer, Calphad 28 (2004) 379, eqs. (24)-(32). Each row a_j of ``constraints``
+(p, n) keeps sum_i a_ji c_ki fixed (eq. 19): a row of ones is the plain substitutional balance, and a row
+picking the elements of one sublattice holds a stoichiometry such as (Cr + Fe) : (Mo + W) = 2 : 1. Per class
+the n composition rates, the radius rate and the p Lagrange multipliers solve
+
+    A_ij = (R T rho^3 / 45) (1/(c_ki D_ki) + 5/(c_0i D_0i)) delta_ij,
+    A_i,n+1 = (R T rho^2 / 3) (c_ki - c_0i) / (c_0i D_0i),   A_i,n+1+j = a_ji,
+    A_n+1,n+1 = 1/M + R T rho sum_i (c_ki - c_0i)^2 / (c_0i D_0i),
+    B_i = -(rho / 3) (mu_ki - mu_0i),   B_n+1 = -2 gamma / rho - lambda - sum_i c_ki (mu_ki - mu_0i),
+
+with c = x / Omega and M the interface mobility (infinite in part I). With the single row of ones these are
+part I's equations, :func:`evolution_rates`, written without a reference element.
+
 ### `def grain_structure(grain_size: 'float') -> 'tuple[float, float, float]'`
 
 (grain boundary area in m^2, grain edge length in m, number of grain corners) per m^3 for equal

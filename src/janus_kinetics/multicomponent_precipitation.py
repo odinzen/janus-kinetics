@@ -438,6 +438,52 @@ def evolution_rates(radius, composition, mu_precipitate, x_matrix, mu_matrix, tr
     return y[:, 0], dx
 
 
+def constrained_evolution_rates(radius, composition, mu_precipitate, x_matrix, mu_matrix, tracer,
+                                precipitate_tracer, constraints, settings: NucleationSettings, T: float,
+                                interface_mobility: float = np.inf):
+    """(drho/dt (k,), dx/dt (k, n)) with the precipitate composition held to linear constraints, after
+    Kozeschnik, Svoboda and Fischer, Calphad 28 (2004) 379, eqs. (24)-(32). Each row a_j of ``constraints``
+    (p, n) keeps sum_i a_ji c_ki fixed (eq. 19): a row of ones is the plain substitutional balance, and a row
+    picking the elements of one sublattice holds a stoichiometry such as (Cr + Fe) : (Mo + W) = 2 : 1. Per class
+    the n composition rates, the radius rate and the p Lagrange multipliers solve
+
+        A_ij = (R T rho^3 / 45) (1/(c_ki D_ki) + 5/(c_0i D_0i)) delta_ij,
+        A_i,n+1 = (R T rho^2 / 3) (c_ki - c_0i) / (c_0i D_0i),   A_i,n+1+j = a_ji,
+        A_n+1,n+1 = 1/M + R T rho sum_i (c_ki - c_0i)^2 / (c_0i D_0i),
+        B_i = -(rho / 3) (mu_ki - mu_0i),   B_n+1 = -2 gamma / rho - lambda - sum_i c_ki (mu_ki - mu_0i),
+
+    with c = x / Omega and M the interface mobility (infinite in part I). With the single row of ones these are
+    part I's equations, :func:`evolution_rates`, written without a reference element."""
+    rho = np.asarray(radius, dtype=float)
+    omega = settings.molar_volume
+    xk = np.atleast_2d(np.asarray(composition, dtype=float))
+    a = np.atleast_2d(np.asarray(constraints, dtype=float))
+    k, n = xk.shape
+    p = a.shape[0]
+    if a.shape[1] != n:
+        raise ValueError("each constraint row needs one coefficient per element")
+    c0d = np.asarray(x_matrix) * np.asarray(tracer) / omega
+    ckd = xk * np.asarray(precipitate_tracer) / omega
+    delta = (xk - x_matrix) / omega
+    rt = R * T
+    size = n + 1 + p
+    mat = np.zeros((k, size, size))
+    idx = np.arange(n)
+    mat[:, idx, idx] = rt * rho[:, None] ** 3 / 45 * (1 / ckd + 5 / c0d)
+    cross = rt * rho[:, None] ** 2 / 3 * delta / c0d
+    mat[:, :n, n] = cross
+    mat[:, n, :n] = cross
+    mat[:, n, n] = 1 / interface_mobility + rt * rho * (delta**2 / c0d).sum(axis=1)
+    mat[:, :n, n + 1:] = a.T
+    mat[:, n + 1:, :n] = a
+    dmu = np.asarray(mu_precipitate, dtype=float) - np.asarray(mu_matrix, dtype=float)
+    b = np.zeros((k, size))
+    b[:, :n] = -rho[:, None] / 3 * dmu
+    b[:, n] = -2 * settings.gamma / rho - settings.misfit - (xk / omega * dmu).sum(axis=1)
+    y = np.linalg.solve(mat, b[..., None])[..., 0]
+    return y[:, n], omega * y[:, :n]
+
+
 def nucleation(composition, driving_force, x_matrix, tracer, settings: NucleationSettings, T: float, t: float):
     """(rate in m^-3 s^-1, critical radius in m) for nuclei of mole fractions ``composition`` with
     driving force ``driving_force`` (J/m^3), part I eqs. (40)-(41) and (46)-(48).

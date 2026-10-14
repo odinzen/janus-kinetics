@@ -661,6 +661,18 @@ over a fourfold range of step limits and 100-800 classes, so the gap follows the
 mobilities rather than the alloy; the paper's own estimate for isolated particles is
 6.4 times.
 
+Kozeschnik, Svoboda and Fischer (2004) write the same equations without a reference
+element and with every compositional constraint as a Lagrange multiplier (eqs. 24-32),
+so a precipitate can keep a stoichiometry, (Cr + Fe) : (Mo + W) = 2 : 1 in a Laves phase,
+say, and an interface of finite mobility. `constrained_evolution_rates` solves them per
+class. With the single substitutional balance they give part I's rates to round-off; with
+a sublattice constraint the composition moves only within each sublattice; the rates make
+dG/dt + Q = 0 (eq. 17) with G and Q from eqs. 9-14, for finite and infinite mobility; and
+shifting the precipitate's chemical potentials along the constraints, keeping
+sum_i c_i mu_i, changes nothing, as it must when only combinations of them are defined.
+The solvers do not use it yet: the minimiser that supplies a precipitate's chemical
+potentials needs every composition coordinate free.
+
 Misfit. Part I eq. 37 subtracts the misfit energy lambda per volume of precipitate
 from the driving force. Appendix A gives it as lambda0 = eps0^2 E / (1 - nu) for a
 linear misfit eps0, or lambda0 f(S), f = 2 S (1 - ln S) - S^2, when the matrix yields

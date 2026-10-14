@@ -139,7 +139,11 @@ Left for later, each needing a source to be opened first:
   2000: ageing, up-quenching and heating ramps, AA 6082); the CALPHAD-driven solvers take temperature
   schedules too. Open: heterogeneous nucleation beyond grain junctions;
 - the mean-radius approach (section 3.1): done (solve_mean_radius), with eq. 17 taken as 0
-  outside 0.99-1.01 R*, where the paper leaves it undefined.
+  outside 0.99-1.01 R*, where the paper leaves it undefined;
+- precipitates held to stoichiometric constraints, with a finite interface mobility (Kozeschnik,
+  Svoboda and Fischer 2004): the rate equations are done (constrained_evolution_rates); using them in
+  the solvers needs chemical potentials of phases whose composition is constrained by their
+  sublattices.
 
 ## Thin films (in progress)
 
