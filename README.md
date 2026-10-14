@@ -97,7 +97,8 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   ternaries or computed on demand for any number of elements (their section 2.5).
 - **Precipitation**: classical nucleation, growth and coarsening on a size-class
   distribution (Perez, Dumont and Acevedo-Reyes 2008, with its 2009 corrigendum),
-  for precipitates of fixed composition in a binary matrix.
+  for precipitates of fixed composition in a binary matrix, and the same paper's
+  mean radius approach, which follows only the number and mean size.
 - **Multicomponent precipitation** with driving forces and nucleus compositions from
   the full CALPHAD Gibbs energies (Svoboda, Fischer, Fratzl and Kozeschnik 2004):
   classes that keep their nucleation composition, ordered precipitates such as
@@ -106,7 +107,9 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   the grain size (Cahn 1956) or the dislocation density, temperature schedules, and
   several phases or nucleation sites competing for one matrix; checked against the
   LSW limit, a three-phase equilibrium, and atom-probe kinetics of gamma'
-  in two Ni-Al-Cr alloys (Sudbrack et al. 2006; Booth-Morrison et al. 2008).
+  in two Ni-Al-Cr alloys (Sudbrack et al. 2006; Booth-Morrison et al. 2008). The
+  evolution rates also take general composition constraints, such as a sublattice
+  stoichiometry, and a finite interface mobility (Kozeschnik, Svoboda and Fischer 2004).
 - **Interfacial energy estimates** for coherent precipitates from the enthalpy of
   solution (the generalized broken-bond model of Sonderegger and Kozeschnik 2009),
   for any fcc or bcc interface orientation or the orientation average, with the
@@ -114,7 +117,8 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
 - **Late-stage coarsening in multicomponent alloys**: Philippe and Voorhees' (2013)
   rate constant, matrix supersaturation, number density and precipitate-composition
   drift, with the full mobility matrix; the precipitation solver reproduces them in a
-  ternary whose solutes diffuse at different rates.
+  ternary whose solutes diffuse at different rates, and the drift is compared with
+  atom-probe trajectories of gamma' (Mao et al. 2012).
 - **Precipitation along heat treatments** in dilute alloys (Myhr and Grong 2000):
   nucleation, growth, dissolution and coarsening of a size distribution through
   ageing, up-quenching and heating ramps, reproducing their AA 6082 figures.
@@ -133,7 +137,9 @@ Agren 1999), each checked against numbers or figures its paper prints. A Cr-O
 thermodynamic description, `kjellqvist2008_cro()` (from Kjellqvist, Selleby and
 Sundman 2008), serves the Cr2O3 scale model.
 
-The equations are collected in [docs/theory.md](docs/theory.md), the API in
+The equations are collected in [docs/theory.md](docs/theory.md), what each part is
+checked against and how closely in [docs/validation.md](docs/validation.md), including
+where the papers could not be reproduced and the misprints found in them, the API in
 [docs/api.md](docs/api.md), and the references, checked against Crossref, in
 [docs/references.md](docs/references.md). What is not done yet is listed in
 [ROADMAP.md](ROADMAP.md); the main gaps are the ferromagnetic mobility factor
@@ -148,9 +154,12 @@ pip install -e . --no-deps
 pytest
 ```
 
-The test suite (285 tests, plus 5 skipped for data that is not available) takes
-about five minutes. On Windows run inside the activated environment, since
-numpy's MKL libraries are only found on the activated path.
+The full test suite takes about 15 minutes on a desktop; `pytest -m "not slow"`
+leaves out the runs of 5 s or more and takes about 4. Ten tests are skipped, each
+with the reason a paper's figure or table cannot be reproduced
+([docs/validation.md](docs/validation.md) lists them). On Windows run inside the
+activated environment, since numpy's MKL libraries are only found on the activated
+path.
 
 ## Example
 

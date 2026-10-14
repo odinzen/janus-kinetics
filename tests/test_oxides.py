@@ -78,6 +78,7 @@ def test_chemical_diffusivity_by_an_independent_route(mag):
     assert mag.chemical_diffusivity(T, p) == pytest.approx(expected, rel=1e-3)
 
 
+@pytest.mark.slow
 def test_vacancies_and_extra_iron_swap_with_oxygen_pressure(mag):
     """Octahedral vacancies grow and extra octahedral Fe shrinks as p_O2 rises (their Fig. 3),
     so D* has a minimum between the two mechanisms (their Fig. 4)."""
@@ -172,6 +173,7 @@ FIG4_MINIMA = {1273: (-9.14, -14.666), 1373: (-7.61, -14.025), 1473: (-6.50, -13
                1623: (-4.89, -12.709)}
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("T", sorted(FIG4_MINIMA))
 def test_magnetite_tracer_minimum_against_fig_4(mag, T):
     """The oxygen pressure of lowest D* follows Fig. 4 within 0.25 decades from 1273 to 1623 K; it is set by

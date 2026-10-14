@@ -88,6 +88,7 @@ def _bd(k, gamma, n, steps, geometry="planar"):
     return solve_back_diffusion(k, gamma * L**2 / (2 * TF), L, TF, n_cells=n, steps=steps, geometry=geometry)
 
 
+@pytest.mark.slow
 def test_back_diffusion_matches_the_exact_solution():
     """gamma = 2 D t_f / L^2 = 0.8 and k = 0.13: the interface solid follows eq. (40) within 0.2 % up to
     f_s = 0.95 and reaches 4.49 at f_s = 1 against 4.513 exact."""
@@ -305,6 +306,7 @@ def _toy_scheil():
         return scheil_gulliver(_toy()[0], ["B", "C", "A"], ["FCC", "LIQUID"], _TOY_ALLOY, 1680.0, step=0.25)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("geometry", ["planar", "cylindrical"])
 def test_without_solid_diffusion_solidification_follows_scheil(geometry):
     """With the solid frozen the fraction solid follows pycalphad's Scheil-Gulliver path (Bocklund et al.) within
@@ -328,6 +330,7 @@ def test_with_fast_solid_diffusion_solidification_follows_the_lever_rule():
     assert res.finished and 1636 < res.temperature[-1] < 1644
 
 
+@pytest.mark.slow
 def test_back_diffusion_lies_between_the_limits_and_conserves_solute():
     """With D = 1e-12 and 1e-13 m^2/s (and the solid's own mobility, which here is 1e-13) the fraction solid lies
     between Scheil and the lever rule at every temperature and rises with D; the default diffusivity, read from
@@ -442,6 +445,7 @@ def _eutectic_point():
     return fsolve(eqs, [0.5, 0.99, 670.0], xtol=1e-13)
 
 
+@pytest.mark.slow
 def test_frozen_solid_ends_in_the_scheil_eutectic():
     """With no diffusion in the solid the run is handed on within one 2 K step below the eutectic and the BETA it
     leaves is the Scheil value: the liquid reaches x_E at f_L = (x_E / x0)^(1 / (k - 1)) and freezes as FCC
@@ -461,6 +465,7 @@ def test_frozen_solid_ends_in_the_scheil_eutectic():
     assert np.all(np.diff(res.temperatures) <= 0) and np.max(-np.diff(res.temperatures)) <= 2.0 + 1e-6
 
 
+@pytest.mark.slow
 def test_fast_solid_diffusion_never_reaches_the_eutectic():
     """With D = 1e-9 m^2/s the solid stays uniform, the liquid runs out at the equilibrium solidus with 0.25 B,
     about 836 K, and no BETA forms, as Kattner et al. find for the Laves phase in IN718 by the lever rule."""
@@ -470,6 +475,7 @@ def test_fast_solid_diffusion_never_reaches_the_eutectic():
     assert res.back_diffusion.liquid[-1, 0] == pytest.approx(0.25, abs=0.01)
 
 
+@pytest.mark.slow
 def test_less_eutectic_with_more_back_diffusion_and_the_solute_is_kept():
     """BETA falls as the solid diffusivity rises (their Fig. 1: at a sixth of the arm spacing the Laves phase does
     not form), and every run keeps the alloy's B to 1e-9 (1e-8 around a cylinder, the solver tolerance)."""

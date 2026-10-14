@@ -30,3 +30,19 @@ def test_readme_example_runs():
     scope: dict = {}
     exec(compile(code, "README.md", "exec"), scope)
     assert scope["result"].markers[-1, 0] > 0
+
+
+def test_validation_page_matches_the_suite():
+    """docs/validation.md names only test files that exist, and lists one bullet per skipped test under its three
+    headings of skipped tests."""
+    import re
+
+    page = (ROOT / "docs" / "validation.md").read_text(encoding="utf-8")
+    named = set(re.findall(r"test_\w+\.py", page))
+    assert named and all((ROOT / "tests" / n).is_file() for n in named), sorted(named)
+    skipped = 0
+    for heading in re.findall(r"### [^\n]*\(skipped tests\)\n\n(.*?)(?=\n###|\n## )", page, re.S):
+        skipped += len(re.findall(r"^- ", heading, re.M))
+    markers = sum(p.read_text(encoding="utf-8").count("@pytest.mark.skip(") for p in (ROOT / "tests").glob("test_*.py")
+                  if p.name != "test_docs.py")
+    assert skipped == markers == 10

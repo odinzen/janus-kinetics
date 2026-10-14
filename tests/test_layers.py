@@ -129,6 +129,7 @@ def _thinning_beta(**kw):
     return solve_layers([0.0, 1e-4, 1.002e-4, 2e-4], layers, conds, 300.0, save_times=[15.0], **kw)
 
 
+@pytest.mark.slow
 def test_adaptive_steps_follow_a_layer_through_its_thinnest_point():
     """Steps of 0.5 s or more carry the beta interface past its neighbour near 14 s and report the layer
     consumed; it is not. Adaptive steps, measuring each interface move against the thinner neighbouring
@@ -140,6 +141,7 @@ def test_adaptive_steps_follow_a_layer_through_its_thinnest_point():
 
 
 
+@pytest.mark.slow
 def test_adaptive_steps_retry_an_overlong_first_step():
     """The first adaptive step has no error estimate; from a largest step of 2e4 s it would carry the thin
     beta interface through its neighbour, and is retried shorter instead of reporting the layer consumed."""

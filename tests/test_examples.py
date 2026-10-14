@@ -53,6 +53,7 @@ def test_precipitation_example_runs_the_full_sequence():
     assert res.matrix_fraction[-1] == pytest.approx(0.01, abs=1e-3)
 
 
+@pytest.mark.slow
 def test_two_phase_example_agrees_between_models():
     out = two_phase_couple.run(coarse=True)
     shift_sharp = out["sharp"].interface[-1] - out["half"]
@@ -60,6 +61,7 @@ def test_two_phase_example_agrees_between_models():
     assert shift_homog == pytest.approx(shift_sharp, rel=0.15)
 
 
+@pytest.mark.slow
 def test_thin_film_anneal_follows_the_temperature_schedule():
     """The reaction layer grows while hot and stops when cooled, and both interfaces sit at the
     pycalphad tie-lines of the current temperature (900 K mid-hold, 600 K at the end)."""

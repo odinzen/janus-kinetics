@@ -299,6 +299,7 @@ def test_graded_faces():
                                        Layer(np.full(4, 0.1), 1e-14)], [FixedInterface([0.5], [0.1])], 1.0, 1.0)
 
 
+@pytest.mark.slow
 def test_graded_two_sided_couple():
     """The similarity couple above on 50 + 100 cells graded 30:1 toward the interface lands within 0.15 % of the
     exact position at t1/4 and t1, closer than 400 + 800 uniform cells (0.19 and 0.12 %); 50 + 100 uniform cells
@@ -321,6 +322,7 @@ def test_graded_two_sided_couple():
     assert np.max(np.abs(inv - inv[0])) < 1e-12 * inv[0, 0]
 
 
+@pytest.mark.slow
 def test_graded_ternary_couple(ternary_couple, two_phase_db):
     """The ternary couple on 40 cells a side graded 20:1 toward the interface: the interface shift within 0.5 % and
     the operating tie-line within 5e-4 of the 200-cell uniform run (both within 0.4 % and 1e-4 of a 400-cell one),

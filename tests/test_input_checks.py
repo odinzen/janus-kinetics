@@ -185,6 +185,7 @@ def test_homogenization_refuses_compositions_beyond_its_table(binary_table):
         solve_homogenized(faces, np.where(z < 2e-4, 0.999, 0.70)[:, None], binary_table, 50.0, 0.25)
 
 
+@pytest.mark.slow
 def test_ternary_homogenization_runs_near_the_table_hypotenuse():
     """Before, x_A + x_B = 0.96 was judged outside the table, every step was damped to nothing and
     reported as converged, and the profile never moved."""
@@ -202,6 +203,7 @@ def test_ternary_homogenization_runs_near_the_table_hypotenuse():
 
 # --- stacks -------------------------------------------------------------------------------------
 
+@pytest.mark.slow
 def test_vanishing_layer_under_local_equilibrium_is_reported_as_consumed():
     """Before, the interface Newton failed first and the run ended in a ConvergenceError without results. The
     alpha layer really is used up, near 171 s with 0.1 s, 0.02 s and adaptive steps alike."""

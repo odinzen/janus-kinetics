@@ -161,8 +161,11 @@ Left for later, each needing a source to be opened first:
 ## Phase 4. Examples, documentation and release preparation (done)
 
 - Worked examples in examples/, each run at coarse resolution by tests/test_examples.py.
-- docs/theory.md (equations with sources), docs/api.md (generated from the
-  docstrings, kept current by a test) and docs/references.md (written from Crossref).
+- docs/theory.md (equations with sources), docs/validation.md (what each part is checked
+  against and how closely, with every paper that could not be reproduced and every misprint
+  found), docs/api.md (generated from the docstrings, kept current by a test) and
+  docs/references.md (written from Crossref).
+- Tests of 5 s or more are marked slow, so `pytest -m "not slow"` gives a quick check.
 - CITATION.cff, .zenodo.json and CHANGELOG.md for version 0.1.0, with a test that
   the version and authorship agree across them.
 

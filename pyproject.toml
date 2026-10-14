@@ -37,6 +37,8 @@ janus_kinetics = ["data/*.tdb"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "--strict-markers"
+markers = ["slow: takes 5 s or more; pytest -m \"not slow\" runs the rest"]
 filterwarnings = [
     "ignore:The type definition character:UserWarning",
     # raised inside pycalphad.calculate under numpy >= 2.5, not by this package

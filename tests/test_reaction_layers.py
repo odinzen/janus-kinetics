@@ -350,6 +350,7 @@ def test_one_curved_layer_follows_van_loo_eq_26(geometry, shape, q, ratio):
         assert np.all((marker > inner) & (marker < outer))
 
 
+@pytest.mark.slow
 def test_two_curved_layers_agree_with_the_layered_stack_solver():
     """Two line compounds (x = 0.3, 0.6; D_int 2e-17 and 1e-17 m^2/s; equal molar volumes) between a 1 um sphere of
     x = 0.02 and a shell of x = 0.95, against solve_layers with each compound a phase of range delta and

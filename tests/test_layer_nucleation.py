@@ -69,6 +69,7 @@ def _heated():
     return _couple(HEAT)
 
 
+@pytest.mark.slow
 def test_beta_nucleates_where_its_barrier_reaches_the_threshold():
     """Heating at 1 K/s, beta's barrier at the interface falls from about 1200 kT at 500 K; it is inserted at the
     first check after the barrier reaches 60 kT, which the independent calculation puts at 897.5 K: the event is at
@@ -163,6 +164,7 @@ def test_inserted_layer_starts_at_the_nucleus_composition():
     assert [type(c) for c in new_conds] == [LocalEquilibrium, LocalEquilibrium] and new_conds[0].right is beta
 
 
+@pytest.mark.slow
 def test_two_layers_nucleating_at_one_check():
     """alpha | gamma | alpha heated: beta reaches the threshold at both interfaces at the same check (the stack is
     symmetric). Both nucleate there, at 900 K like the single couple, the second at its index shifted by the first

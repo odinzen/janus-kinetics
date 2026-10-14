@@ -121,6 +121,7 @@ def _sharp_interface(far, cells=750):
     return st, res
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("far", [(0.02, 0.02), (0.012, 0.03)])
 def test_ternary_growth_matches_the_sharp_interface_solver(far):
     """A-B-C, ideal, with B and C partitioned 50 and 30 times into the particle and C diffusing 4 times faster:

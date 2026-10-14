@@ -106,6 +106,7 @@ def alpha_layer_error(binary, n_cells):
     return abs(thickness - sharp.interface[-1]) / shift
 
 
+@pytest.mark.slow
 def test_binary_two_phase_couple_converges_to_sharp_interface(binary):
     coarse, fine = alpha_layer_error(binary, 400), alpha_layer_error(binary, 800)
     assert coarse < 0.12
@@ -183,6 +184,7 @@ def test_single_phase_couple_under_an_anneal_matches_phase1_solver(anneal_table)
     assert np.max(np.abs(homog.x[-1] - ref.x[-1])) < 2e-3
 
 
+@pytest.mark.slow
 def test_two_phase_couple_under_an_anneal_matches_sharp_interface(anneal_table):
     """The alpha layer from the homogenized run against the sharp interface whose tie-line follows the schedule."""
     alpha, beta, table = anneal_table
@@ -219,6 +221,7 @@ def quaternary_db():
     return db, {name: SolutionPhase(db, name, ["A", "B", "C", "D"]) for name in ("ALPHA", "BETA")}
 
 
+@pytest.mark.slow
 def test_on_demand_table_equals_the_full_table_in_a_binary(binary):
     """On a 1D grid both interpolate linearly between the same nodes, so values agree
     and a two-phase couple runs identically, with fewer equilibria."""
@@ -253,6 +256,7 @@ def test_on_demand_slopes_are_those_of_its_interpolant():
         np.testing.assert_allclose(g[:, :, j], fd, rtol=1e-6, atol=1e-6)
 
 
+@pytest.mark.slow
 def test_on_demand_ternary_agrees_with_the_full_table(ternary_run):
     """At grid nodes the two tables hold the same equilibrium; between nodes they
     triangulate differently, so the couple differs by less than the grid allows."""
@@ -271,6 +275,7 @@ def test_on_demand_ternary_agrees_with_the_full_table(ternary_run):
     assert od.calculations < len(table.points) / 4
 
 
+@pytest.mark.slow
 def test_quaternary_single_phase_couple_converges_to_the_phase1_solver():
     """Inside the alpha field the homogenized result must approach the ordinary solver as
     the composition grid is refined (2.1e-3 at a 0.02 step, 4.8e-4 at 0.01)."""
@@ -288,6 +293,7 @@ def test_quaternary_single_phase_couple_converges_to_the_phase1_solver():
     assert errors[1] < 1e-3 and errors[1] < errors[0] / 3
 
 
+@pytest.mark.slow
 def test_quaternary_two_phase_couple_conserves_with_few_equilibria():
     db, phases = quaternary_db()
     od = OnDemandEquilibriumTable(db, phases, T, spacing=0.025)
@@ -421,6 +427,7 @@ def alpha_core_error(binary, n_cells):
     return abs(radius - sharp.interfaces[-1, 0]) / shift
 
 
+@pytest.mark.slow
 def test_two_phase_sphere_converges_to_sharp_interface(binary):
     """As the planar couple does: 9.7 % of the shift at 400 cells, 3.6 % at 800."""
     coarse, fine = alpha_core_error(binary, 400), alpha_core_error(binary, 800)

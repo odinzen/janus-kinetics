@@ -257,6 +257,7 @@ def test_oxygen_share_against_fig_11():
     pass
 
 
+@pytest.mark.slow
 def test_rate_constant_by_wagners_form(db):
     """k from the tracer diffusivities, (1/2) int (D*_Cr / n_g + D*_O) d ln p_O2 with n_g the Cr
     per O at the gas side, by the
@@ -274,6 +275,7 @@ def test_rate_constant_by_wagners_form(db):
     assert 0.5 * simpson(vals, x=ln_p) == pytest.approx(g.k, rel=1e-3)
 
 
+@pytest.mark.slow
 def test_cation_part_through_mu_cr(db):
     """The cation part integrated over mu_Cr instead of mu_O, (1/n_g) int (1/3) y''_Va y''_Cr M
     (-dmu_Cr), the form of eq. (3) without the Gibbs-Duhem step."""

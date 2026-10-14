@@ -495,6 +495,7 @@ def _sudbrack_evolving_run():
                                                   HOURS * 3600, precipitate_tracer=[2.7e-23, 1.4e-23, 2.7e-23])
 
 
+@pytest.mark.slow
 def test_evolving_precipitates_relax_to_the_dupin_solvus():
     """The gamma' leaves its nucleus composition (16.3 Al, 8.3 Cr at.%) for Dupin's gamma' solvus (14.56,
     9.54): 14.70 and 9.45 at 1024 h. Al falls as the atom probe shows (19.1 to 16.7, Table 2); Cr rises where
@@ -515,6 +516,7 @@ def test_evolving_inputs_are_checked():
                                            precipitate_tracer=[1e-23, 1e-23])
 
 
+@pytest.mark.slow
 def test_second_alloy_shows_the_same_coarsening_gap():
     """Booth-Morrison et al., Acta Mater. 56 (2008) 3422, Table 1 and p. 3432: Ni-7.5Al-8.5Cr at 873 K,
     gamma = 24 mJ/m^2, measured K = 1.84e-31 m^3/s. The model matches <R> at 1 h (1.22 against 1.24 nm) and
@@ -655,6 +657,7 @@ def test_isothermal_schedule_equals_a_constant_temperature():
     np.testing.assert_allclose(b.volume_fraction, a.volume_fraction, rtol=1e-12)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("T2", [848.0, 893.0])
 def test_temperature_step_matches_two_chained_runs(T2):
     """873 K for 1 h, then T2 for 1 h, as one schedule (a 1 s ramp) and as two runs, the second started

@@ -58,6 +58,8 @@ First version.
 - Solidification with back-diffusion in the solid and CALPHAD tie-lines for any number of elements
   (`solve_solidification`), checked against the Scheil-Gulliver and lever-rule limits;
   `SolutionPhase(mobilities=False)` for a phase used for its thermodynamics alone.
+- docs/validation.md, a page of what each part is checked against, the papers not reproduced and the
+  misprints found; slow tests marked so `pytest -m "not slow"` runs a quick check.
 - Precipitate evolution rates under general composition constraints and a finite interface mobility
   (Kozeschnik, Svoboda and Fischer 2004, `constrained_evolution_rates`).
 - The relaxed Hessian of an ordered phase (`PhaseMinimizer.hessian`), and the precipitate composition drift of

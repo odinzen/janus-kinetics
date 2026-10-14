@@ -165,6 +165,7 @@ def zener_curved(geometry, n_right=1200, steps=1600, grading=1.0):
     return res, alpha, lam, t1
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("geometry", ["cylindrical", "spherical"])
 def test_zener_curved_growth(geometry):
     """Started from Zener's similarity profile at 1e3 s, the particle radius at 1e5 s is alpha sqrt(D t)
@@ -181,6 +182,7 @@ def test_zener_curved_growth(geometry):
     np.testing.assert_allclose(res.x_left[-1, :, 0], N0, atol=1e-12)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("geometry", ["cylindrical", "spherical"])
 def test_zener_curved_error_falls_with_the_grid(geometry):
     """Doubling the matrix cells cuts the radius error to about 0.6 of its value, first order in the grid as
@@ -192,6 +194,7 @@ def test_zener_curved_error_falls_with_the_grid(geometry):
     assert errors[1] < 0.75 * errors[0]
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("geometry", ["cylindrical", "spherical"])
 def test_graded_grid_beats_a_finer_uniform_one(geometry):
     """The matrix shell on 300 cells graded 100:1 toward the interface: the radius at 1e5 s is closer to Zener's
