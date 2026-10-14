@@ -58,6 +58,7 @@ First version.
 - Solidification with back-diffusion in the solid and CALPHAD tie-lines for any number of elements
   (`solve_solidification`), checked against the Scheil-Gulliver and lever-rule limits;
   `SolutionPhase(mobilities=False)` for a phase used for its thermodynamics alone.
+- The Perez et al. Table 1 example draws the mean radius approach beside the size classes, as their Fig. 7 does.
 - Worked example: the dendrite tip of Ni-5.2Al-14.2Cr from Turnbull's interfacial energy and Meyer et al.'s
   liquid diffusivity of nickel.
 - docs/validation.md, a page of what each part is checked against, the papers not reproduced and the

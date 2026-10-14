@@ -48,10 +48,19 @@ def test_surface_depletion_matches_the_constant_d_estimate():
 
 
 def test_precipitation_example_runs_the_full_sequence():
-    res = precipitation_table1.run(coarse=True)["result"]
+    """The classes nucleate, peak and coarsen toward X^i; the mean radius approach saved at the same times follows
+    them through nucleation and growth, 1e3 to 3e4 s, R within 5 % and N within 20 % on this coarse class grid (the
+    example's own grid, twice as fine, keeps N within 14 % to 1e5 s), and ends with the smaller radius."""
+    out = precipitation_table1.run(coarse=True)
+    res, mean = out["result"], out["mean"]
     n = res.number_density
     assert 0 < np.argmax(n) < len(n) - 1
     assert res.matrix_fraction[-1] == pytest.approx(0.01, abs=1e-3)
+    np.testing.assert_allclose(mean.times, res.times, rtol=1e-12)
+    window = (res.times >= 1e3) & (res.times <= 3e4)
+    np.testing.assert_allclose(mean.mean_radius[window], res.mean_radius[window], rtol=0.05)
+    np.testing.assert_allclose(mean.number_density[window], res.number_density[window], rtol=0.2)
+    assert mean.mean_radius[-1] < res.mean_radius[-1]
 
 
 @pytest.mark.slow
