@@ -1481,6 +1481,10 @@ Scheil steps going on at ``step`` K from there, so the hand-off is as late as on
 the profile back-diffusion gave it; later primary solid joins the Scheil solids. ``temperature`` must fall;
 other keyword arguments go to :func:`solve_solidification`.
 
+Solids are told apart by phase name. A database that describes the primary solid and the second one with a
+single ordered model, as Dupin's Al-Cr-Ni does gamma and gamma' (pycalphad names both L12_FCC), cannot be
+handed on this way: the primary solid itself would count as the second.
+
 ## `janus_kinetics.solver`
 
 ### `class Boundary(kind: "Literal['no_flux', 'fixed']", composition: 'np.ndarray | Callable | None' = None, held: 'tuple[int, ...] | None' = None) -> None`

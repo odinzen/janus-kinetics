@@ -82,8 +82,10 @@ elements for the primary solid (solve_solidification, between and at the Scheil 
 limits). Dendrite tip operating point for any number of solutes with CALPHAD partition ratios
 and slopes (Kattner, Boettinger and Coriell 1996): done. A second solid from the last liquid:
 done by handing the liquid to Scheil-Gulliver at its onset, as Kattner et al. 1996 do
-(solve_solidification_to_end). Open: the AerMet100 case of Lippard et al. 1998 (commercial
-databases), and measured homogenization data.
+(solve_solidification_to_end); solids are told apart by name, so gamma and gamma' described by one
+ordered model (Dupin's Al-Cr-Ni) cannot yet be separated. Open: telling ordered from disordered
+composition sets of one model, the AerMet100 case of Lippard et al. 1998 (commercial databases), and
+measured homogenization data.
 
 Cylindrical and spherical geometry: done for solve_planar and solve_layers
 (Zener 1949 eq. 12 with lambda = 2, 3; series solutions), and for solve_homogenized

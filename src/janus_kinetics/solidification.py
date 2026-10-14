@@ -446,7 +446,11 @@ def solve_solidification_to_end(db: Database, phases: Sequence[str], solid: Solu
     among them); once another phase takes more than ``threshold`` of it the run is handed on from that state, the
     Scheil steps going on at ``step`` K from there, so the hand-off is as late as one step. The primary solid keeps
     the profile back-diffusion gave it; later primary solid joins the Scheil solids. ``temperature`` must fall;
-    other keyword arguments go to :func:`solve_solidification`."""
+    other keyword arguments go to :func:`solve_solidification`.
+
+    Solids are told apart by phase name. A database that describes the primary solid and the second one with a
+    single ordered model, as Dupin's Al-Cr-Ni does gamma and gamma' (pycalphad names both L12_FCC), cannot be
+    handed on this way: the primary solid itself would count as the second."""
     comps = list(solid.elements)
     primary, liquid_name = solid.lattice.phase_name, liquid.lattice.phase_name
     if primary not in phases or liquid_name not in phases:
