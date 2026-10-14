@@ -92,7 +92,7 @@ derived here; one layer reproduces van Loo's eqs. 25-26).
 
 Graded grids next to moving interfaces: done (graded_faces; 300 graded cells beat 1200 uniform
 ones on Zener's sphere). Layers that nucleate during a run:
-done for solution-phase layers in plates (solve_layers_with_nucleation). Left for later: an adaptive
+done for solution-phase layers in plates, cylinders and spheres (solve_layers_with_nucleation). Left for later: an adaptive
 (on-demand) equilibrium table for four or more elements (done: OnDemandEquilibriumTable,
 isothermal only, as in the paper).
 
@@ -151,7 +151,7 @@ Left for later, each needing a source to be opened first:
 - Layer suppression by interfacial barriers in thin-film couples (Gosele and Tu 1982): done
   for two compounds. Nucleation of a new phase at an interface (d'Heurle 1988): specific thickness and
   the critical lens for any three interface energies, done, and layers that nucleate during a layered
-  run once that barrier falls to a threshold (planar).
+  run once that barrier falls to a threshold (plates, cylinders and spheres).
 - Linear-parabolic oxidation (Deal and Grove 1965): done.
 
 ## Phase 4. Examples, documentation and release preparation (done)

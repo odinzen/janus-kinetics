@@ -12,7 +12,8 @@ on the threshold.
 The layer takes its material from both neighbours, a slab from each side of the interface whose widths are chosen,
 by the lever rule, so that the mixture lies as close as it can to the nucleus composition (exactly, in a binary);
 the new layer starts uniform at that mixture, so every element is conserved. The neighbours are remapped
-conservatively onto their shortened extents. Plates only.
+conservatively onto their shortened extents. In a cylinder or sphere amounts are weighted by r^p dr throughout, so
+conservation is as exact; the mixture there is the lever-rule one only to first order in the slab width.
 """
 
 from __future__ import annotations
@@ -27,7 +28,7 @@ from .interface_nucleation import interface_nucleus
 from .moving_boundary import Layer, LocalEquilibrium, StackResult, graded_faces, solve_layers
 from .phase import SolutionPhase
 from .schedule import Temperature, temperature_at, with_time
-from .solver import Boundary, Diffusivity
+from .solver import Boundary, Diffusivity, Geometry, cell_measures
 
 K_B = 1.380649e-23  # J/K
 N_A = 6.02214076e23  # 1/mol
@@ -110,20 +111,28 @@ class LayeredRun:
         return np.concatenate(times), np.concatenate(widths)
 
     def inventory(self) -> list[np.ndarray]:
-        """Each segment's integral of every independent mole fraction over the stack (planar)."""
+        """Each segment's integral of every independent mole fraction over the stack (r^p dr in a cylinder or sphere)."""
         return [seg.inventory() for seg in self.segments]
 
 
-def _content(faces, x):
+def _measure(r, geometry):
+    """r^(p+1) / (p+1): the amount of a uniform unit profile from 0 to r, per unit area, radian or steradian."""
+    p = {"planar": 0, "cylindrical": 1, "spherical": 2}[geometry]
+    return np.asarray(r, dtype=float) ** (p + 1) / (p + 1)
+
+
+def _content(faces, x, geometry="planar"):
     """Cumulative amount of each element from the first face, at each face (piecewise-constant cells)."""
-    return np.vstack([np.zeros(x.shape[1]), np.cumsum(np.diff(faces)[:, None] * x, axis=0)])
+    return np.vstack([np.zeros(x.shape[1]), np.cumsum(cell_measures(faces, geometry)[:, None] * x, axis=0)])
 
 
-def _remap(faces, x, new_faces):
-    """Conservative cell averages of the piecewise-constant profile (faces, x) on ``new_faces`` inside it."""
-    cum = _content(faces, x)
-    at = np.column_stack([np.interp(new_faces, faces, cum[:, k]) for k in range(x.shape[1])])
-    return np.diff(at, axis=0) / np.diff(new_faces)[:, None]
+def _remap(faces, x, new_faces, geometry="planar"):
+    """Conservative cell averages of the piecewise-constant profile (faces, x) on ``new_faces`` inside it. Within a
+    cell the content is linear in the measure, so interpolating in it is exact."""
+    cum = _content(faces, x, geometry)
+    m, new_m = _measure(faces, geometry), _measure(new_faces, geometry)
+    at = np.column_stack([np.interp(new_m, m, cum[:, k]) for k in range(x.shape[1])])
+    return np.diff(at, axis=0) / np.diff(new_m)[:, None]
 
 
 def _shift_time(fn, t0):
@@ -135,8 +144,8 @@ def solve_layers_with_nucleation(positions, layers: list[Layer], conditions: lis
                                  temperature: Temperature, candidates: Sequence[NucleatingLayer],
                                  check_interval: float, left: Boundary = Boundary.no_flux(),
                                  right: Boundary = Boundary.no_flux(), save_times=None,
-                                 tol: float = 1e-10) -> LayeredRun:
-    """:func:`solve_layers` (planar) in stretches of ``check_interval``, inserting each candidate layer once its
+                                 tol: float = 1e-10, geometry: Geometry = "planar") -> LayeredRun:
+    """:func:`solve_layers` in a plate, cylinder or sphere (``geometry``) in stretches of ``check_interval``, inserting each candidate layer once its
     nucleation barrier at its interface falls to its ``barrier`` (in kT) at the temperature ``temperature`` (the
     one the interface conditions follow). Candidates are indexed by the interfaces of the stack they find; after one
     nucleates, the interfaces to its right shift up by one. Returns the run in segments with the events."""
@@ -163,7 +172,7 @@ def solve_layers_with_nucleation(positions, layers: list[Layer], conditions: lis
             else:
                 shifted_conds.append(c)
         seg = solve_layers(pos, shifted_layers, shifted_conds, t1 - t0, min(dt, t1 - t0), left, right,
-                           save_times=inside if inside.size else None, tol=tol)
+                           save_times=inside if inside.size else None, tol=tol, geometry=geometry)
         seg.times = seg.times + t0
         run.segments.append(seg)
         # carry the state over: positions, profiles on each layer's own fractions, interface compositions
@@ -192,7 +201,7 @@ def solve_layers_with_nucleation(positions, layers: list[Layer], conditions: lis
             if barrier_kt > cand.barrier:
                 k += 1
                 continue
-            pos, layer_list, conds = _insert(pos, layer_list, conds, cand, x_new, temperature)
+            pos, layer_list, conds = _insert(pos, layer_list, conds, cand, x_new, temperature, geometry)
             run.events.append(NucleationEvent(t1, T, i, cand.name, barrier_kt, dgm, x_new))
             del pending[k]
             pending = [NucleatingLayer(**{**p.__dict__, "interface": p.interface + 1}) if p.interface > i else p
@@ -201,7 +210,7 @@ def solve_layers_with_nucleation(positions, layers: list[Layer], conditions: lis
     return run
 
 
-def _insert(pos, layer_list, conds, cand: NucleatingLayer, x_new, temperature):
+def _insert(pos, layer_list, conds, cand: NucleatingLayer, x_new, temperature, geometry="planar"):
     """Carve the new layer out of both sides of interface ``cand.interface``, conserving every element."""
     i = cand.interface
     lo, s, hi = pos[i], pos[i + 1], pos[i + 2]
@@ -215,20 +224,23 @@ def _insert(pos, layer_list, conds, cand: NucleatingLayer, x_new, temperature):
     if h >= 0.5 * min(s - lo, hi - s):
         raise ValueError("the nucleated layer would be thicker than half a neighbouring layer; reduce its thickness")
     # mean compositions of a slab of width h on each side, then the split that brings the mixture closest to x_new
-    xa = _remap(left_faces, xl_prof, np.array([s - h, s]))[0]
-    xb = _remap(right_faces, xr_prof, np.array([s, s + h]))[0]
+    xa = _remap(left_faces, xl_prof, np.array([s - h, s]), geometry)[0]
+    xb = _remap(right_faces, xr_prof, np.array([s, s + h]), geometry)[0]
     target = np.asarray(x_new, dtype=float)[:-1]
     diff = xa - xb
     share = float(np.clip((target - xb) @ diff / max(diff @ diff, 1e-300), 0.05, 0.95))
     h_left, h_right = share * h, (1 - share) * h
-    content = (_content(left_faces, xl_prof)[-1] - np.array([np.interp(s - h_left, left_faces, col) for col in _content(left_faces, xl_prof).T])
-               + np.array([np.interp(s + h_right, right_faces, col) for col in _content(right_faces, xr_prof).T]))
-    x_mix = content / h
+    slab = np.array([s - h_left, s, s + h_right])
+    m = np.diff(_measure(slab, geometry))
+    content = (_remap(left_faces, xl_prof, slab[:2], geometry)[0] * m[0]
+               + _remap(right_faces, xr_prof, slab[1:], geometry)[0] * m[1])
+    x_mix = content / m.sum()
     new_left = lo + (s - h_left - lo) * (left_faces - lo) / (s - lo)
     new_right = s + h_right + (hi - s - h_right) * (right_faces - s) / (hi - s)
     layers = list(layer_list)
-    layers[i] = Layer(_remap(left_faces, xl_prof, new_left), left_l.diffusivity, left_l.name, left_l.faces)
-    layers[i + 1] = Layer(_remap(right_faces, xr_prof, new_right), right_l.diffusivity, right_l.name, right_l.faces)
+    layers[i] = Layer(_remap(left_faces, xl_prof, new_left, geometry), left_l.diffusivity, left_l.name, left_l.faces)
+    layers[i + 1] = Layer(_remap(right_faces, xr_prof, new_right, geometry), right_l.diffusivity, right_l.name,
+                          right_l.faces)
     layers.insert(i + 1, Layer(np.tile(x_mix, (cand.cells, 1)), cand.diffusivity, cand.name,
                                graded_faces(cand.cells, cand.grading, "both")))
     old = conds[i]

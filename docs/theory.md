@@ -480,7 +480,9 @@ independent calculation puts at 897.5 K; the B content is unchanged to 1e-12 thr
 the new layer grows from 2 nm to micrometres. Several phases can appear at one check: each
 insertion shifts the interfaces beyond it, and the remaining candidates are read at their new
 places in the same check. On alpha | gamma | alpha, beta appears at both interfaces at 900 K with
-the same barrier, as the symmetry requires.
+the same barrier, as the symmetry requires. Around an axis or a centre every amount is the
+integral of r^p dr, so insertion and remapping conserve as exactly (1e-12); a core and shell
+of the same couple nucleate beta at the same check, 900 K.
 
 ## Electromigration stress
 

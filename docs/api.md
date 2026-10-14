@@ -631,7 +631,7 @@ be negative stays at zero (the phase is kinetically suppressed); a shrinking lay
 The run in segments, one :class:`StackResult` (times absolute) per stretch with a fixed set of layers, and
 the nucleation events between them.
 
-- `inventory(self) -> 'list[np.ndarray]'`: Each segment's integral of every independent mole fraction over the stack (planar).
+- `inventory(self) -> 'list[np.ndarray]'`: Each segment's integral of every independent mole fraction over the stack (r^p dr in a cylinder or sphere).
 - `thickness(self, name: 'str') -> 'tuple[np.ndarray, np.ndarray]'`: (times, thickness) of the layer called ``name`` over the segments where it exists.
 
 ### `class NucleatingLayer(phase: 'SolutionPhase', interface: 'int', energies: 'tuple[float, float, float]', molar_volume: 'float', diffusivity: 'Diffusivity', name: 'str' = '', cells: 'int' = 20, thickness: 'float' = 2e-09, grading: 'float' = 4.0, barrier: 'float' = 60.0) -> None`
@@ -652,9 +652,9 @@ NucleationEvent(time: 'float', temperature: 'float', interface: 'int', name: 'st
 material at chemical potentials ``potentials`` (J/mol, one per element): the parallel tangent,
 max_x (sum_i x_i mu_i - G_m(x)). Negative when the phase cannot form.
 
-### `def solve_layers_with_nucleation(positions, layers: 'list[Layer]', conditions: 'list', t_end: 'float', dt: 'float', temperature: 'Temperature', candidates: 'Sequence[NucleatingLayer]', check_interval: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10) -> 'LayeredRun'`
+### `def solve_layers_with_nucleation(positions, layers: 'list[Layer]', conditions: 'list', t_end: 'float', dt: 'float', temperature: 'Temperature', candidates: 'Sequence[NucleatingLayer]', check_interval: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, geometry: 'Geometry' = 'planar') -> 'LayeredRun'`
 
-:func:`solve_layers` (planar) in stretches of ``check_interval``, inserting each candidate layer once its
+:func:`solve_layers` in a plate, cylinder or sphere (``geometry``) in stretches of ``check_interval``, inserting each candidate layer once its
 nucleation barrier at its interface falls to its ``barrier`` (in kT) at the temperature ``temperature`` (the
 one the interface conditions follow). Candidates are indexed by the interfaces of the stack they find; after one
 nucleates, the interfaces to its right shift up by one. Returns the run in segments with the events.

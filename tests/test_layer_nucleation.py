@@ -123,18 +123,26 @@ def test_nucleation_needs_local_equilibrium():
         solve_layers_with_nucleation([0.0, 1e-5, 2e-5], layers, [FixedInterface([0.1], [0.9])], 2.0, 1.0, 900.0, [cand], 1.0)
 
 
-def test_remap_is_conservative_on_a_rough_profile():
+@pytest.mark.parametrize("p, geometry", [(0, "planar"), (1, "cylindrical"), (2, "spherical")])
+def test_remap_is_conservative_on_a_rough_profile(p, geometry):
     """Cell averages over new faces inside the old extent carry exactly the content between them, whatever the
-    profile: a jagged two-element profile on uneven cells, remapped onto a shorter uneven grid."""
+    profile: a jagged two-element profile on uneven cells, remapped onto a shorter uneven grid, the content of a
+    piece being x times the integral of r^p dr over it."""
     rng = np.random.default_rng(3)
     faces = np.concatenate([[0.0], np.cumsum(rng.uniform(0.5, 2.0, 30))])
     x = rng.uniform(0.0, 1.0, (30, 2))
     new = np.sort(rng.uniform(faces[0], faces[-1] * 0.8, 12))
-    out = _remap(faces, x, new)
+    out = _remap(faces, x, new, geometry)
+
+    def integral(a, b):
+        return (b ** (p + 1) - a ** (p + 1)) / (p + 1)
+
     for k in range(2):
-        exact = [np.sum(np.clip(np.minimum(faces[1:], b) - np.maximum(faces[:-1], a), 0, None) * x[:, k])
-                 for a, b in zip(new[:-1], new[1:])]
-        np.testing.assert_allclose(out[:, k] * np.diff(new), exact, rtol=1e-12, atol=1e-15)
+        exact = []
+        for a, b in zip(new[:-1], new[1:]):
+            lo, hi = np.maximum(faces[:-1], a), np.minimum(faces[1:], b)
+            exact.append(np.sum(np.where(hi > lo, integral(lo, np.maximum(hi, lo)), 0.0) * x[:, k]))
+        np.testing.assert_allclose(out[:, k] * integral(new[:-1], new[1:]), exact, rtol=1e-12, atol=1e-15)
 
 
 def test_inserted_layer_starts_at_the_nucleus_composition():
@@ -178,3 +186,48 @@ def test_two_layers_nucleating_at_one_check():
     assert run.segments[-1].names == ("alpha", "beta_left", "gamma", "beta_right", "alpha2")
     totals = np.concatenate([inv[:, 0] for inv in run.inventory()])
     np.testing.assert_allclose(totals, totals[0], rtol=1e-12)
+
+
+@pytest.mark.parametrize("geometry", ["cylindrical", "spherical"])
+def test_insertion_around_an_axis_or_centre_conserves(geometry):
+    """Inserting at r = 1 um between uneven profiles keeps every element's r^p dr integral to 1e-12, and the new
+    layer's composition is the nucleus one to first order in its width over the radius."""
+    alpha, gamma, beta = _phases()
+    pos = np.array([0.0, 1e-6, 2e-6])
+    layers = [Layer(np.linspace(0.05, 0.12, 10), np.eye(1) * 1e-15, "alpha"),
+              Layer(np.linspace(0.68, 0.75, 10), np.eye(1) * 1e-15, "gamma")]
+    conds = [LocalEquilibrium(alpha, gamma, 900.0, [0.25], [0.75])]
+    cand = NucleatingLayer(beta, 0, SIGMA, VM, np.eye(1) * 1e-14, "beta", cells=6, thickness=3e-8)
+    new_pos, new_layers, _ = _insert(pos, layers, conds, cand, np.array([0.5, 0.5]), 900.0, geometry)
+    p = {"cylindrical": 1, "spherical": 2}[geometry]
+
+    def amount(bounds, lays):
+        total = 0.0
+        for lo, hi, lay in zip(bounds[:-1], bounds[1:], lays):
+            x0 = np.ravel(lay.x0)
+            f = lo + (hi - lo) * np.asarray(lay.faces if lay.faces is not None else np.linspace(0, 1, len(x0) + 1))
+            total += np.sum((f[1:] ** (p + 1) - f[:-1] ** (p + 1)) / (p + 1) * x0)
+        return total
+
+    assert amount(new_pos, new_layers) == pytest.approx(amount(pos, layers), rel=1e-12)
+    assert np.ravel(new_layers[1].x0)[0] == pytest.approx(0.5, abs=0.5 * 3e-8 / 1e-6)
+
+
+@pytest.mark.parametrize("geometry", ["cylindrical", "spherical"])
+def test_nucleation_around_an_axis_or_centre(geometry):
+    """The heated couple as a core and shell: the interface compositions follow the same tie-line, so beta appears
+    at the same check, 900 K, and the B integral (r^p dr) is kept to 1e-12 through the insertion and the run."""
+    alpha, gamma, beta = _phases()
+    xa, xg = _tie(500.0)
+    layers = [Layer(np.full(40, 0.05), np.eye(1) * 1e-15, "alpha", graded_faces(40, 20, "right")),
+              Layer(np.full(40, 0.95), np.eye(1) * 1e-15, "gamma", graded_faces(40, 20, "left"))]
+    cand = NucleatingLayer(beta, 0, SIGMA, VM, np.eye(1) * 1e-14, "beta", cells=20, thickness=2e-9, barrier=60.0)
+    run = solve_layers_with_nucleation([0.0, LENGTH / 2, LENGTH], layers, [LocalEquilibrium(alpha, gamma, HEAT, xa, xg)],
+                                       480.0, 1.0, HEAT, [cand], 5.0, save_times=np.arange(10.0, 480.0, 10.0),
+                                       geometry=geometry)
+    assert len(run.events) == 1 and run.events[0].temperature == pytest.approx(900.0, abs=1e-9)
+    assert run.segments[-1].geometry == geometry
+    totals = np.concatenate([inv[:, 0] for inv in run.inventory()])
+    np.testing.assert_allclose(totals, totals[0], rtol=1e-12)
+    t, w = run.thickness("beta")
+    assert w[-1] > 10 * w[0]
