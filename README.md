@@ -89,9 +89,9 @@ Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
   Kobayashi's exact Brody-Flemings solution, a back-diffusion solidification model
   in a plate, cylinder or sphere, solidification with back-diffusion and CALPHAD
   tie-lines for any number of elements (between the Scheil and lever-rule limits,
-  which it reproduces), the dendrite tip's radius, liquid and temperature for any number
-  of solutes with CALPHAD partition ratios and slopes (Kattner et al. 1996), and the anneal
-  that removes the segregation.
+  which it reproduces) and on into a eutectic or other second solid, the dendrite tip's
+  radius, liquid and temperature for any number of solutes with CALPHAD partition ratios
+  and slopes (Kattner et al. 1996), and the anneal that removes the segregation.
 - **Homogenization model** for diffusion through multiphase mixtures (Larsson and
   Hoglund 2009), with local equilibrium tabulated up front for binaries and
   ternaries or computed on demand for any number of elements (their section 2.5).

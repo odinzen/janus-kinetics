@@ -297,6 +297,7 @@ class SolidificationResult:
     solid_faces: list
     solid: list
     finished: bool
+    stopped: bool = False
 
 
 def equilibrium_start(db: Database, components: Sequence[str], solid_phase: str, liquid_phase: str,
@@ -321,7 +322,8 @@ def solve_solidification(solid: SolutionPhase, liquid: SolutionPhase, temperatur
                          t_end: float, length: float, start: tuple[float, Sequence[float], Sequence[float]],
                          solid_diffusivity=None, cells: int = 200, grading: float = 20.0, dt: float = 0.05,
                          save_times=None, geometry: Geometry = "planar", liquid_diffusivity: float = 1e-6,
-                         liquid_cells: int = 4, tol: float = 1e-8, tolerance: float | None = None) -> SolidificationResult:
+                         liquid_cells: int = 4, tol: float = 1e-8, tolerance: float | None = None,
+                         stop: Callable[[float, float, np.ndarray], bool] | None = None) -> SolidificationResult:
     """Solidification with back-diffusion in the solid and local equilibrium at its interface with the liquid, for
     any number of elements, the volume-element calculation of DICTRA's solidification runs (Borgenstam et al.,
     J. Phase Equilib. 21 (2000) 269; Lippard et al., Metall. Mater. Trans. B 29 (1998) 205). The primary solid
@@ -333,10 +335,11 @@ def solve_solidification(solid: SolutionPhase, liquid: SolutionPhase, temperatur
     ``start`` is (fraction solid, solid and liquid independent mole fractions) at t = 0, for instance
     :func:`equilibrium_start` a little below the liquidus. ``solid_diffusivity`` is a constant matrix or a callable
     of (x) or (x, t); by default the solid's own interdiffusion matrix at the current temperature. The solid's
-    ``cells`` are graded ``grading``:1 toward the interface. Only the primary solid forms: a run that should form a
-    second solid (a eutectic) is beyond it. When the liquid runs out the run stops and returns what it has
+    ``cells`` are graded ``grading``:1 toward the interface. Only the primary solid forms here; for a run that goes on
+    to a second solid (a eutectic) see :func:`solve_solidification_to_end`. When the liquid runs out the run stops and returns what it has
     (``finished``). With no diffusion in the solid it follows the Scheil-Gulliver path, with fast diffusion the
-    lever rule.
+    lever rule. ``stop(t, T, liquid)``, if given, is asked at each save time and ends the run when it returns True
+    (``stopped``); :func:`solve_solidification_to_end` uses it to hand a run on once a second solid appears.
     """
     f0, xs0, xl0 = start
     xs0, xl0 = np.atleast_1d(np.asarray(xs0, dtype=float)), np.atleast_1d(np.asarray(xl0, dtype=float))
@@ -355,10 +358,18 @@ def solve_solidification(solid: SolutionPhase, liquid: SolutionPhase, temperatur
     layers = [Layer(np.tile(xs0, (cells, 1)), solid_diffusivity, "solid", graded_faces(cells, grading, "right")),
               Layer(np.tile(xl0, (liquid_cells, 1)), np.eye(m) * liquid_diffusivity, "liquid")]
     cond = [LocalEquilibrium(solid, liquid, temperature, xs0, xl0)]
-    finished = False
+    finished, stopped = False, []
+
+    def ask(state):
+        w = cell_measures(state.faces[1][0], geometry)
+        if stop(float(state.times[0]), float(temperature(state.times[0])), w @ state.x[1][0] / w.sum()):
+            stopped.append(True)
+            return True
+        return False
+
     try:
         res = solve_layers([0.0, s0, length], layers, cond, t_end, dt, save_times=save_times, tol=tol,
-                           geometry=geometry, tolerance=tolerance)
+                           geometry=geometry, tolerance=tolerance, stop=None if stop is None else ask)
     except (PhaseDissolvedError, ConvergenceError) as err:
         # the liquid running out ends solidification; any other failure is passed on
         if "liquid" not in str(err):
@@ -367,4 +378,102 @@ def solve_solidification(solid: SolutionPhase, liquid: SolutionPhase, temperatur
     widths = cell_measures(np.moveaxis(res.faces[1], 0, -1), geometry)
     liquid_x = np.einsum("it,tik->tk", widths, res.x[1]) / widths.sum(axis=0)[:, None]
     return SolidificationResult(res.times, temperature(res.times), (res.interfaces[:, 0] / length) ** (p + 1),
-                                liquid_x, res.interface_left[:, 0], list(res.faces[0]), list(res.x[0]), finished)
+                                liquid_x, res.interface_left[:, 0], list(res.faces[0]), list(res.x[0]), finished,
+                                bool(stopped))
+
+
+@dataclass
+class CompleteSolidification:
+    """A back-diffusion run handed on to a Scheil-Gulliver path once a second solid appears: the run up to the
+    hand-off, the Scheil part from there (its fractions are of the liquid left at the hand-off, or None if no second
+    solid formed), the hand-off temperature, and the run's geometry and volume element."""
+
+    back_diffusion: SolidificationResult
+    scheil: ScheilResult | None
+    handoff_temperature: float | None
+    primary: str
+    length: float
+    geometry: Geometry
+
+    def _liquid_left(self) -> float:
+        return 1.0 - float(self.back_diffusion.fraction_solid[-1])
+
+    @property
+    def temperatures(self) -> np.ndarray:
+        if self.scheil is None:
+            return self.back_diffusion.temperature
+        return np.concatenate([self.back_diffusion.temperature, self.scheil.temperatures[1:]])
+
+    @property
+    def fraction_solid(self) -> np.ndarray:
+        """Fraction of the element solid along the whole path."""
+        if self.scheil is None:
+            return self.back_diffusion.fraction_solid
+        f = self._liquid_left()
+        return np.concatenate([self.back_diffusion.fraction_solid, 1 - f + f * self.scheil.fraction_solid[1:]])
+
+    def phase_fractions(self) -> dict:
+        """Amount of each solid phase at the end, as a fraction of the element."""
+        out = {self.primary: float(self.back_diffusion.fraction_solid[-1])}
+        if self.scheil is not None:
+            for name, amount in self.scheil.solid_phase_fractions().items():
+                out[name] = out.get(name, 0.0) + self._liquid_left() * amount
+        return out
+
+    def mean_composition(self) -> np.ndarray:
+        """Independent mole fractions of everything in the element (solids and any liquid left), which the run
+        conserves: the primary solid's profile at the hand-off, each Scheil solid, and the last liquid."""
+        bd = self.back_diffusion
+        total = cell_measures(np.array([0.0, self.length]), self.geometry)[0]
+        x = cell_measures(bd.solid_faces[-1], self.geometry) @ bd.solid[-1] / total
+        if self.scheil is None:
+            return x + self._liquid_left() * bd.liquid[-1]
+        f = self._liquid_left()
+        for step in self.scheil.solids:
+            for _, amount, xs in step:
+                x = x + f * amount * np.asarray(xs)[:-1]
+        return x + f * (1 - self.scheil.fraction_solid[-1]) * self.scheil.liquid_composition[-1]
+
+
+def solve_solidification_to_end(db: Database, phases: Sequence[str], solid: SolutionPhase, liquid: SolutionPhase,
+                                temperature: TemperatureSchedule, t_end: float, length: float,
+                                start: tuple[float, Sequence[float], Sequence[float]], step: float = 1.0,
+                                threshold: float = 1e-6, **kwargs) -> CompleteSolidification:
+    """:func:`solve_solidification` until the liquid would form a solid other than the primary one, then the
+    Scheil-Gulliver path of the liquid left, as Kattner, Boettinger and Coriell, Z. Metallkd. 87 (1996) 522, treat
+    the eutectic (p. 525): 'During eutectic solidification, solid diffusion was neglected.' At every ``step`` K of
+    cooling the liquid is equilibrated alone with ``phases`` (pycalphad names, the liquid's and the primary solid's
+    among them); once another phase takes more than ``threshold`` of it the run is handed on from that state, the
+    Scheil steps going on at ``step`` K from there, so the hand-off is as late as one step. The primary solid keeps
+    the profile back-diffusion gave it; later primary solid joins the Scheil solids. ``temperature`` must fall;
+    other keyword arguments go to :func:`solve_solidification`."""
+    comps = list(solid.elements)
+    primary, liquid_name = solid.lattice.phase_name, liquid.lattice.phase_name
+    if primary not in phases or liquid_name not in phases:
+        raise ValueError(f"phases must include the primary solid {primary} and the liquid {liquid_name}")
+    times = np.linspace(0.0, t_end, 20001)
+    temps = temperature(times)
+    if np.any(np.diff(temps) > 0):
+        raise ValueError("the temperature must not rise during solidification")
+    targets = np.arange(temps[0] - step, temps[-1], -step)
+    # the time each target temperature is reached, from the falling schedule
+    checks = np.interp(-targets, -temps, times)
+    checks = np.unique(checks[(checks > 0) & (checks < t_end)])
+    if "save_times" in kwargs:
+        raise ValueError("the save times are the checks, one every step K; set step instead")
+    others = [ph for ph in phases if ph not in (primary, liquid_name)]
+
+    def second_solid(t, T, x):
+        eq = equilibrium(db, comps + ["VA"], list(phases),
+                         {v.T: T, v.P: 101325, v.N: 1, **{v.X(c): xi for c, xi in zip(comps[:-1], x)}})
+        names = [str(p) for p in np.ravel(eq.Phase.values)]
+        return sum(a for n, a in zip(names, np.ravel(eq.NP.values)) if n in others) > threshold
+
+    run = solve_solidification(solid, liquid, temperature, t_end, length, start, save_times=checks,
+                               stop=second_solid if others else None, **kwargs)
+    geometry = kwargs.get("geometry", "planar")
+    if not run.stopped:
+        return CompleteSolidification(run, None, None, primary, length, geometry)
+    T = float(run.temperature[-1])
+    scheil = scheil_gulliver(db, comps, phases, run.liquid[-1], T + step, step, liquid=liquid_name, t_min=float(temps[-1]))
+    return CompleteSolidification(run, scheil, T, primary, length, geometry)

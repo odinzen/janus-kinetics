@@ -477,7 +477,11 @@ remapped conservatively. In d'Heurle's own scenario, a couple heated at 1 K/s pa
 phase between its sides gains enough driving force (here 1.3 kJ/mol at 500 K to 4.4 at 900 K, as NiSi2
 gains in his Table III), the phase appears at the first check after its barrier reaches 60 kT, which an
 independent calculation puts at 897.5 K; the B content is unchanged to 1e-12 through the insertion and
-the new layer grows from 2 nm to micrometres.
+the new layer grows from 2 nm to micrometres. Several phases can appear at one check: each
+insertion shifts the interfaces beyond it, and the remaining candidates are read at their new
+places in the same check. On alpha | gamma | alpha, beta appears at both interfaces at 900 K with
+the same barrier, as the symmetry requires.
+
 ## Electromigration stress
 
 In a metal line held by a rigid passivation the electron wind moves atoms along the
@@ -897,9 +901,16 @@ solid and the liquid follow pycalphad's Scheil-Gulliver path within 1e-3 down to
 plate and around a cylinder alike; with fast diffusion in the solid the fraction solid is
 the lever rule's within 3e-3 and the liquid runs out at the equilibrium solidus. In between
 it lies between them and rises with the solid diffusivity, and every element is conserved to
-1e-9. Only the primary solid forms; a second solid (a eutectic, or Lippard et al.'s carbides)
-is beyond it, as are the AerMet100 data of Lippard et al. (1998), which need commercial
-databases.
+1e-9. A second solid (a eutectic, or Lippard et al.'s carbides) is handled as Kattner,
+Boettinger and Coriell (1996) handle the Laves eutectic in IN718: solid diffusion is neglected
+from its start. Every step K of cooling the remaining liquid is equilibrated alone with all the
+phases; once another solid would take part of it the run hands that liquid to the
+Scheil-Gulliver path, while the primary solid keeps its back-diffused profile. On a binary with
+k = 0.2 and a B-rich solid that forms from liquid of about half B, the frozen-solid run ends in
+the eutectic fraction of the closed-form Scheil equation within 1 % (2 K steps), with fast
+diffusion the liquid runs out at the solidus (0.25 B) and no second solid forms, in between the
+second solid shrinks as the solid diffusivity rises, and every run keeps the solute to 1e-9 (1e-8
+around a cylinder). The AerMet100 data of Lippard et al. (1998) need commercial databases.
 
 ## Dendrite tip
 

@@ -58,6 +58,11 @@ First version.
 - Solidification with back-diffusion in the solid and CALPHAD tie-lines for any number of elements
   (`solve_solidification`), checked against the Scheil-Gulliver and lever-rule limits;
   `SolutionPhase(mobilities=False)` for a phase used for its thermodynamics alone.
+- Two candidate layers reaching the nucleation threshold at one check: the second was read at its old interface
+  index and came a check late; both now nucleate in that check.
+- Back-diffusion solidification that goes on into a second solid (`solve_solidification_to_end`), handing the
+  last liquid to Scheil-Gulliver at its onset as Kattner et al. (1996) do; `stop` hooks on `solve_layers` and
+  `solve_solidification`.
 - Dendrite tip operating point for any number of solutes (Kattner, Boettinger and Coriell 1996), with
   partition ratios and liquidus slopes from the solid-liquid equilibrium; Whipple's (1954) contour angles,
   penetration ratios and asymptote checked against his paper.

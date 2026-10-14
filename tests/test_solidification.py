@@ -396,3 +396,119 @@ def test_clyne_kurz_table_1():
     table = [(2.6, 0.42), (2.5, 0.415), (2.4, 0.41), (2.1, 0.40), (1.9, 0.395), (1.8, 0.39)]
     for alpha, printed in table:
         assert _clyne_kurz_omega(alpha) == pytest.approx(printed, abs=0.005)
+
+
+# --- a second solid: Kattner, Boettinger and Coriell, Z. Metallkd. 87 (1996) 522 -----------------------------
+
+from scipy.optimize import fsolve  # noqa: E402
+
+from janus_kinetics.solidification import solve_solidification_to_end  # noqa: E402
+from janus_kinetics.thermo import R  # noqa: E402
+
+# the constant-k binary above (k = 0.2, A melting at 1000 K) with a B-rich solid BETA whose B is worth
+# R T ln 0.1: it forms once the liquid holds about half B, so Scheil freezing ends in a eutectic and the
+# equilibrium solidus (liquid 0.25 B) is reached first
+EUTECTIC = CONSTANT_K + """
+PHASE BETA % 1 1 !
+CONSTITUENT BETA :A,B: !
+PARAMETER G(BETA,A;0) 298.15 30000; 6000 N !
+PARAMETER G(BETA,B;0) 298.15 R*T*LN(0.1); 6000 N !
+"""
+_EUT_PHASES = ["LIQUID", "FCC", "BETA"]
+_EUT_COOLING = TemperatureSchedule([0.0, 400.0], [965.0, 565.0])
+
+
+@functools.lru_cache(maxsize=None)
+def _eutectic(ds, geometry="planar"):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        db = Database(EUTECTIC)
+        fcc = SolutionPhase(db, "FCC", ["B", "A"], mobilities=False)
+        liq = SolutionPhase(db, "LIQUID", ["B", "A"], mobilities=False)
+        start = equilibrium_start(db, ["B", "A"], "FCC", "LIQUID", [0.05], 965.0)
+        return solve_solidification_to_end(db, _EUT_PHASES, fcc, liq, _EUT_COOLING, 400.0, _LENGTH, start, step=2.0,
+                                           solid_diffusivity=np.eye(1) * ds, cells=60, dt=0.2, geometry=geometry)
+
+
+def _eutectic_point():
+    """Liquid, BETA and temperature of the eutectic, by hand: equal B and A potentials in liquid, FCC (B at 0.2
+    x_L) and BETA."""
+    def eqs(v):
+        xl, xb, T = v
+        rt = R * T
+        return [np.log(0.2 * xl) - np.log(0.1) - np.log(xb),
+                (10000 - 10 * T) / rt + np.log(1 - xl) - np.log(1 - 0.2 * xl),
+                (10000 - 10 * T) / rt + np.log(1 - xl) - 30000 / rt - np.log(1 - xb)]
+    return fsolve(eqs, [0.5, 0.99, 670.0], xtol=1e-13)
+
+
+def test_frozen_solid_ends_in_the_scheil_eutectic():
+    """With no diffusion in the solid the run is handed on within one 2 K step below the eutectic and the BETA it
+    leaves is the Scheil value: the liquid reaches x_E at f_L = (x_E / x0)^(1 / (k - 1)) and freezes as FCC
+    (0.2 x_E) and BETA, giving BETA f_L (x_E - 0.2 x_E) / (x_B,BETA - 0.2 x_E), within 1 %."""
+    xe, xb, te = _eutectic_point()
+    assert 0.49 < xe < 0.5 and xb > 0.99
+    res = _eutectic(1e-20)
+    assert te - 2.0 <= res.handoff_temperature <= te
+    f_liquid = (xe / 0.05) ** (1 / (0.2 - 1))
+    beta = f_liquid * 0.8 * xe / (xb - 0.2 * xe)
+    phases = res.phase_fractions()
+    assert phases["BETA"] == pytest.approx(beta, rel=0.01)
+    assert sum(phases.values()) == pytest.approx(1.0, abs=1e-9)
+    assert res.fraction_solid[-1] == pytest.approx(1.0, abs=1e-9)
+    # the Scheil steps pick up at the hand-off temperature itself, one step after the last check
+    assert res.scheil.temperatures[1] == pytest.approx(res.handoff_temperature, abs=1e-9)
+    assert np.all(np.diff(res.temperatures) <= 0) and np.max(-np.diff(res.temperatures)) <= 2.0 + 1e-6
+
+
+def test_fast_solid_diffusion_never_reaches_the_eutectic():
+    """With D = 1e-9 m^2/s the solid stays uniform, the liquid runs out at the equilibrium solidus with 0.25 B,
+    about 836 K, and no BETA forms, as Kattner et al. find for the Laves phase in IN718 by the lever rule."""
+    res = _eutectic(1e-9)
+    assert res.scheil is None and res.handoff_temperature is None
+    assert res.back_diffusion.finished and set(res.phase_fractions()) == {"FCC"}
+    assert res.back_diffusion.liquid[-1, 0] == pytest.approx(0.25, abs=0.01)
+
+
+def test_less_eutectic_with_more_back_diffusion_and_the_solute_is_kept():
+    """BETA falls as the solid diffusivity rises (their Fig. 1: at a sixth of the arm spacing the Laves phase does
+    not form), and every run keeps the alloy's B to 1e-9 (1e-8 around a cylinder, the solver tolerance)."""
+    beta = [_eutectic(ds).phase_fractions().get("BETA", 0.0) for ds in (1e-20, 1e-13, 4e-13, 1e-9)]
+    assert beta[0] > beta[1] > beta[2] > beta[3] == 0.0
+    for ds in (1e-20, 1e-13, 4e-13, 1e-9):
+        np.testing.assert_allclose(_eutectic(ds).mean_composition(), [0.05], rtol=1e-9)
+    cylinder = _eutectic(1e-13, "cylindrical")
+    assert cylinder.scheil is not None
+    np.testing.assert_allclose(cylinder.mean_composition(), [0.05], rtol=1e-8)
+
+
+def test_stop_ends_a_run_where_asked():
+    """A stop at the first save below 940 K ends the run there; up to it the run is the unstopped one."""
+    db, solid, liquid = _toy()
+    start = equilibrium_start(db, ["B", "C", "A"], "FCC", "LIQUID", _TOY_ALLOY, 1672.0)
+    saves = np.arange(2.0, 40.0, 2.0)
+    kwargs = dict(solid_diffusivity=np.eye(2) * 1e-12, cells=30, dt=0.1, save_times=saves)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        full = solve_solidification(solid, liquid, _COOLING, 40.0, _LENGTH, start, **kwargs)
+        cut = solve_solidification(solid, liquid, _COOLING, 40.0, _LENGTH, start, stop=lambda t, T, x: T < 1655.0,
+                                   **kwargs)
+    assert cut.stopped and not full.stopped
+    n = len(cut.times)
+    assert cut.temperature[-1] < 1655.0 <= cut.temperature[-2]
+    np.testing.assert_allclose(cut.fraction_solid, full.fraction_solid[:n], rtol=1e-12)
+    np.testing.assert_allclose(cut.liquid, full.liquid[:n], rtol=1e-12)
+
+
+def test_eutectic_inputs_are_checked():
+    db = Database(EUTECTIC)
+    fcc = SolutionPhase(db, "FCC", ["B", "A"], mobilities=False)
+    liq = SolutionPhase(db, "LIQUID", ["B", "A"], mobilities=False)
+    start = (0.05, [0.01], [0.05])
+    with pytest.raises(ValueError, match="primary solid"):
+        solve_solidification_to_end(db, ["LIQUID", "BETA"], fcc, liq, _EUT_COOLING, 400.0, _LENGTH, start)
+    with pytest.raises(ValueError, match="rise"):
+        solve_solidification_to_end(db, _EUT_PHASES, fcc, liq, TemperatureSchedule([0.0, 10.0], [900.0, 950.0]),
+                                    10.0, _LENGTH, start)
+    with pytest.raises(ValueError, match="save times"):
+        solve_solidification_to_end(db, _EUT_PHASES, fcc, liq, _EUT_COOLING, 400.0, _LENGTH, start, save_times=[1.0])

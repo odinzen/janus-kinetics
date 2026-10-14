@@ -744,7 +744,7 @@ from the ``toward`` end (or both ends), the widest ``ratio`` times the narrowest
 flux from the composition gradient over the first half cell, first-order accurate in that width, so fine
 cells beside it buy accuracy where it is spent; ``ratio = 1`` is the uniform grid.
 
-### `def solve_layers(positions, layers: 'list[Layer]', conditions: 'list', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50, geometry: 'Geometry' = 'planar', tolerance: 'float | None' = None) -> 'StackResult'`
+### `def solve_layers(positions, layers: 'list[Layer]', conditions: 'list', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50, geometry: 'Geometry' = 'planar', tolerance: 'float | None' = None, stop: 'Callable[[StackResult], bool] | None' = None) -> 'StackResult'`
 
 Integrate diffusion through a stack of phase layers with moving interfaces, in a plate (default)
 or in concentric shells of a long cylinder or a sphere (``geometry``), positions then being radii.
@@ -764,6 +764,9 @@ fraction and each interface position in thicknesses of the thinner layer beside 
 thin reaction layer is followed as closely as a thick one. A step that does not converge,
 or in which a layer seems to vanish while it still holds 2 % of its first thickness, is
 halved and redone.
+
+``stop``, if given, is called at each save time with that one saved state (a StackResult of
+length 1); the run ends there, returning what it has, once it returns True.
 
 ### `def solve_moving_boundary(length: 'float', interface: 'float', x0_left, x0_right, d_left: 'Diffusivity', d_right: 'Diffusivity', condition: 'FixedInterface | LocalEquilibrium', t_end: 'float', dt: 'float', left: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), right: 'Boundary' = Boundary(kind='no_flux', composition=None, held=None), save_times=None, tol: 'float' = 1e-10, picard_tol: 'float' = 1e-10, max_newton: 'int' = 30, max_picard: 'int' = 50, geometry: 'Geometry' = 'planar', tolerance: 'float | None' = None, grading: 'float' = 1.0) -> 'MovingBoundaryResult'`
 
@@ -1334,6 +1337,16 @@ with the solid profile (positions in m, compositions over C0) at the end.
 
 - `mean_solid(self) -> 'float'`: Average composition of the solid over C0 at the end; with no liquid left this is 1 by mass balance.
 
+### `class CompleteSolidification(back_diffusion: 'SolidificationResult', scheil: 'ScheilResult | None', handoff_temperature: 'float | None', primary: 'str', length: 'float', geometry: 'Geometry') -> None`
+
+A back-diffusion run handed on to a Scheil-Gulliver path once a second solid appears: the run up to the
+hand-off, the Scheil part from there (its fractions are of the liquid left at the hand-off, or None if no second
+solid formed), the hand-off temperature, and the run's geometry and volume element.
+
+- `fraction_solid` (property): Fraction of the element solid along the whole path.
+- `mean_composition(self) -> 'np.ndarray'`: Independent mole fractions of everything in the element (solids and any liquid left), which the run
+- `phase_fractions(self) -> 'dict'`: Amount of each solid phase at the end, as a fraction of the element.
+
 ### `class ScheilResult(temperatures: 'np.ndarray', fraction_solid: 'np.ndarray', liquid_composition: 'np.ndarray', solids: 'list', components: 'tuple') -> None`
 
 Temperatures (K), fraction solid, liquid mole fractions (n_T, n) and the solid formed at each step:
@@ -1343,7 +1356,7 @@ mole fractions.
 - `increments(self) -> 'tuple[np.ndarray, np.ndarray]'`: (fraction-solid edges, independent mole fractions of the solid laid down in each step), the input
 - `solid_phase_fractions(self) -> 'dict'`: Amount of each solid phase formed over the whole path, as a fraction of the alloy.
 
-### `class SolidificationResult(times: 'np.ndarray', temperature: 'np.ndarray', fraction_solid: 'np.ndarray', liquid: 'np.ndarray', interface_solid: 'np.ndarray', solid_faces: 'list', solid: 'list', finished: 'bool') -> None`
+### `class SolidificationResult(times: 'np.ndarray', temperature: 'np.ndarray', fraction_solid: 'np.ndarray', liquid: 'np.ndarray', interface_solid: 'np.ndarray', solid_faces: 'list', solid: 'list', finished: 'bool', stopped: 'bool' = False) -> None`
 
 Times (s), temperatures (K), fraction solid (by volume of the element), the liquid's mole fractions (t, n-1),
 the interface solid's (t, n-1), the solid's faces (m) and compositions at each saved time, and whether the
@@ -1398,7 +1411,7 @@ composition from the element's solute balance. The solid's response is linear in
 value, so two solves give the exact C_L of the step. The run starts at ``fs_start`` with the solid at
 k C0 (the Scheil and exact solutions agree there to order f_s). Compositions are over C0.
 
-### `def solve_solidification(solid: 'SolutionPhase', liquid: 'SolutionPhase', temperature: 'TemperatureSchedule', t_end: 'float', length: 'float', start: 'tuple[float, Sequence[float], Sequence[float]]', solid_diffusivity=None, cells: 'int' = 200, grading: 'float' = 20.0, dt: 'float' = 0.05, save_times=None, geometry: 'Geometry' = 'planar', liquid_diffusivity: 'float' = 1e-06, liquid_cells: 'int' = 4, tol: 'float' = 1e-08, tolerance: 'float | None' = None) -> 'SolidificationResult'`
+### `def solve_solidification(solid: 'SolutionPhase', liquid: 'SolutionPhase', temperature: 'TemperatureSchedule', t_end: 'float', length: 'float', start: 'tuple[float, Sequence[float], Sequence[float]]', solid_diffusivity=None, cells: 'int' = 200, grading: 'float' = 20.0, dt: 'float' = 0.05, save_times=None, geometry: 'Geometry' = 'planar', liquid_diffusivity: 'float' = 1e-06, liquid_cells: 'int' = 4, tol: 'float' = 1e-08, tolerance: 'float | None' = None, stop: 'Callable[[float, float, np.ndarray], bool] | None' = None) -> 'SolidificationResult'`
 
 Solidification with back-diffusion in the solid and local equilibrium at its interface with the liquid, for
 any number of elements, the volume-element calculation of DICTRA's solidification runs (Borgenstam et al.,
@@ -1411,10 +1424,22 @@ equilibrium at the current temperature, and nothing leaves the element.
 ``start`` is (fraction solid, solid and liquid independent mole fractions) at t = 0, for instance
 :func:`equilibrium_start` a little below the liquidus. ``solid_diffusivity`` is a constant matrix or a callable
 of (x) or (x, t); by default the solid's own interdiffusion matrix at the current temperature. The solid's
-``cells`` are graded ``grading``:1 toward the interface. Only the primary solid forms: a run that should form a
-second solid (a eutectic) is beyond it. When the liquid runs out the run stops and returns what it has
+``cells`` are graded ``grading``:1 toward the interface. Only the primary solid forms here; for a run that goes on
+to a second solid (a eutectic) see :func:`solve_solidification_to_end`. When the liquid runs out the run stops and returns what it has
 (``finished``). With no diffusion in the solid it follows the Scheil-Gulliver path, with fast diffusion the
-lever rule.
+lever rule. ``stop(t, T, liquid)``, if given, is asked at each save time and ends the run when it returns True
+(``stopped``); :func:`solve_solidification_to_end` uses it to hand a run on once a second solid appears.
+
+### `def solve_solidification_to_end(db: 'Database', phases: 'Sequence[str]', solid: 'SolutionPhase', liquid: 'SolutionPhase', temperature: 'TemperatureSchedule', t_end: 'float', length: 'float', start: 'tuple[float, Sequence[float], Sequence[float]]', step: 'float' = 1.0, threshold: 'float' = 1e-06, **kwargs) -> 'CompleteSolidification'`
+
+:func:`solve_solidification` until the liquid would form a solid other than the primary one, then the
+Scheil-Gulliver path of the liquid left, as Kattner, Boettinger and Coriell, Z. Metallkd. 87 (1996) 522, treat
+the eutectic (p. 525): 'During eutectic solidification, solid diffusion was neglected.' At every ``step`` K of
+cooling the liquid is equilibrated alone with ``phases`` (pycalphad names, the liquid's and the primary solid's
+among them); once another phase takes more than ``threshold`` of it the run is handed on from that state, the
+Scheil steps going on at ``step`` K from there, so the hand-off is as late as one step. The primary solid keeps
+the profile back-diffusion gave it; later primary solid joins the Scheil solids. ``temperature`` must fall;
+other keyword arguments go to :func:`solve_solidification`.
 
 ## `janus_kinetics.solver`
 

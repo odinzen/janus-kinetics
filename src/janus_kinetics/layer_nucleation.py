@@ -175,22 +175,26 @@ def solve_layers_with_nucleation(positions, layers: list[Layer], conditions: lis
                  if isinstance(c, LocalEquilibrium) else c for i, c in enumerate(conds)]
         pos = np.array(bounds)
         T = temperature_at(temperature, t1)
-        for cand in list(pending):
+        # walk the pending list by position: an insertion shifts the interfaces of those after it, and they must be
+        # read at their new indices in this same check
+        k = 0
+        while k < len(pending):
+            cand = pending[k]
             i = cand.interface
             c = conds[i]
             if not isinstance(c, LocalEquilibrium):
                 raise ValueError(f"interface {i} is not held in local equilibrium, so no phase can nucleate there")
-            mu = c.left.chemical_potentials(seg.interface_left[-1, i], T)
+            mu = c.left.chemical_potentials(c.unpack(c.initial())[0], T)
             dgm, x_new = driving_force(cand.phase, mu, T)
-            if dgm <= 0:
-                continue
-            nuc = interface_nucleus(*cand.energies, dgm / cand.molar_volume)
-            barrier_kt = nuc.barrier / (K_B * T)
+            barrier_kt = np.inf
+            if dgm > 0:
+                barrier_kt = interface_nucleus(*cand.energies, dgm / cand.molar_volume).barrier / (K_B * T)
             if barrier_kt > cand.barrier:
+                k += 1
                 continue
             pos, layer_list, conds = _insert(pos, layer_list, conds, cand, x_new, temperature)
             run.events.append(NucleationEvent(t1, T, i, cand.name, barrier_kt, dgm, x_new))
-            pending.remove(cand)
+            del pending[k]
             pending = [NucleatingLayer(**{**p.__dict__, "interface": p.interface + 1}) if p.interface > i else p
                        for p in pending]
         t0 = t1

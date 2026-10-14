@@ -137,6 +137,7 @@ from .reaction_layers import LineCompound, ParabolicGrowth, ReactionResult, inte
 from .schedule import TemperatureSchedule
 from .solidification import (
     BackDiffusionResult,
+    CompleteSolidification,
     ScheilResult,
     SolidificationResult,
     equilibrium_start,
@@ -146,6 +147,7 @@ from .solidification import (
     segregation_profile,
     solve_back_diffusion,
     solve_solidification,
+    solve_solidification_to_end,
 )
 from .solver import Boundary, DiffusionResult, solve_planar, uniform_faces
 from .thermo import GibbsEnergy, R, dmu_dx, reduced_hessian, thermodynamic_factor
@@ -158,6 +160,7 @@ __all__ = [
     "BackDiffusionResult",
     "Boundary",
     "CompetitionResult",
+    "CompleteSolidification",
     "CompoundLayer",
     "ConvergenceError",
     "DendriteTip",
@@ -295,6 +298,7 @@ __all__ = [
     "solve_planar",
     "solve_reaction_layers",
     "solve_solidification",
+    "solve_solidification_to_end",
     "solve_two_layers",
     "specific_thickness",
     "steady_stress",

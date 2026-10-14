@@ -40,6 +40,10 @@ from .solver import _EXPONENT, Boundary, Diffusivity, Geometry, _as_callable, _A
 from .thermo import R, dmu_dx, reduced_hessian
 
 
+class _Stopped(Exception):
+    pass
+
+
 class PhaseDissolvedError(RuntimeError):
     """The interface reached an outer boundary, so one phase has vanished."""
 
@@ -315,6 +319,7 @@ def solve_layers(
     max_picard: int = 50,
     geometry: Geometry = "planar",
     tolerance: float | None = None,
+    stop: Callable[[StackResult], bool] | None = None,
 ) -> StackResult:
     """Integrate diffusion through a stack of phase layers with moving interfaces, in a plate (default)
     or in concentric shells of a long cylinder or a sphere (``geometry``), positions then being radii.
@@ -334,6 +339,9 @@ def solve_layers(
     thin reaction layer is followed as closely as a thick one. A step that does not converge,
     or in which a layer seems to vanish while it still holds 2 % of its first thickness, is
     halved and redone.
+
+    ``stop``, if given, is called at each save time with that one saved state (a StackResult of
+    length 1); the run ends there, returning what it has, once it returns True.
     """
     pos = np.asarray(positions, dtype=float)
     n_layers = len(layers)
@@ -545,6 +553,8 @@ def solve_layers(
     def on_save(t):
         times.append(t)
         saved.append(snapshot())
+        if stop is not None and stop(collect(saved[-1:], times[-1:])):
+            raise _Stopped
 
     n_comp = sum(r.x.size for r in regions)
 
@@ -556,6 +566,8 @@ def solve_layers(
     start = np.concatenate([r.x.ravel() for r in regions] + [s])
     try:
         _march(start, advance, t_end, dt, save_times, tolerance, on_step=on_step, on_save=on_save, norm=norm)
+    except _Stopped:
+        pass
     except (PhaseDissolvedError, ConvergenceError) as err:
         err.result = collect(saved, times)
         raise

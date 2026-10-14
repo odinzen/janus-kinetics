@@ -153,3 +153,28 @@ def test_inserted_layer_starts_at_the_nucleus_composition():
     after = sum(w * np.mean(np.ravel(lay.x0)) for w, lay in zip(widths, new_layers))
     assert after == pytest.approx(before, rel=1e-12)
     assert [type(c) for c in new_conds] == [LocalEquilibrium, LocalEquilibrium] and new_conds[0].right is beta
+
+
+def test_two_layers_nucleating_at_one_check():
+    """alpha | gamma | alpha heated: beta reaches the threshold at both interfaces at the same check (the stack is
+    symmetric). Both nucleate there, at 900 K like the single couple, the second at its index shifted by the first
+    insertion (interface 2), with the same barrier; the stack ends alpha | beta | gamma | beta | alpha, and B is
+    conserved."""
+    alpha, gamma, beta = _phases()
+    xa, xg = _tie(500.0)
+    length = 30e-6
+    layers = [Layer(np.full(40, 0.05), np.eye(1) * 1e-15, "alpha", graded_faces(40, 20, "right")),
+              Layer(np.full(60, 0.95), np.eye(1) * 1e-15, "gamma", graded_faces(60, 20, "both")),
+              Layer(np.full(40, 0.05), np.eye(1) * 1e-15, "alpha2", graded_faces(40, 20, "left"))]
+    conds = [LocalEquilibrium(alpha, gamma, HEAT, xa, xg), LocalEquilibrium(gamma, alpha, HEAT, xg, xa)]
+    cands = [NucleatingLayer(beta, i, SIGMA, VM, np.eye(1) * 1e-14, name, cells=20, thickness=2e-9, barrier=60.0)
+             for i, name in ((0, "beta_left"), (1, "beta_right"))]
+    run = solve_layers_with_nucleation([0.0, length / 3, 2 * length / 3, length], layers, conds, 480.0, 1.0, HEAT,
+                                       cands, 5.0, save_times=np.arange(10.0, 480.0, 10.0))
+    left, right = run.events
+    assert (left.name, left.interface, right.name, right.interface) == ("beta_left", 0, "beta_right", 2)
+    assert left.time == right.time and left.temperature == pytest.approx(900.0, abs=1e-9)
+    assert right.barrier_kt == pytest.approx(left.barrier_kt, rel=1e-6)
+    assert run.segments[-1].names == ("alpha", "beta_left", "gamma", "beta_right", "alpha2")
+    totals = np.concatenate([inv[:, 0] for inv in run.inventory()])
+    np.testing.assert_allclose(totals, totals[0], rtol=1e-12)

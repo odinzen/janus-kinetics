@@ -80,7 +80,8 @@ Microsegregation: done (solidification module; Kobayashi 1988 exact solution,
 Bocklund et al. 2020 Scheil-Gulliver), and back-diffusion with CALPHAD tie-lines and several
 elements for the primary solid (solve_solidification, between and at the Scheil and lever
 limits). Dendrite tip operating point for any number of solutes with CALPHAD partition ratios
-and slopes (Kattner, Boettinger and Coriell 1996): done. Open: secondary solids forming from the last liquid, the AerMet100 case of Lippard
+and slopes (Kattner, Boettinger and Coriell 1996): done. A second solid from the last liquid: done by handing the liquid to Scheil-Gulliver at its
+onset, as Kattner et al. 1996 do (solve_solidification_to_end). Open: the AerMet100 case of Lippard
 et al. 1998 (commercial databases), and measured homogenization data.
 
 Cylindrical and spherical geometry: done for solve_planar and solve_layers
