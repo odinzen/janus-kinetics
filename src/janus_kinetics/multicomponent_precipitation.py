@@ -129,6 +129,24 @@ class PhaseMinimizer:
         mu = np.concatenate([mu_n[:, None] - nu_c, mu_n[:, None]], axis=1)
         return y, gm, mu
 
+    def hessian(self, y, T: float) -> np.ndarray:
+        """d^2 G / dx_i dx_j over the independent mole fractions (k, n-1, n-1), with the site fractions ``y``
+        (k, ny) from :meth:`solve` kept at internal equilibrium as x moves. Differentiating the stationarity
+        conditions, [[H, A^T], [A, 0]] [dy; dnu] = [0; e_j] for a unit change of x_j, and the Hessian is -dnu/dx."""
+        y = np.atleast_2d(np.asarray(y, dtype=float))
+        k, ny = y.shape
+        m = self._a.shape[0]
+        s = self._sublattices.shape[0]
+        h = self._hess(np.concatenate([y, np.full((k, 1), T)], axis=1)).reshape(k, ny, ny)
+        kkt = np.zeros((k, ny + m, ny + m))
+        kkt[:, :ny, :ny] = h
+        kkt[:, :ny, ny:] = self._a.T
+        kkt[:, ny:, :ny] = self._a
+        rhs = np.zeros((ny + m, m - s))
+        rhs[ny + s:, :] = np.eye(m - s)
+        sol = np.linalg.solve(kkt, np.broadcast_to(rhs, (k, ny + m, m - s)))
+        return -sol[:, ny + s:, :]
+
 
 class PrecipitateThermo:
     """Gibbs energy of the precipitate phase from pycalphad, with its internal degrees of freedom

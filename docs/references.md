@@ -8,6 +8,7 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Blech I.A. (1977). Erratum: Electromigration in thin aluminum films on titanium nitride. *Journal of Applied Physics* 48, 2648-2648. https://doi.org/10.1063/1.324308
 - Bocklund B., Bobbio L.D., Otis R.A., Beese A.M., Liu Z.K. (2020). Experimental validation of Scheil-Gulliver simulations for gradient path planning in additively manufactured functionally graded materials. *Materialia* 11, 100689. https://doi.org/10.1016/j.mtla.2020.100689
 - Booth-Morrison C., Weninger J., Sudbrack C.K., Mao Z., Noebe R.D., Seidman D.N. (2008). Effects of solute concentrations on kinetic pathways in Ni-Al-Cr alloys. *Acta Materialia* 56, 3422-3438. https://doi.org/10.1016/j.actamat.2008.03.016
+- Borgenstam A., Höglund L., Ågren J., Engström A. (2000). DICTRA, a tool for simulation of diffusional transformations in alloys. *Journal of Phase Equilibria* 21, 269-280. https://doi.org/10.1361/105497100770340057
 - Cahn J.W. (1956). The kinetics of grain boundary nucleated reactions. *Acta Metallurgica* 4, 449-459. https://doi.org/10.1016/0001-6160(56)90041-4
 - Campbell C., Boettinger W., Kattner U. (2002). Development of a diffusion mobility database for Ni-base superalloys. *Acta Materialia* 50, 775-792. https://doi.org/10.1016/s1359-6454(01)00383-4
 - Chen Q., Jeppsson J., Ågren J. (2008). Analytical treatment of diffusion during precipitate growth in multicomponent systems. *Acta Materialia* 56, 1890-1896. https://doi.org/10.1016/j.actamat.2007.12.037
@@ -31,6 +32,8 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Korhonen M.A., Børgesen P., Tu K.N., Li C.Y. (1993). Stress evolution due to electromigration in confined metal lines. *Journal of Applied Physics* 73, 3790-3799. https://doi.org/10.1063/1.354073
 - Kozeschnik E., Svoboda J., Fratzl P., Fischer F. (2004). Modelling of kinetics in multi-component multi-phase systems with spherical precipitates. *Materials Science and Engineering: A* 385, 157-165. https://doi.org/10.1016/j.msea.2004.06.016
 - Larsson H., Höglund L. (2009). Multiphase diffusion simulations in 1D using the DICTRA homogenization model. *Calphad* 33, 495-501. https://doi.org/10.1016/j.calphad.2009.06.004
+- Lippard H.E., Campbell C.E., Dravid V.P., Olson G.B., Björklind T., Borggren U., Kellgren P. (1998). Microsegregation behavior during solidification and homogenization of AerMet100 steel. *Metallurgical and Materials Transactions B* 29, 205-210. https://doi.org/10.1007/s11663-998-0023-0
+- Mao Z., Booth-Morrison C., Sudbrack C.K., Martin G., Seidman D.N. (2012). Kinetic pathways for phase separation: An atomic-scale study in Ni-Al-Cr alloys. *Acta Materialia* 60, 1871-1888. https://doi.org/10.1016/j.actamat.2011.10.046
 - Myhr O., Grong Ø. (2000). Modelling of non-isothermal transformations in alloys containing a particle distribution. *Acta Materialia* 48, 1605-1615. https://doi.org/10.1016/s1359-6454(99)00435-8
 - Otis R., Liu Z.K. (2017). pycalphad: CALPHAD-based Computational Thermodynamics in Python. *Journal of Open Research Software* 5, 1. https://doi.org/10.5334/jors.140
 - Perez M., Dumont M., Acevedo-Reyes D. (2008). Implementation of classical nucleation and growth theories for precipitation. *Acta Materialia* 56, 2119-2132. https://doi.org/10.1016/j.actamat.2007.12.050

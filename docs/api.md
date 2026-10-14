@@ -818,6 +818,7 @@ site fractions. Chemical potentials follow from the Lagrange multipliers of the 
 constraints: with x_n dependent, dG/dx_i = -nu_i, mu_n = G + sum_i x_i nu_i and mu_i = mu_n - nu_i.
 
 - `disordered(self, x) -> 'np.ndarray'`: Site fractions with every sublattice at composition ``x``, a starting point.
+- `hessian(self, y, T: 'float') -> 'np.ndarray'`: d^2 G / dx_i dx_j over the independent mole fractions (k, n-1, n-1), with the site fractions ``y``
 - `solve(self, x, y0, T: 'float', tol: 'float' = 1e-11, max_iter: 'int' = 60)`: (site fractions (k, ny), G (k,) in J/mol, mu (k, n)) at mole fractions ``x`` (k, n), from ``y0``.
 
 ### `class Population(precipitate: 'PrecipitateThermo', settings: 'NucleationSettings', initial: 'dict | None' = None, precipitate_tracer: 'Sequence[float] | None' = None, growth: "Literal['extremal', 'local_equilibrium']" = 'extremal', growth_form: "Literal['mobility', 'diffusivity']" = 'mobility') -> None`

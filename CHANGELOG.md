@@ -58,6 +58,8 @@ First version.
 - Solidification with back-diffusion in the solid and CALPHAD tie-lines for any number of elements
   (`solve_solidification`), checked against the Scheil-Gulliver and lever-rule limits;
   `SolutionPhase(mobilities=False)` for a phase used for its thermodynamics alone.
+- The relaxed Hessian of an ordered phase (`PhaseMinimizer.hessian`), and the precipitate composition drift of
+  Philippe and Voorhees checked against the atom-probe trajectories of Mao et al. (2012).
 - Layers nucleating during a run around an axis or a centre, not just in plates.
 - The mean radius approach of Perez et al. (2008), section 3.1 (`solve_mean_radius`), checked against the class
   method and the LSW rate.

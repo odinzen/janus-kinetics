@@ -821,6 +821,16 @@ the supersaturation stays on the tie-line, its critical radius closes on <R> (0.
 size is eq. (43)'s within 2 % from 3e8 s. With the two solutes equally mobile K would be 2.6 times
 larger, and keeping only the slow one (eq. 48) would overstate it by 31 %.
 
+The direction of eq. (45), G_beta^-1 G_alpha dC / (dC^T G_alpha dC), holds no mobility: coupling
+between the solute fluxes changes how far the mean precipitate lies off its equilibrium
+composition, not which way. Mao et al. (2012) measured gamma' in three Ni-Al-Cr alloys at 873 K
+by atom probe (Table 4): Al and, in two of the alloys, Cr above their long-time values and falling
+through coarsening. With Dupin's Hessians at each tie-line (gamma' ordered, its Hessian taken with
+the order relaxed, exactly, by implicit differentiation of the internal equilibrium), eq. (45)
+puts gamma' Al-rich and Cr-poor, the Kuehmann-Voorhees prediction Mao et al. report, so the Cr
+disagreement cannot come from neglected flux coupling in this regime. Their Table 4 prints the
+gamma' Al of alloy C at 16 h as 11.0 at.%; the row sums to 100 only with 18.0.
+
 ## Interfacial energy from broken bonds
 
 Sonderegger and Kozeschnik (2009) estimate the energy of a coherent interface from the

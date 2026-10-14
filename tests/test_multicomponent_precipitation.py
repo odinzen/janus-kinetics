@@ -906,3 +906,88 @@ def test_nucleation_site_inputs_are_checked():
         nucleation_sites("surface", vm, grain_size=1e-5)
     with pytest.raises(ValueError, match="grain size"):
         grain_structure(0.0)
+
+
+# --- precipitate composition trajectories: Mao, Booth-Morrison, Sudbrack, Martin and Seidman, Acta Mater. 60
+# (2012) 1871, Table 4 (APT at 873 K), against Philippe and Voorhees' eq. (45) with Dupin's Hessians -----------
+
+from janus_kinetics.coarsening import precipitate_composition_shift  # noqa: E402
+
+MAO_ALLOYS = {"A": (0.075, 0.085), "B": (0.052, 0.142), "C": (0.065, 0.095)}
+# gamma'-precipitate Al and Cr (at.%) from 16 h on, with the long-time (infinity) row last
+MAO_GP_LATE = {
+    "A": ([18.6, 18.3, 18.18, 18.02, 17.8], [6.1, 6.0, 5.90, 5.87, 5.9]),
+    "B": ([17.2, 17.2, 17.0, 16.7, 16.7], [7.3, 7.2, 7.1, 6.9, 6.8]),
+    "C": ([18.0, 17.9, 17.8, 17.65, 17.54, 17.5], [6.9, 6.6, 6.4, 6.30, 6.22, 6.1]),
+}
+ORDERED_START = np.array([0.01, 0.01, 0.98, 0.9, 0.05, 0.05])
+
+
+def _dupin_tie(alloy):
+    eq = equilibrium(_db(), ELEMENTS + ["VA"], ["L12_FCC"],
+                     {v.T: T, v.P: 101325, v.N: 1, v.X("AL"): alloy[0], v.X("CR"): alloy[1]})
+    names = [str(p) for p in np.ravel(eq.Phase.values)]
+    comp = eq.X.values.reshape(len(names), -1)
+    order = [list(map(str, eq.component.values)).index(c) for c in ELEMENTS]
+    sets = sorted((comp[i][order] for i, n in enumerate(names) if n), key=lambda x: x[0])
+    return sets[0], sets[-1]  # gamma, gamma'
+
+
+def _hessians(alloy):
+    pm = _precipitate().minimizer
+    xa, xb = _dupin_tie(alloy)
+    yb, _, _ = pm.solve(xb, ORDERED_START, T)
+    return xa, xb, _matrix().reduced_hessian(xa[:2], T), pm.hessian(yb, T)[0], yb[0]
+
+
+def test_relaxed_hessian_of_ordered_gamma_prime():
+    """The minimiser's Hessian, with the L1_2 order relaxed as x moves, equals central differences of its own
+    chemical potentials (to 1e-6) at Dupin's gamma' of alloy C, which is ordered (Al and Cr on the minority
+    sublattice); on disordered gamma it is the solution-phase Hessian to round-off."""
+    pm = _precipitate().minimizer
+    xa, xb, g_a, g_b, yb = _hessians(MAO_ALLOYS["C"])
+    assert yb[3] > 0.5 and yb[0] < 0.01
+    h, cols = 1e-5, []
+    for j in range(2):
+        d = np.zeros(3)
+        d[j], d[2] = h, -h
+        mu = [pm.solve(xb + s * d, yb, T)[2][0] for s in (1, -1)]
+        cols.append(((mu[0][:2] - mu[0][2]) - (mu[1][:2] - mu[1][2])) / (2 * h))
+    np.testing.assert_allclose(g_b, np.array(cols).T, rtol=1e-6)
+    ya, _, _ = pm.solve(xa, pm.disordered(xa), T)
+    np.testing.assert_allclose(pm.hessian(ya, T)[0], g_a, rtol=1e-12)
+
+
+def test_composition_drift_direction_ignores_the_mobilities():
+    """Eq. (45)'s direction G_beta^-1 G_alpha dC / (dC^T G_alpha dC) holds no mobility: a diagonal M and one with
+    strong Al-Cr coupling give parallel drifts, so flux coupling sets only how far the precipitate composition
+    lies off equilibrium, never in which direction, in the late-stage regime the formula describes."""
+    xa, xb, g_a, g_b, _ = _hessians(MAO_ALLOYS["B"])
+    dc = (xb - xa)[:2]
+    plain = precipitate_composition_shift(3.6e6, dc, np.diag([1e-25, 1e-25]), g_a, g_b, 6.7584e-6, 0.0225)[0]
+    coupled = precipitate_composition_shift(3.6e6, dc, [[1e-25, -0.9e-25], [-0.9e-25, 1e-25]], g_a, g_b, 6.7584e-6,
+                                            0.0225)[0]
+    assert plain @ coupled / (np.linalg.norm(plain) * np.linalg.norm(coupled)) == pytest.approx(1.0, abs=1e-12)
+    assert np.linalg.norm(coupled) != pytest.approx(np.linalg.norm(plain), rel=0.1)
+
+
+def test_mean_field_drift_against_mao_table_4():
+    """Mao et al. find the gamma' Al and Cr both above their long-time values and falling (Table 4), and note the
+    Kuehmann-Voorhees mean-field model gets Al right but not Cr. Eq. (45) with Dupin's Hessians at each alloy's
+    tie-line agrees: gamma' is Al-rich (dAl > 0) and Cr-poor (dCr < 0) while it coarsens, in all three alloys.
+    In B and C the measured Cr is above its long-time value at every time from 16 h and falls toward it, the
+    opposite sign; in A it lies within 0.2 at.% of it throughout. Since the direction holds no mobility, the
+    flux coupling Mao et al. invoke cannot reverse it in this regime. (Table 4 prints gamma' Al in alloy C at 16 h
+    as 11.0 at.%; the row sums to 100 only with 18.0, used here.)"""
+    for name, alloy in MAO_ALLOYS.items():
+        xa, xb, g_a, g_b, _ = _hessians(alloy)
+        dc = (xb - xa)[:2]
+        drift = np.linalg.solve(g_b, g_a @ dc) / float(dc @ g_a @ dc)
+        assert drift[0] > 0 > drift[1], name
+        al, cr = (np.array(v) for v in MAO_GP_LATE[name])
+        assert np.all(al[:-1] >= al[-1]) and al[0] > al[-1], name
+        if name == "A":
+            assert np.all(np.abs(cr - cr[-1]) <= 0.2)
+        else:
+            assert np.all(cr[:-1] > cr[-1]) and np.all(np.diff(cr) < 0), name
+    assert 75.09 + 18.0 + 6.9 == pytest.approx(100.0, abs=0.05)
