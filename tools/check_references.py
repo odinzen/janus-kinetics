@@ -61,6 +61,9 @@ REFERENCES = [
     ("10.1007/s11663-998-0023-0", "Lippard", 1998, "29", "205"),
     ("10.1016/j.actamat.2011.10.046", "Mao", 2012, "60", "1871"),
     ("10.1016/j.calphad.2004.11.003", "Kozeschnik", 2004, "28", "379"),
+    ("10.1063/1.1699435", "Turnbull", 1950, "21", "1022"),
+    ("10.1103/PhysRevB.77.092201", "Meyer", 2008, "77", "092201"),
+    ("10.1016/S0927-796X(03)00036-6", "Hoyt", 2003, "41", "121"),
     ("10.1016/S1359-6454(01)00383-4", "Campbell", 2002, "50", "775"),
     ("10.1016/S0364-5916(01)00049-9", "Dupin", 2001, "25", "279"),
     ("10.1016/S0925-8388(96)02652-7", "Ansara", 1997, "247", "20"),
@@ -72,6 +75,13 @@ REFERENCES = [
 ]
 
 OUT = Path(__file__).parents[1] / "docs" / "references.md"
+
+# Crossref records whose author list is incomplete, with the authors as the paper's own title page prints them.
+# The script reports each correction, so it never hides a difference.
+AUTHORS_FROM_THE_PAPER = {
+    "10.1016/S0927-796X(03)00036-6": [{"family": "Hoyt", "given": "J. J."}, {"family": "Asta", "given": "Mark"},
+                                      {"family": "Karma", "given": "Alain"}],
+}
 
 
 def plain(s: str) -> str:
@@ -103,7 +113,8 @@ def entry(m: dict) -> str:
     for fancy, plain_char in (("\u2013", "-"), ("\u2014", "-"), ("\u201c", '"'), ("\u201d", '"'), ("\u2019", "'")):
         title = title.replace(fancy, plain_char)
     journal = (m.get("container-title") or [""])[0]
-    vol, page = m.get("volume", ""), m.get("page", "")
+    # journals that number articles instead of pages (Physical Review, Materialia) carry an article number
+    vol, page = m.get("volume", ""), m.get("page") or m.get("article-number") or ""
     return f"{authors} ({year}). {title}. *{journal}* {vol}" + (f", {page}" if page else "") + f". https://doi.org/{m['DOI']}"
 
 
@@ -113,7 +124,7 @@ def main() -> int:
         m = fetch(doi)
         got_author = plain(m["author"][0]["family"])
         got_year = m["issued"]["date-parts"][0][0]
-        got_page = (m.get("page") or "").split("-")[0]
+        got_page = (m.get("page") or m.get("article-number") or "").split("-")[0]
         checks = {
             "first author": plain(author) in got_author or got_author in plain(author),
             "year": got_year == year,
@@ -124,6 +135,10 @@ def main() -> int:
         if bad:
             problems.append(f"{doi}: {', '.join(bad)} differ (Crossref: {m['author'][0]['family']}, {got_year}, "
                             f"vol {m.get('volume')}, p {got_page})")
+        listed = AUTHORS_FROM_THE_PAPER.get(doi)
+        if listed is not None:
+            print(f"NOTE {doi}: Crossref lists {len(m['author'])} author(s); the paper lists {len(listed)}, used here")
+            m = {**m, "author": listed}
         lines.append(entry(m))
         time.sleep(1)
     OUT.write_text("# References\n\nEvery work cited in janus-kinetics, written from its Crossref record by "

@@ -24,6 +24,7 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Harrison L.G. (1961). Influence of dislocations on diffusion kinetics in solids with particular reference to the alkali halides. *Transactions of the Faraday Society* 57, 1191. https://doi.org/10.1039/tf9615701191
 - Hart E. (1957). On the role of dislocations in bulk diffusion. *Acta Metallurgica* 5, 597. https://doi.org/10.1016/0001-6160(57)90127-x
 - Helander T., Ågren J. (1999). A phenomenological treatment of diffusion in Al-Fe and Al-Ni alloys having B2-b.c.c. ordered structure. *Acta Materialia* 47, 1141-1152. https://doi.org/10.1016/s1359-6454(99)00010-5
+- Hoyt J.J., Asta M., Karma A. (2003). Atomistic and continuum modeling of dendritic solidification. *Materials Science and Engineering: R: Reports* 41, 121-163. https://doi.org/10.1016/s0927-796x(03)00036-6
 - Jönsson B. (1992). On Ferromagnetic Ordering and Lattice Diffusion - A Simple Model / Uber ferromagnetische Ordnung und Gitterdiffusion Ein einfaches Modell. *International Journal of Materials Research* 83, 349-355. https://doi.org/10.1515/ijmr-1992-830512
 - Jönsson B. (1995). Assessment of the Mobilities of Cr, Fe and Ni in bcc Cr-Fe-Ni Alloys. *ISIJ International* 35, 1415-1421. https://doi.org/10.2355/isijinternational.35.1415
 - Kattner U.R., Boettinger W.J., Coriell S.R. (1996). Application of Lukas' Phase Diagram Programs to Solidification Calculations of Multicomponent Alloys. *International Journal of Materials Research* 87, 522-528. https://doi.org/10.1515/ijmr-1996-870703
@@ -35,6 +36,7 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Larsson H., Höglund L. (2009). Multiphase diffusion simulations in 1D using the DICTRA homogenization model. *Calphad* 33, 495-501. https://doi.org/10.1016/j.calphad.2009.06.004
 - Lippard H.E., Campbell C.E., Dravid V.P., Olson G.B., Björklind T., Borggren U., Kellgren P. (1998). Microsegregation behavior during solidification and homogenization of AerMet100 steel. *Metallurgical and Materials Transactions B* 29, 205-210. https://doi.org/10.1007/s11663-998-0023-0
 - Mao Z., Booth-Morrison C., Sudbrack C.K., Martin G., Seidman D.N. (2012). Kinetic pathways for phase separation: An atomic-scale study in Ni-Al-Cr alloys. *Acta Materialia* 60, 1871-1888. https://doi.org/10.1016/j.actamat.2011.10.046
+- Meyer A., Stüber S., Holland-Moritz D., Heinen O., Unruh T. (2008). Determination of self-diffusion coefficients by quasielastic neutron scattering measurements of levitated Ni droplets. *Physical Review B* 77, 092201. https://doi.org/10.1103/physrevb.77.092201
 - Myhr O., Grong Ø. (2000). Modelling of non-isothermal transformations in alloys containing a particle distribution. *Acta Materialia* 48, 1605-1615. https://doi.org/10.1016/s1359-6454(99)00435-8
 - Otis R., Liu Z.K. (2017). pycalphad: CALPHAD-based Computational Thermodynamics in Python. *Journal of Open Research Software* 5, 1. https://doi.org/10.5334/jors.140
 - Perez M., Dumont M., Acevedo-Reyes D. (2008). Implementation of classical nucleation and growth theories for precipitation. *Acta Materialia* 56, 2119-2132. https://doi.org/10.1016/j.actamat.2007.12.050
@@ -47,6 +49,7 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Sundman B. (1991). An assessment of the Fe-O system. *Journal of Phase Equilibria* 12, 127-140. https://doi.org/10.1007/bf02645709
 - Suzuoka T. (1961). Lattice and Grain Boundary Diffusion in Polycrystals. *Transactions of the Japan Institute of Metals* 2, 25-32. https://doi.org/10.2320/matertrans1960.2.25
 - Svoboda J., Fischer F., Fratzl P., Kozeschnik E. (2004). Modelling of kinetics in multi-component multi-phase systems with spherical precipitates. *Materials Science and Engineering: A* 385, 166-174. https://doi.org/10.1016/j.msea.2004.06.018
+- Turnbull D. (1950). Formation of Crystal Nuclei in Liquid Metals. *Journal of Applied Physics* 21, 1022-1028. https://doi.org/10.1063/1.1699435
 - Wagner C. (1969). The evaluation of data obtained with diffusion couples of binary single-phase and multiphase systems. *Acta Metallurgica* 17, 99-107. https://doi.org/10.1016/0001-6160(69)90131-x
 - Whipple R. (1954). CXXXVIII. Concentration contours in grain boundary diffusion. *The London, Edinburgh, and Dublin Philosophical Magazine and Journal of Science* 45, 1225-1236. https://doi.org/10.1080/14786441208561131
 - Zener C. (1949). Theory of Growth of Spherical Precipitates from Solid Solution. *Journal of Applied Physics* 20, 950-953. https://doi.org/10.1063/1.1698258

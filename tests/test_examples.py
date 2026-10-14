@@ -12,6 +12,7 @@ import fe_cr_couple  # noqa: E402
 import interconnect_electromigration  # noqa: E402
 import chromia_scale  # noqa: E402
 import film_reaction  # noqa: E402
+import ni_dendrite_tip  # noqa: E402
 import ni_sn_kirkendall  # noqa: E402
 import oxygen_uptake  # noqa: E402
 import precipitation_table1  # noqa: E402
@@ -188,3 +189,32 @@ def test_aluminium_heat_treatment_ages_and_reheats():
     for v in f.values():
         assert np.all(v <= out["equilibrium"] + 1e-4)
         assert v[out["temps"] >= 505].max() < 1e-6
+
+
+def test_ni_dendrite_tip_inputs_come_from_the_papers():
+    """Turnbull's Table II row for nickel gives a melting point of 1722 K (Meyer et al. take 1726), a heat of fusion
+    of 17.5 kJ/mol (Hoyt et al., Table 1: 0.1776 eV/atom, 17.1), a molar volume of 6.87 cm^3 and Gamma = 1.72e-7 K m;
+    Meyer et al.'s eq. 3 returns their Table I diffusivities at 1514 and 1940 K (2.09 and 4.54e-9 m^2/s)."""
+    ni = ni_dendrite_tip.turnbull_nickel()
+    assert ni["melting_point"] == pytest.approx(1726, abs=5)
+    assert ni["heat"] == pytest.approx(0.1776 * 96485.33, rel=0.03)
+    assert ni["molar_volume"] == pytest.approx(6.87e-6, rel=1e-3)
+    assert ni["gamma"] == pytest.approx(1.72e-7, rel=2e-3)
+    assert ni_dendrite_tip.turnbull_nickel(0.347)["gamma"] / ni["gamma"] == pytest.approx(0.347 / 0.255, rel=1e-12)
+    np.testing.assert_allclose(ni_dendrite_tip.liquid_diffusivity([1514.0, 1940.0]), [2.09e-9, 4.54e-9], rtol=0.03)
+
+
+def test_ni_dendrite_tip_runs_from_the_liquidus():
+    """At 1e-5 m/s and no gradient the tip is within 0.5 K of the liquidus; its undercooling grows with speed and its
+    radius falls; the larger interfacial energy undercools it more; and with a gradient the slowest tip is held back
+    (the turn of Kattner et al.'s Fig. 4) while fast tips barely notice."""
+    out = ni_dendrite_tip.run(coarse=True)
+    tl = out["liquidus"].temperature
+    flat = out["runs"]["Turnbull", 0.0]
+    under = np.array([tl - t.temperature for t in flat])
+    assert 0 < under[0] < 0.5 and np.all(np.diff(under) > 0)
+    assert np.all(np.diff([t.radius for t in flat]) < 0)
+    jones = [tl - t.temperature for t in out["runs"]["Jones", 0.0]]
+    assert np.all(np.array(jones) > under)
+    steep = np.array([tl - t.temperature for t in out["runs"]["Turnbull", 1e4]])
+    assert steep[0] > under[0] and steep[-1] == pytest.approx(under[-1], rel=1e-3)
