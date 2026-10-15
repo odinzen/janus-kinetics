@@ -7,6 +7,8 @@ abstract: >-
   equation cited to its source.
 version: 0.1.0
 date-released: 2026-10-14
+# the concept DOI resolves to the latest version; 0.1.0 itself is 10.5281/zenodo.23381870
+doi: 10.5281/zenodo.23381869
 repository-code: "https://github.com/odinzen/janus-kinetics"
 license: MIT
 type: software
