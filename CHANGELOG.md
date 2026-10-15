@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- A Jupyter notebook, notebooks/KineticsWithJanus: solidification beyond Scheil in Ni-18Al-2Cr with pycalphad
+  and janus-kinetics.
+
 ## 0.1.0 (2026-10-14)
 
 First version.

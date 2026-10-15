@@ -195,6 +195,10 @@ result = solve_planar(faces, x0, lambda x: phase.interdiffusion_matrix(x, T), t_
 print(result.markers[-1])  # Kirkendall marker position after 10 h, m
 ```
 
+A Jupyter notebook, [notebooks/KineticsWithJanus](notebooks/KineticsWithJanus/KineticsWithJanus.ipynb),
+walks through solidification beyond Scheil with pycalphad and janus-kinetics side by side: how
+much gamma' a Ni-Al-Cr casting forms as the cooling rate changes.
+
 More complete scripts, each tested, are in [examples/](examples): the couple
 above with a figure, chromium loss to a surface in a ternary, a precipitation
 run, an alpha/beta couple solved by both two-phase models, a reaction layer
