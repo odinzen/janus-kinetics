@@ -6,6 +6,8 @@ abstract: >-
   kinetics on top of pycalphad, built from the published models with each
   equation cited to its source.
 version: 0.1.0
+date-released: 2026-10-14
+repository-code: "https://github.com/odinzen/janus-kinetics"
 license: MIT
 type: software
 keywords:

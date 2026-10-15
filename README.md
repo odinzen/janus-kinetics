@@ -7,7 +7,7 @@ MQ and MF parameters of a Thermo-Calc style database, the thermodynamics come
 from pycalphad's Gibbs energy models, and the two combine into multicomponent
 diffusion, two-phase and precipitation simulations.
 
-Version 0.1.0 (not yet released). Tested with Python 3.12 and pycalphad 0.11.2.
+Version 0.1.0, released 2026-10-14. Tested with Python 3.12 and pycalphad 0.11.2.
 
 ## What it does
 
@@ -148,6 +148,8 @@ and scales of several oxides or on alloys.
 ## Install
 
 ```
+git clone https://github.com/odinzen/janus-kinetics
+cd janus-kinetics
 conda create -n janus-kinetics -c conda-forge python=3.12 pycalphad numpy scipy pytest matplotlib
 conda activate janus-kinetics
 pip install -e . --no-deps

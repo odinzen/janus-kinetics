@@ -26,6 +26,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Chemistry",
 ]
 
+[project.urls]
+Repository = "https://github.com/odinzen/janus-kinetics"
+
 [project.optional-dependencies]
 test = ["pytest"]
 
