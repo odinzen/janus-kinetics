@@ -1578,3 +1578,66 @@ Dimensionless thermodynamic factor (x_i / RT) dmu_i/dx_j, shape (..., n, n-1).
 
 For an ideal solution the upper (n-1) block is the identity and the last
 row is -1, the multicomponent analogue of d ln a / d ln x = 1.
+
+## `janus_kinetics.kawin_bridge` (optional, needs kawin, `pip install janus-kinetics[kawin]`)
+
+### `class KawinPrecipitation(times: 'np.ndarray', mean_radius: 'np.ndarray', number_density: 'np.ndarray', volume_fraction: 'np.ndarray', matrix_composition: 'np.ndarray', driving_force: 'np.ndarray', strength: 'np.ndarray | None' = None) -> None`
+
+kawin's states of one precipitate in the names of :class:`MulticomponentResult`: times (s), mean
+radius (m), number density (m^-3), volume fraction, the matrix mole fractions (t, n-1) in janus's order,
+the driving force per volume of precipitate (J/m^3, as kawin keeps it), and the yield strength (Pa)
+if a strength model was coupled.
+
+
+### `def independent_copy(db: 'Database') -> 'Database'`
+
+A copy of ``db`` sharing nothing with it. pycalphad's deepcopy of a Database copies the parameters but
+shares the phase and function dictionaries, and kawin adds a DIS_ phase for each order-disorder model to
+the database it is given, which then breaks janus's equilibria on the original.
+
+### `def kawin_elements(elements: 'Sequence[str]', dependent: 'str | None' = None) -> 'list[str]'`
+
+kawin's element list for janus's ``elements``: the solvent first, the independent elements in janus's
+order, then VA.
+
+### `def kawin_history(model, strength_model=None) -> 'KawinPrecipitation'`
+
+The solved ``model``'s states (its first precipitate) as a :class:`KawinPrecipitation`; with
+``strength_model`` (coupled before solving) also kawin's total yield strength at each state.
+
+### `def kawin_model(thermodynamics, precipitate_phase: 'str', alloy: 'Sequence[float]', T, settings, solutes: 'Sequence[str]', atoms_per_cell: 'float | None' = None)`
+
+An unsolved kawin PrecipitateModel for the precipitate, alloy and temperature that
+:func:`solve_multicomponent_precipitation` takes, with janus's :class:`NucleationSettings`: the same
+interfacial energy, the same molar volume for both phases, homogeneous nucleation on
+``settings.site_density`` sites per m^3. kawin takes the unit-cell volume and ``atoms_per_cell``; by
+default the count is the one that makes its cell edge equal ``settings.lattice_parameter`` (4 for fcc
+when the two are consistent), and the cell volume is then that count times the atomic volume, so
+kawin's molar volume is ``settings.molar_volume`` either way. ``T`` is a temperature in K or a kawin TemperatureParameters.
+
+Couple a kawin strength model with ``model.addCouplingModel`` before solving. Only bulk nucleation
+without misfit energy is carried over; anything else raises, since kawin describes it differently.
+
+### `def kawin_thermodynamics(db: 'Database', matrix_phase: 'str', precipitate_phases: 'Sequence[str]', elements: 'Sequence[str]', mobility_db: 'Database | None' = None, dependent: 'str | None' = None, **kwargs)`
+
+kawin's MulticomponentThermodynamics on janus's database (merged with ``mobility_db`` by
+:func:`merge_mobilities` when the mobilities sit in a file of their own) and janus's element order.
+kawin gets a copy of the database, never ``db`` itself (see :func:`independent_copy`). Keyword arguments
+go to kawin.
+
+### `def local_compositions(z: 'np.ndarray', x: 'np.ndarray', positions: 'Sequence[float]') -> 'np.ndarray'`
+
+Mole fractions (len(positions), n-1) of a janus profile ``x`` (cells, n-1) at cell centres ``z``,
+interpolated linearly to ``positions`` (m), for instance the dendrite axis and the arm edge of a
+homogenized casting to age in kawin.
+
+### `def merge_mobilities(db: 'Database', mobility_db: 'Database', phase: 'str', elements: 'Sequence[str]') -> 'Database'`
+
+A copy of ``db`` holding also the MQ and MF parameters of ``phase`` from ``mobility_db``, so a program
+that reads one database (kawin does) sees janus's thermodynamics and mobilities together.
+
+A mobility database often writes the phase with a vacancy-only sublattice the thermodynamic one lacks,
+fcc as (Al,Cr,Ni)(Va) against (Al,Cr,Ni), say; the two are the same lattice, so each parameter is
+re-keyed onto ``db``'s sublattices. Parameters naming elements outside ``elements`` are left out, as are
+functions the copied parameters do not use. Parameters of that kind already in ``db`` are kept and a
+clash raises, since two values for one mobility would be summed.

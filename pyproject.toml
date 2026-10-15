@@ -31,6 +31,8 @@ Repository = "https://github.com/odinzen/janus-kinetics"
 
 [project.optional-dependencies]
 test = ["pytest"]
+# optional bridge to kawin (janus_kinetics.kawin_bridge)
+kawin = ["kawin>=0.5"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

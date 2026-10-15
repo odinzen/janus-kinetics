@@ -159,7 +159,8 @@ pytest
 The full test suite takes about 15 minutes on a desktop; `pytest -m "not slow"`
 leaves out the runs of 5 s or more and takes about 4. Ten tests are skipped, each
 with the reason a paper's figure or table cannot be reproduced
-([docs/validation.md](docs/validation.md) lists them). On Windows run inside the
+([docs/validation.md](docs/validation.md) lists them); without kawin installed, the
+tests of the kawin bridge are skipped as well. On Windows run inside the
 activated environment, since numpy's MKL libraries are only found on the activated
 path.
 
@@ -240,7 +241,10 @@ Conventions worth knowing:
 that started this work to create a new, independent package. janus-kinetics was written clean-room,
 from the governing equations and the published papers. It extends the same idea to moving interfaces,
 solidification, oxidation and thin films; for strength and surrogate models, kawin remains the place
-to go.
+to go. An optional bridge, `janus_kinetics.kawin_bridge` (`pip install janus-kinetics[kawin]`), hands
+kawin the same database and janus's inputs, so a casting solidified and homogenized here can be aged
+in kawin at its local compositions; [docs/validation.md](docs/validation.md) shows how the two compare
+on the same ageing.
 
 ## How to cite
 

@@ -15,9 +15,10 @@ def test_api_reference_is_current():
 
 def test_every_public_name_is_documented():
     import janus_kinetics
+    from janus_kinetics import kawin_bridge
 
-    missing = [n for n in janus_kinetics.__all__
-               if callable(getattr(janus_kinetics, n)) and not getattr(janus_kinetics, n).__doc__]
+    missing = [n for module in (janus_kinetics, kawin_bridge) for n in module.__all__
+               if callable(getattr(module, n)) and not getattr(module, n).__doc__]
     assert not missing, missing
 
 

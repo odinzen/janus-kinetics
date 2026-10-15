@@ -151,6 +151,19 @@ Tests: test_solidification.py, test_dendrite_tip.py, test_homogenization.py.
 | Homogenization in a quaternary as the grid is refined | phase-1 solver | 2.1e-3, 4.8e-4, 1.4e-4 |
 | Slowest decay mode of an anneal in a plate, cylinder and sphere | exact eigenvalues | 1 % |
 
+## Bridge to kawin
+
+Tests: test_kawin_bridge.py. The tests that run kawin skip when it is not installed
+(`pip install janus-kinetics[kawin]`); the database merge is checked either way.
+
+| Check | Source | Agreement |
+|---|---|---|
+| Mobilities from the merged database against the two separate files | exact | identical, at five compositions and three temperatures |
+| gamma' nucleus and driving force in Ni-5.2Al-14.2Cr at 873 K, kawin against janus | same database, both by parallel tangent | 1e-5 relative; 368.8 J/mol (Sudbrack et al. 2007, Table 3: 369) |
+| Interdiffusion matrix of gamma, kawin against janus | same mobilities | 1e-7 relative; tracers differ by kawin's gas constant, 8.314 |
+| Molar volume, cell edge, sites and interfacial energy handed to kawin | janus's settings | 1e-4 (kawin's Avogadro constant) |
+| Ageing at 873 K, 10 min to 1024 h, kawin against janus with evolving compositions | same inputs, different models | volume fraction 2 % and matrix 0.03 at.% late; radius up to 31 % and number density a factor 2 apart on the way |
+
 ## Not reproduced, and why
 
 ### Paper inconsistent with itself (skipped tests)
@@ -186,6 +199,11 @@ Tests: test_solidification.py, test_dendrite_tip.py, test_homogenization.py.
 
 - Coarsening of gamma' in Ni-Al-Cr runs 4.4-6.5 times faster than measured, close to the papers' own
   estimates with these mobilities.
+- The late mean radius of the size-class model scatters by about 5 % (11.5-12.6 nm for Ni-5.2Al-14.2Cr at
+  1024 h) with the saved times and 1-4 times tighter step limits, from merging and splitting classes; the
+  volume fraction moves by 0.1 %. With precipitate tracer diffusivities 100 times Sudbrack's the explicit
+  composition update fails ("reduce the step limits"), so particles that equilibrate fast inside are out
+  of reach there.
 - Mao et al. 2012: the measured gamma' Cr is above its long-time value and falling in two alloys; the mean-field
   drift has it below. The drift direction holds no mobility, so flux coupling cannot reverse it in the
   late stage.
