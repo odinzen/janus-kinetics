@@ -233,6 +233,15 @@ Conventions worth knowing:
 - A thermodynamic description with a magnetic contribution triggers a warning,
   because the mobilities omit Jonsson's ferromagnetic factor.
 
+## Related software
+
+[kawin](https://github.com/materialsgenomefoundation/kawin) (Ury et al., Acta Mater. 255 (2023)
+118988), the open Kampmann-Wagner precipitation and diffusion package built on pycalphad, was the seed
+that started this work to create a new, independent package. janus-kinetics was written clean-room,
+from the governing equations and the published papers. It extends the same idea to moving interfaces,
+solidification, oxidation and thin films; for strength and surrogate models, kawin remains the place
+to go.
+
 ## How to cite
 
 Cite the software as M. E. Bustamante, janus-kinetics (Zenodo), version 0.1.0:

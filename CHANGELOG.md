@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- README credits kawin as the seed of this work.
 - A Jupyter notebook, notebooks/KineticsWithJanus: solidification beyond Scheil in Ni-18Al-2Cr with pycalphad
   and janus-kinetics.
 
