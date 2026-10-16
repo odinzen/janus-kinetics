@@ -27,6 +27,7 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Hoyt J.J., Asta M., Karma A. (2003). Atomistic and continuum modeling of dendritic solidification. *Materials Science and Engineering: R: Reports* 41, 121-163. https://doi.org/10.1016/s0927-796x(03)00036-6
 - Jönsson B. (1992). On Ferromagnetic Ordering and Lattice Diffusion - A Simple Model / Uber ferromagnetische Ordnung und Gitterdiffusion Ein einfaches Modell. *International Journal of Materials Research* 83, 349-355. https://doi.org/10.1515/ijmr-1992-830512
 - Jönsson B. (1995). Assessment of the Mobilities of Cr, Fe and Ni in bcc Cr-Fe-Ni Alloys. *ISIJ International* 35, 1415-1421. https://doi.org/10.2355/isijinternational.35.1415
+- Karnthaler H., Mühlbacher E., Rentenberger C. (1996). The influence of the fault energies on the anomalous mechanical behaviour of Ni3Al alloys. *Acta Materialia* 44, 547-560. https://doi.org/10.1016/1359-6454(95)00191-3
 - Kattner U.R., Boettinger W.J., Coriell S.R. (1996). Application of Lukas' Phase Diagram Programs to Solidification Calculations of Multicomponent Alloys. *International Journal of Materials Research* 87, 522-528. https://doi.org/10.1515/ijmr-1996-870703
 - Kjellqvist L., Selleby M., Sundman B. (2008). Thermodynamic modelling of the Cr-Fe-Ni-O system. *Calphad* 32, 577-592. https://doi.org/10.1016/j.calphad.2008.04.005
 - Kobayashi S. (1988). Solute redistribution during solidification with diffusion in solid phase: A theoretical analysis. *Journal of Crystal Growth* 88, 87-96. https://doi.org/10.1016/s0022-0248(98)90010-0
@@ -42,10 +43,12 @@ Every work cited in janus-kinetics, written from its Crossref record by `tools/c
 - Perez M., Dumont M., Acevedo-Reyes D. (2008). Implementation of classical nucleation and growth theories for precipitation. *Acta Materialia* 56, 2119-2132. https://doi.org/10.1016/j.actamat.2007.12.050
 - Perez M., Dumont M., Acevedo-Reyes D. (2009). Corrigendum to "Implementation of classical nucleation and growth theories for precipitation" [Acta Materialia 56 (2008) 2119-2132]. *Acta Materialia* 57, 1318. https://doi.org/10.1016/j.actamat.2008.11.020
 - Philippe T., Voorhees P. (2013). Ostwald ripening in multicomponent alloys. *Acta Materialia* 61, 4237-4244. https://doi.org/10.1016/j.actamat.2013.03.049
+- Prikhodko S., Carnes J., Isaak D., Ardell A. (1997). Elastic Constants of a Ni-12.69 AT. % Al Alloy From 295 to 1300 K. *Scripta Materialia* 38, 67-72. https://doi.org/10.1016/s1359-6462(97)00448-x
 - Purdy G.R., Kirkaldy J.S. (1971). Homogenization by diffusion. *Metallurgical Transactions* 2, 371-378. https://doi.org/10.1007/bf02663324
 - SUDBRACK C., NOEBE R., SEIDMAN D. (2007). Compositional pathways and capillary effects during isothermal precipitation in a nondilute Ni-Al-Cr alloy. *Acta Materialia* 55, 119-130. https://doi.org/10.1016/j.actamat.2006.08.009
 - SUDBRACK C., YOON K., NOEBE R., SEIDMAN D. (2006). Temporal evolution of the nanostructure and phase compositions in a model Ni-Al-Cr alloy. *Acta Materialia* 54, 3199-3210. https://doi.org/10.1016/j.actamat.2006.03.015
 - Sonderegger B., Kozeschnik E. (2009). Generalized Nearest-Neighbor Broken-Bond Analysis of Randomly Oriented Coherent Interfaces in Multicomponent Fcc and Bcc Structures. *Metallurgical and Materials Transactions A* 40, 499-510. https://doi.org/10.1007/s11661-008-9752-6
+- Stoller R., Zinkle S. (2000). On the relationship between uniaxial yield strength and resolved shear stress in polycrystalline materials. *Journal of Nuclear Materials* 283-287, 349-352. https://doi.org/10.1016/s0022-3115(00)00378-0
 - Sundman B. (1991). An assessment of the Fe-O system. *Journal of Phase Equilibria* 12, 127-140. https://doi.org/10.1007/bf02645709
 - Suzuoka T. (1961). Lattice and Grain Boundary Diffusion in Polycrystals. *Transactions of the Japan Institute of Metals* 2, 25-32. https://doi.org/10.2320/matertrans1960.2.25
 - Svoboda J., Fischer F., Fratzl P., Kozeschnik E. (2004). Modelling of kinetics in multi-component multi-phase systems with spherical precipitates. *Materials Science and Engineering: A* 385, 166-174. https://doi.org/10.1016/j.msea.2004.06.018

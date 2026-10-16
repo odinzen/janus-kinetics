@@ -1,6 +1,6 @@
 """Hand janus-kinetics results to kawin for precipitation and strength, and run kawin on janus's inputs.
 
-kawin (Ury, Wang, Otis and Liu, Acta Mater. 255 (2023) 118988) is an optional dependency, installed with
+kawin (Ury et al., Acta Mater. 255 (2023) 118988) is an optional dependency, installed with
 ``pip install janus-kinetics[kawin]``. This module imports it only when a function here needs it, so
 janus-kinetics itself never requires it.
 

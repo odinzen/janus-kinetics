@@ -1,4 +1,4 @@
-"""The optional bridge to kawin (Ury, Wang, Otis and Liu, Acta Mater. 255 (2023) 118988).
+"""The optional bridge to kawin (Ury et al., Acta Mater. 255 (2023) 118988).
 
 The database merge is checked without kawin. Everything that runs kawin is skipped when kawin is not
 installed (pip install janus-kinetics[kawin]).
