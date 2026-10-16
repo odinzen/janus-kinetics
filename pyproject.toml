@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "janus-kinetics"
-version = "0.1.0"
+version = "0.2.0"
 description = "Multicomponent diffusion, moving boundaries and precipitation kinetics on top of pycalphad"
 readme = "README.md"
 license = "MIT"

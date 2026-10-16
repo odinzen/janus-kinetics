@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-10-15)
 
 - Optional bridge to kawin, `janus_kinetics.kawin_bridge` (`pip install janus-kinetics[kawin]`): merges a
   separate mobility file into the thermodynamic database, builds kawin's thermodynamics and precipitation

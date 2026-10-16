@@ -7,7 +7,8 @@ MQ and MF parameters of a Thermo-Calc style database, the thermodynamics come
 from pycalphad's Gibbs energy models, and the two combine into multicomponent
 diffusion, two-phase and precipitation simulations.
 
-Version 0.1.0, released 2026-10-14. Tested with Python 3.12 and pycalphad 0.11.2.
+Version 0.2.0, released 2026-10-15. Tested with Python 3.12 and pycalphad 0.11.2 (the kawin bridge with
+kawin 0.5.0).
 
 ## What it does
 
@@ -251,9 +252,9 @@ on the same ageing.
 
 ## How to cite
 
-Cite the software as M. E. Bustamante, janus-kinetics (Zenodo), version 0.1.0:
-https://doi.org/10.5281/zenodo.23381870 (every version: https://doi.org/10.5281/zenodo.23381869;
-details in [CITATION.cff](CITATION.cff)), together with pycalphad (Otis and Liu 2017) and the papers
+Cite the software as M. E. Bustamante, janus-kinetics (Zenodo), version 0.2.0:
+https://doi.org/10.5281/zenodo.23381869, which resolves to the latest version (0.1.0 is
+https://doi.org/10.5281/zenodo.23381870; details in [CITATION.cff](CITATION.cff)), together with pycalphad (Otis and Liu 2017) and the papers
 named in the docstrings of the functions you use.
 
 ## License

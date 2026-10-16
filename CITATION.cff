@@ -5,8 +5,8 @@ abstract: >-
   Multicomponent diffusion, moving-boundary, homogenization and precipitation
   kinetics on top of pycalphad, built from the published models with each
   equation cited to its source.
-version: 0.1.0
-date-released: 2026-10-14
+version: 0.2.0
+date-released: 2026-10-15
 # the concept DOI resolves to the latest version; 0.1.0 itself is 10.5281/zenodo.23381870
 doi: 10.5281/zenodo.23381869
 repository-code: "https://github.com/odinzen/janus-kinetics"
