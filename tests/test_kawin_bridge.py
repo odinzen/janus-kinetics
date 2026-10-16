@@ -1,7 +1,7 @@
 """The optional bridge to kawin (Ury et al., Acta Mater. 255 (2023) 118988).
 
 The database merge is checked without kawin. Everything that runs kawin is skipped when kawin is not
-installed (pip install janus-kinetics[kawin]).
+installed (pip install kawin).
 
 The case is gamma' (L1_2) in Ni-5.2Al-14.2Cr at.% at 873 K on pycalphad's alcrni.tdb, Dupin, Ansara and
 Sundman, Calphad 25 (2001) 279, with the mobilities of Campbell, Boettinger and Kattner (2002), as in
@@ -35,7 +35,7 @@ ALLOY = np.array([0.052, 0.142])
 # test_multicomponent_precipitation.py
 SETTINGS = NucleationSettings(gamma=0.0225, molar_volume=6.7584e-6, lattice_parameter=0.3552e-9)
 needs_kawin = pytest.mark.skipif(importlib.util.find_spec("kawin") is None,
-                                 reason="kawin is not installed (pip install janus-kinetics[kawin])")
+                                 reason="kawin is not installed (pip install kawin)")
 
 
 @functools.lru_cache(maxsize=None)

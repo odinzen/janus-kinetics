@@ -2,7 +2,7 @@
 
     python tools/build_cast_to_strength.py
 
-Needs kawin (pip install janus-kinetics[kawin]), nbformat and nbclient. Code lines stay under 80
+Needs kawin (pip install kawin), nbformat and nbclient. Code lines stay under 80
 characters so GitHub's notebook view shows them without a sideways scroll bar.
 """
 

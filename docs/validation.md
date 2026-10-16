@@ -154,7 +154,7 @@ Tests: test_solidification.py, test_dendrite_tip.py, test_homogenization.py.
 ## Bridge to kawin
 
 Tests: test_kawin_bridge.py. The tests that run kawin skip when it is not installed
-(`pip install janus-kinetics[kawin]`); the database merge is checked either way.
+(`pip install kawin`); the database merge is checked either way.
 
 | Check | Source | Agreement |
 |---|---|---|

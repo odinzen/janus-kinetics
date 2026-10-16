@@ -18,7 +18,7 @@ from janus_kinetics import kawin_bridge
 OUT = Path(__file__).parents[1] / "docs" / "api.md"
 
 # kept out of the top-level namespace because they need a package janus-kinetics does not require
-OPTIONAL = {kawin_bridge: "needs kawin, `pip install janus-kinetics[kawin]`"}
+OPTIONAL = {kawin_bridge: "needs kawin, `pip install kawin`"}
 
 
 def render() -> str:

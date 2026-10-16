@@ -1579,7 +1579,7 @@ Dimensionless thermodynamic factor (x_i / RT) dmu_i/dx_j, shape (..., n, n-1).
 For an ideal solution the upper (n-1) block is the identity and the last
 row is -1, the multicomponent analogue of d ln a / d ln x = 1.
 
-## `janus_kinetics.kawin_bridge` (optional, needs kawin, `pip install janus-kinetics[kawin]`)
+## `janus_kinetics.kawin_bridge` (optional, needs kawin, `pip install kawin`)
 
 ### `class KawinPrecipitation(times: 'np.ndarray', mean_radius: 'np.ndarray', number_density: 'np.ndarray', volume_fraction: 'np.ndarray', matrix_composition: 'np.ndarray', driving_force: 'np.ndarray', strength: 'np.ndarray | None' = None) -> None`
 

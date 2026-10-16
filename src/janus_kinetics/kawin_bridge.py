@@ -1,7 +1,7 @@
 """Hand janus-kinetics results to kawin for precipitation and strength, and run kawin on janus's inputs.
 
 kawin (Ury et al., Acta Mater. 255 (2023) 118988) is an optional dependency, installed with
-``pip install janus-kinetics[kawin]``. This module imports it only when a function here needs it, so
+``pip install kawin``. This module imports it only when a function here needs it, so
 janus-kinetics itself never requires it.
 
 The two packages read the same pycalphad databases but number compositions differently. janus keeps the
@@ -39,7 +39,7 @@ def _require_kawin():
     try:
         import kawin  # noqa: F401
     except ImportError as exc:
-        raise ImportError("this needs kawin; install it with pip install janus-kinetics[kawin]") from exc
+        raise ImportError("this needs kawin; install it with pip install kawin") from exc
 
 
 def independent_copy(db: Database) -> Database:

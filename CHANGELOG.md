@@ -1,8 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- The kawin bridge is installed with `pip install kawin`; 0.2.0 named an extra that only works from a
+  clone, since janus-kinetics is not on PyPI.
+
 ## 0.2.0 (2026-10-15)
 
-- Optional bridge to kawin, `janus_kinetics.kawin_bridge` (`pip install janus-kinetics[kawin]`): merges a
+- Optional bridge to kawin, `janus_kinetics.kawin_bridge` (needs `pip install kawin`): merges a
   separate mobility file into the thermodynamic database, builds kawin's thermodynamics and precipitation
   model from janus's inputs, and returns kawin's results in janus's composition order. Checked against
   janus on gamma' ageing in Ni-5.2Al-14.2Cr.

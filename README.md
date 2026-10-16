@@ -202,7 +202,7 @@ walks through solidification beyond Scheil with pycalphad and janus-kinetics sid
 much gamma' a Ni-Al-Cr casting forms as the cooling rate changes.
 A second, [notebooks/CastToStrength](notebooks/CastToStrength/CastToStrength.ipynb), follows a
 Ni-Al-Cr casting through homogenization and on into kawin for gamma' ageing and strength at the
-dendrite axis and the arm edge (needs `pip install janus-kinetics[kawin]`).
+dendrite axis and the arm edge (needs `pip install kawin`).
 
 More complete scripts, each tested, are in [examples/](examples): the couple
 above with a figure, chromium loss to a surface in a ternary, a precipitation
@@ -245,7 +245,7 @@ Conventions worth knowing:
 that started this work to create a new, independent package. janus-kinetics was written clean-room,
 from the governing equations and the published papers. It extends the same idea to moving interfaces,
 solidification, oxidation and thin films; for strength and surrogate models, kawin remains the place
-to go. An optional bridge, `janus_kinetics.kawin_bridge` (`pip install janus-kinetics[kawin]`), hands
+to go. An optional bridge, `janus_kinetics.kawin_bridge` (`pip install kawin` to use it), hands
 kawin the same database and janus's inputs, so a casting solidified and homogenized here can be aged
 in kawin at its local compositions; [docs/validation.md](docs/validation.md) shows how the two compare
 on the same ageing.
