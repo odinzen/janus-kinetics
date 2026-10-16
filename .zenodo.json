@@ -2,7 +2,7 @@
   "title": "janus-kinetics",
   "upload_type": "software",
   "version": "0.2.0",
-  "description": "Multicomponent diffusion, moving-boundary, homogenization and precipitation kinetics on top of pycalphad, built from the published models with each equation cited to its source.",
+  "description": "janus-kinetics adds kinetics to pycalphad. It takes the thermodynamics from a pycalphad Database and the atomic mobilities from MQ/MF database parameters, and solves multicomponent diffusion in plates, cylinders and spheres with Kirkendall markers; moving interfaces and stacks of phase layers, including layers that nucleate during a run; solidification by the Scheil-Gulliver path and by back-diffusion with CALPHAD tie-lines, with a hand-off at the eutectic and a dendrite-tip model; homogenization anneals; precipitation by the Kampmann-Wagner size-class method, the multicomponent model of Svoboda, Fischer, Fratzl and Kozeschnik, Myhr-Grong, and a mean-radius approach; and oxide scales, thin-film reactions, electromigration and grain-boundary diffusion. Each model is written from its published equations, and every docstring cites its source. Version 0.2.0 adds an optional bridge to kawin (Ury et al., Acta Mater. 255 (2023) 118988), so a casting solidified and homogenized in janus-kinetics can be aged in kawin at its local compositions.",
   "creators": [
     {
       "name": "Bustamante, Michael E.",

@@ -253,8 +253,8 @@ on the same ageing.
 ## How to cite
 
 Cite the software as M. E. Bustamante, janus-kinetics (Zenodo), version 0.2.0:
-https://doi.org/10.5281/zenodo.23381869, which resolves to the latest version (0.1.0 is
-https://doi.org/10.5281/zenodo.23381870; details in [CITATION.cff](CITATION.cff)), together with pycalphad (Otis and Liu 2017) and the papers
+https://doi.org/10.5281/zenodo.23418793 (every version: https://doi.org/10.5281/zenodo.23381869;
+details in [CITATION.cff](CITATION.cff)), together with pycalphad (Otis and Liu 2017) and the papers
 named in the docstrings of the functions you use.
 
 ## License
