@@ -6,6 +6,8 @@
   separate mobility file into the thermodynamic database, builds kawin's thermodynamics and precipitation
   model from janus's inputs, and returns kawin's results in janus's composition order. Checked against
   janus on gamma' ageing in Ni-5.2Al-14.2Cr.
+- A notebook, notebooks/CastToStrength: casting with back-diffusion, homogenization, then gamma' ageing and
+  relative strength across a dendrite arm in kawin, built by tools/build_cast_to_strength.py.
 - README credits kawin as the seed of this work.
 - A Jupyter notebook, notebooks/KineticsWithJanus: solidification beyond Scheil in Ni-18Al-2Cr with pycalphad
   and janus-kinetics.

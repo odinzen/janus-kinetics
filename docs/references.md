@@ -2,6 +2,7 @@
 
 Every work cited in janus-kinetics, written from its Crossref record by `tools/check_references.py`.
 
+- Ahmadi M., Povoden-Karadeniz E., Öksüz K., Falahati A., Kozeschnik E. (2014). A model for precipitation strengthening in multi-particle systems. *Computational Materials Science* 91, 173-186. https://doi.org/10.1016/j.commatsci.2014.04.025
 - Andersson J.O., Ågren J. (1992). Models for numerical treatment of multicomponent diffusion in simple phases. *Journal of Applied Physics* 72, 1350-1355. https://doi.org/10.1063/1.351745
 - Ansara I., Dupin N., Lukas H.L., Sundman B. (1997). Thermodynamic assessment of the Al-Ni system. *Journal of Alloys and Compounds* 247, 20-30. https://doi.org/10.1016/s0925-8388(96)02652-7
 - Blech I.A. (1976). Electromigration in thin aluminum films on titanium nitride. *Journal of Applied Physics* 47, 1203-1208. https://doi.org/10.1063/1.322842
