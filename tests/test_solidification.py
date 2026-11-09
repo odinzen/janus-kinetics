@@ -6,8 +6,13 @@ import warnings
 
 import numpy as np
 import pytest
+import xarray as xr
 from pycalphad import Database
+from pycalphad import variables as v
 from scipy.integrate import quad
+
+from janus_kinetics import solidification
+from janus_kinetics.errors import ConvergenceError
 
 from janus_kinetics.solidification import (
     brody_flemings,
@@ -181,6 +186,105 @@ def test_scheil_gulliver_keeps_the_solute():
     solid_b = sum(a * x[0] for step in r.solids for _, a, x in step)
     assert solid_b + (1 - r.fraction_solid[-1]) * r.liquid_composition[-1, 0] == pytest.approx(0.05, rel=1e-6)
     assert r.solid_phase_fractions()["FCC"] == pytest.approx(r.fraction_solid[-1], rel=1e-9)
+
+
+def _faulty_equilibrium(monkeypatch, fault, low, high):
+    """Make pycalphad misbehave between ``low`` and ``high`` K. "empty" = no answer and no error, as it does
+    when a minimization fails; "solid" = a converged result without the liquid unless sampling is dense;
+    "stubborn" = the same even when dense."""
+    real = solidification.equilibrium
+
+    def fake(db, comps, phases, conditions, **kwargs):
+        inside = low <= conditions[v.T] <= high and len(phases) > 1
+        if inside and fault == "empty":
+            eq = real(db, comps, phases, conditions, **kwargs)
+            eq["Phase"] = xr.full_like(eq["Phase"], "")
+            eq["NP"] = xr.full_like(eq["NP"], np.nan)
+            eq["GM"] = xr.full_like(eq["GM"], np.nan)
+            return eq
+        if inside and (fault == "stubborn" or (fault == "solid" and "calc_opts" not in kwargs)):
+            return real(db, comps, ["FCC"], conditions, **kwargs)
+        return real(db, comps, phases, conditions, **kwargs)
+
+    monkeypatch.setattr(solidification, "equilibrium", fake)
+
+
+def _run_faulty(**kwargs):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return scheil_gulliver(Database(CONSTANT_K), ["B", "A"], ["LIQUID", "FCC"], [0.05], 1005.0, 4.0, t_min=800.0,
+                               **kwargs)
+
+
+def test_scheil_gulliver_does_not_read_a_failed_equilibrium_as_no_liquid(monkeypatch):
+    """A step with no answer must not end the run with the alloy's mass unaccounted for."""
+    clean = _scheil(4.0)
+    t_mid = clean.temperatures[len(clean.temperatures) // 2]
+    _faulty_equilibrium(monkeypatch, "empty", t_mid - 5.0, t_mid + 5.0)
+    with pytest.raises(ConvergenceError, match="no equilibrium"):
+        _run_faulty()
+    r = _run_faulty(max_failed_span=20.0)
+    assert len(r.failed_temperatures) == 3
+    assert r.solid_phase_fractions()["FCC"] == pytest.approx(r.fraction_solid[-1], rel=1e-9)
+    # solute balance survives, and the path rejoins the clean one
+    solid_b = sum(a * x[0] for step in r.solids for _, a, x in step)
+    assert solid_b + (1 - r.fraction_solid[-1]) * r.liquid_composition[-1, 0] == pytest.approx(0.05, rel=1e-6)
+    assert r.fraction_solid[-1] == pytest.approx(clean.fraction_solid[-1], rel=1e-3)
+
+
+def test_scheil_gulliver_gives_up_when_failures_last_too_long(monkeypatch):
+    clean = _scheil(4.0)
+    t_mid = clean.temperatures[len(clean.temperatures) // 2]
+    _faulty_equilibrium(monkeypatch, "empty", t_mid - 30.0, t_mid + 30.0)
+    with pytest.raises(ConvergenceError, match="no equilibrium"):
+        _run_faulty(max_failed_span=20.0)
+
+
+def test_scheil_gulliver_counts_each_run_of_failures_on_its_own(monkeypatch):
+    """Two short bands far apart are each within the allowance, even though they span more than it together."""
+    clean = _scheil(4.0)
+    t_mid = clean.temperatures[len(clean.temperatures) // 2]
+    _faulty_equilibrium(monkeypatch, "empty", t_mid + 2.0, t_mid + 6.0)
+    _faulty_equilibrium(monkeypatch, "empty", t_mid - 22.0, t_mid - 18.0)
+    r = _run_faulty(max_failed_span=8.0)
+    assert len(r.failed_temperatures) >= 2
+    assert max(r.failed_temperatures) - min(r.failed_temperatures) > 8.0
+
+
+def test_scheil_gulliver_redoes_a_solid_that_lies_above_the_liquid(monkeypatch):
+    """A converged solid above the liquid's energy is pycalphad missing the liquid; dense sampling gets it back
+    and the path is unchanged."""
+    clean = _scheil(4.0)
+    _faulty_equilibrium(monkeypatch, "solid", 1010.0 - 400.0, 1010.0)
+    r = _run_faulty()
+    assert not r.failed_temperatures
+    # denser sampling starts the minimizer elsewhere, so the two agree to its tolerance only
+    assert np.max(np.abs(r.fraction_solid - clean.fraction_solid)) < 1e-6
+    assert np.max(np.abs(r.liquid_composition - clean.liquid_composition)) < 1e-6
+
+
+def test_scheil_gulliver_does_not_end_when_the_liquid_energy_is_unavailable(monkeypatch):
+    """With no energy for the liquid, a solid answer cannot be confirmed, so it does not end the run."""
+    real = solidification.equilibrium
+
+    def fake(db, comps, phases, conditions, **kwargs):
+        if len(phases) == 1 and 1000.0 <= conditions[v.T] <= 1004.0:
+            eq = real(db, comps, phases, conditions, **kwargs)
+            eq["GM"] = xr.full_like(eq["GM"], np.nan)
+            return eq
+        if 1000.0 <= conditions[v.T] <= 1004.0:
+            return real(db, comps, ["FCC"], conditions, **kwargs)
+        return real(db, comps, phases, conditions, **kwargs)
+
+    monkeypatch.setattr(solidification, "equilibrium", fake)
+    with pytest.raises(ConvergenceError, match="no equilibrium"):
+        _run_faulty()
+
+
+def test_scheil_gulliver_refuses_a_solid_above_the_liquid_when_sampling_cannot_help(monkeypatch):
+    _faulty_equilibrium(monkeypatch, "stubborn", 1000.0, 1004.0)
+    with pytest.raises(ConvergenceError, match="no equilibrium"):
+        _run_faulty()
 
 
 # --- homogenization of a segregation profile ----------------------------------------------------------------

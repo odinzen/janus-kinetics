@@ -4,6 +4,11 @@
 
 - The kawin bridge is installed with `pip install kawin`; 0.2.0 named an extra that only works from a
   clone, since janus-kinetics is not on PyPI.
+- `scheil_gulliver` no longer reads a pycalphad failure as the end of solidification. An empty result used to
+  count as "no liquid left", losing the rest of the alloy without warning; a converged solid above the
+  liquid's energy was accepted the same way. Such a result is now redone with denser sampling and raises
+  `ConvergenceError` if it stays wrong; `max_failed_span` steps past failures, listed in
+  `ScheilResult.failed_temperatures`.
 
 ## 0.2.0 (2026-10-15)
 

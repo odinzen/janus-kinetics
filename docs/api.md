@@ -1387,11 +1387,12 @@ solid formed), the hand-off temperature, and the run's geometry and volume eleme
 - `mean_composition(self) -> 'np.ndarray'`: Independent mole fractions of everything in the element (solids and any liquid left), which the run
 - `phase_fractions(self) -> 'dict'`: Amount of each solid phase at the end, as a fraction of the element.
 
-### `class ScheilResult(temperatures: 'np.ndarray', fraction_solid: 'np.ndarray', liquid_composition: 'np.ndarray', solids: 'list', components: 'tuple') -> None`
+### `class ScheilResult(temperatures: 'np.ndarray', fraction_solid: 'np.ndarray', liquid_composition: 'np.ndarray', solids: 'list', components: 'tuple', failed_temperatures: 'tuple' = ()) -> None`
 
 Temperatures (K), fraction solid, liquid mole fractions (n_T, n) and the solid formed at each step:
 for every temperature step the phases that formed with their amounts (fraction of the alloy) and
-mole fractions.
+mole fractions. ``failed_temperatures`` lists any temperatures stepped past because pycalphad found no
+equilibrium there.
 
 - `increments(self) -> 'tuple[np.ndarray, np.ndarray]'`: (fraction-solid edges, independent mole fractions of the solid laid down in each step), the input
 - `solid_phase_fractions(self) -> 'dict'`: Amount of each solid phase formed over the whole path, as a fraction of the alloy.
@@ -1415,7 +1416,7 @@ composition at fraction solid ``fs``, or with ``x`` (x* = x / X, 0 at the dendri
 in the solid. The series converges for 0 < k < 2 and gamma > 0; ``terms`` must grow as f_s
 approaches 1 with k small, where the terms fall off slowly.
 
-### `def scheil_gulliver(db: 'Database', components: 'Sequence[str]', phases: 'Sequence[str]', composition: 'Sequence[float]', start: 'float', step: 'float' = 1.0, liquid: 'str' = 'LIQUID', stop_fraction: 'float' = 0.0001, t_min: 'float' = 300.0, disordered: 'dict | None' = None) -> 'ScheilResult'`
+### `def scheil_gulliver(db: 'Database', components: 'Sequence[str]', phases: 'Sequence[str]', composition: 'Sequence[float]', start: 'float', step: 'float' = 1.0, liquid: 'str' = 'LIQUID', stop_fraction: 'float' = 0.0001, t_min: 'float' = 300.0, disordered: 'dict | None' = None, max_failed_span: 'float' = 0.0) -> 'ScheilResult'`
 
 Scheil-Gulliver solidification by the algorithm Bocklund et al., Materialia 11 (2020) 100689, give
 (section 2): from ``start`` (K, above the liquidus) the remaining liquid is equilibrated at each
@@ -1425,6 +1426,13 @@ reduced by the solid's, and its composition becomes that of the equilibrium liqu
 ``components`` (the last element dependent). ``disordered`` maps an ordered phase to the name its disordered
 composition sets take (``{"L12_FCC": "FCC_A1"}`` for gamma and gamma' described by one model); without it
 both appear under the phase's own name.
+
+pycalphad reports a failed minimization as an empty result, not an error, and read as it stands that
+would mean no liquid is left. It can also miss a narrow liquid well and return a converged solid of higher
+energy. So a result with no liquid is accepted only if the liquid alone is not lower in energy; if it is,
+the point is redone with denser sampling. A point still without an answer raises
+:class:`ConvergenceError`; with ``max_failed_span`` > 0 (K) the run keeps the liquid as it was and steps
+on, raising only if the failures last longer than that.
 
 ### `def segregation_index(x) -> 'np.ndarray'`
 

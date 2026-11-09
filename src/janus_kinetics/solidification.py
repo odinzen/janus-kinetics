@@ -178,13 +178,15 @@ def _invert(frac: Callable[[float], float], lo_fs: float, hi_fs: float) -> Calla
 class ScheilResult:
     """Temperatures (K), fraction solid, liquid mole fractions (n_T, n) and the solid formed at each step:
     for every temperature step the phases that formed with their amounts (fraction of the alloy) and
-    mole fractions."""
+    mole fractions. ``failed_temperatures`` lists any temperatures stepped past because pycalphad found no
+    equilibrium there."""
 
     temperatures: np.ndarray
     fraction_solid: np.ndarray
     liquid_composition: np.ndarray
     solids: list
     components: tuple
+    failed_temperatures: tuple = ()
 
     def increments(self) -> tuple[np.ndarray, np.ndarray]:
         """(fraction-solid edges, independent mole fractions of the solid laid down in each step), the input
@@ -244,9 +246,22 @@ def _composition_sets(eq, db: Database, comps: Sequence[str], disordered: dict |
     return out
 
 
+_DENSE_SAMPLING = 5000  # points per phase for a second look at a doubtful equilibrium
+
+
+def _missed_liquid(db: Database, species: Sequence[str], liquid: str, conditions: dict, eq, sets: list) -> bool:
+    """True if a result with no liquid lies above the energy of the liquid alone at the same composition, or if
+    that energy cannot be had, in which case nothing confirms the liquid is gone."""
+    if not sets or any(name == liquid for name, _, _ in sets):
+        return False
+    alone = equilibrium(db, list(species), [liquid], conditions)
+    return not float(np.ravel(alone.GM.values)[0]) >= float(np.ravel(eq.GM.values)[0]) - 1e-3
+
+
 def scheil_gulliver(db: Database, components: Sequence[str], phases: Sequence[str], composition: Sequence[float],
                     start: float, step: float = 1.0, liquid: str = "LIQUID", stop_fraction: float = 1e-4,
-                    t_min: float = 300.0, disordered: dict | None = None) -> ScheilResult:
+                    t_min: float = 300.0, disordered: dict | None = None,
+                    max_failed_span: float = 0.0) -> ScheilResult:
     """Scheil-Gulliver solidification by the algorithm Bocklund et al., Materialia 11 (2020) 100689, give
     (section 2): from ``start`` (K, above the liquidus) the remaining liquid is equilibrated at each
     temperature, the solid that forms is set aside and never changes again, the liquid's fraction is
@@ -255,6 +270,13 @@ def scheil_gulliver(db: Database, components: Sequence[str], phases: Sequence[st
     ``components`` (the last element dependent). ``disordered`` maps an ordered phase to the name its disordered
     composition sets take (``{"L12_FCC": "FCC_A1"}`` for gamma and gamma' described by one model); without it
     both appear under the phase's own name.
+
+    pycalphad reports a failed minimization as an empty result, not an error, and read as it stands that
+    would mean no liquid is left. It can also miss a narrow liquid well and return a converged solid of higher
+    energy. So a result with no liquid is accepted only if the liquid alone is not lower in energy; if it is,
+    the point is redone with denser sampling. A point still without an answer raises
+    :class:`ConvergenceError`; with ``max_failed_span`` > 0 (K) the run keeps the liquid as it was and steps
+    on, raising only if the failures last longer than that.
     """
     comps = [c.upper() for c in components]
     x = np.asarray(composition, dtype=float)
@@ -262,11 +284,26 @@ def scheil_gulliver(db: Database, components: Sequence[str], phases: Sequence[st
         raise ValueError("give the n-1 independent mole fractions of the alloy")
     f_liquid, T = 1.0, float(start)
     temps, fs, xl, solids = [T], [0.0], [x.copy()], []
+    failed, first_failed = [], None
     while f_liquid > stop_fraction and T > t_min:
         T -= step
-        eq = equilibrium(db, comps + ["VA"], list(phases),
-                         {v.T: T, v.P: 101325, v.N: 1, **{v.X(c): xi for c, xi in zip(comps[:-1], x)}})
+        species = comps + ["VA"]
+        conditions = {v.T: T, v.P: 101325, v.N: 1, **{v.X(c): xi for c, xi in zip(comps[:-1], x)}}
+        eq = equilibrium(db, species, list(phases), conditions)
         sets = _composition_sets(eq, db, comps, disordered)
+        if _missed_liquid(db, species, liquid, conditions, eq, sets):
+            eq = equilibrium(db, species, list(phases), conditions, calc_opts={"pdens": _DENSE_SAMPLING})
+            sets = _composition_sets(eq, db, comps, disordered)
+            if _missed_liquid(db, species, liquid, conditions, eq, sets):
+                sets = []
+        if not abs(sum(a for _, a, _ in sets) - 1.0) < 1e-6:
+            failed.append(T)
+            first_failed = T if first_failed is None else first_failed
+            if first_failed - T >= max_failed_span:
+                raise ConvergenceError(f"pycalphad found no equilibrium for the liquid from {first_failed:g} to "
+                                       f"{T:g} K, at fraction solid {1 - f_liquid:.4f}; see max_failed_span")
+            continue
+        first_failed = None
         liquid_amount = sum(a for n, a, _ in sets if n == liquid)
         formed = [(n, a * f_liquid, xs) for n, a, xs in sets if n != liquid and a > 0]
         if liquid_amount <= 0:
@@ -280,7 +317,7 @@ def scheil_gulliver(db: Database, components: Sequence[str], phases: Sequence[st
         temps.append(T)
         fs.append(1 - f_liquid)
         xl.append(x.copy())
-    return ScheilResult(np.array(temps), np.array(fs), np.array(xl), solids, tuple(comps))
+    return ScheilResult(np.array(temps), np.array(fs), np.array(xl), solids, tuple(comps), tuple(failed))
 
 
 def segregation_profile(fs_edges, solid_composition, length: float, n_cells: int,
