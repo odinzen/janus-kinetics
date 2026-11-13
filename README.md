@@ -242,8 +242,9 @@ Conventions worth knowing:
 
 [kawin](https://github.com/materialsgenomefoundation/kawin) (Ury et al., Acta Mater. 255 (2023)
 118988), the open Kampmann-Wagner precipitation and diffusion package built on pycalphad, was the seed
-that started this work to create a new, independent package. janus-kinetics was written clean-room,
-from the governing equations and the published papers. It extends the same idea to moving interfaces,
+that started this work to create a new, independent package. janus-kinetics was written from the
+governing equations and the published papers; kawin's source was not read while writing it (its
+documentation was, for the optional bridge below). It extends the same idea to moving interfaces,
 solidification, oxidation and thin films; for strength and surrogate models, kawin remains the place
 to go. An optional bridge, `janus_kinetics.kawin_bridge` (`pip install kawin` to use it), hands
 kawin the same database and janus's inputs, so a casting solidified and homogenized here can be aged
